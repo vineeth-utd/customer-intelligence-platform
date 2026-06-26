@@ -2,51 +2,110 @@
 
 ## Vision
 
-Modern digital products generate millions of customer interactions every day through websites, mobile applications, transactions, marketing campaigns, and support channels. Although this data is readily available, understanding customer behavior and business metrics still requires analysts and engineers to manually query databases, compare dashboards, inspect customer journeys, and collaborate across multiple teams.
+Modern B2B SaaS companies collect enormous amounts of data from merchants, shopper interactions, campaigns, product usage, and business operations. Although this data exists, extracting meaningful insights still requires analysts and engineers to manually query databases, compare dashboards, inspect customer journeys, and collaborate across multiple teams.
 
-The goal of this project is to build an AI-powered Customer Intelligence Platform that enables users to understand customer behavior, investigate business metrics, and make informed decisions using both structured data and semantic knowledge.
+The goal of this project is to build an AI-powered Customer Intelligence Platform that enables internal business teams and merchants to understand customer behavior, investigate business metrics, and make data-driven decisions using both structured data and semantic knowledge.
 
-Rather than functioning as a chatbot, the platform acts as an intelligent analyst that gathers evidence from multiple data sources, reasons over the available information, and provides explainable insights and recommendations.
+Rather than functioning as a chatbot, the platform acts as an intelligent business analyst that gathers evidence from multiple data sources, reasons over available information, and provides explainable insights and recommendations.
+
+---
+
+# Domain Overview
+
+The platform operates in a B2B SaaS ecosystem consisting of three primary entities.
+
+## Platform
+
+Our SaaS platform provides products and features that merchants integrate into their online stores.
+
+Internal teams use the platform to understand business performance, merchant adoption, shopper behavior, and product usage.
+
+---
+
+## Merchant
+
+Merchants are the direct customers of our SaaS platform.
+
+They install and subscribe to our applications, configure platform features, create campaigns, and use the platform to improve shopper engagement and business growth.
+
+Examples of merchant activities include:
+
+* Installing applications
+* Managing subscriptions
+* Enabling platform features
+* Configuring campaigns
+* Viewing business dashboards
+* Investigating shopper behavior
+
+---
+
+## Shopper
+
+Shoppers are the customers of the merchants.
+
+They interact with the merchant's storefront and generate behavioral events by browsing products, adding items to wishlists, saving products for later, adding products to carts, completing purchases, and engaging with campaigns.
+
+These interactions generate the behavioral data that powers analytics and AI investigations.
+
+---
+
+## Customer Intelligence
+
+Throughout this project, **Customer Intelligence** refers to generating meaningful insights across both merchant and shopper data.
+
+This includes understanding:
+
+* Merchant health and adoption
+* Shopper behavior
+* Campaign performance
+* Product usage
+* Feature adoption
+* Revenue trends
+* Customer journeys
+* Business performance
 
 ---
 
 # Problem Statement
 
-Product managers, marketing teams, customer success teams, sales teams, and business analysts frequently need answers to questions such as:
+Internal business teams frequently need answers to questions such as:
 
-* Why did conversion decrease yesterday?
-* Which customer segments are growing or declining?
-* Why has retention dropped over the last month?
-* Which campaigns performed the best?
-* Which customers are likely to churn?
-* What customer behaviors contributed to revenue growth?
-* Is this business trend expected, or does it indicate an underlying issue?
+* Why did merchant retention decrease this month?
+* Which merchants are at risk of churning?
+* Which platform features contribute most to merchant revenue?
+* Why did conversion decrease for a specific merchant?
+* Which shopper segments are responding well to campaigns?
+* Which merchants should Customer Success engage with?
+* Which product features should the Product team prioritize?
+* Which marketing campaigns are producing the highest ROI?
 
-Answering these questions typically involves multiple systems, dashboards, SQL queries, and manual investigation across different teams.
+Merchants have a different set of questions, including:
 
-Even when the required data exists, the investigation process is often:
+* Why has my store's conversion rate decreased?
+* Which shoppers are most likely to purchase?
+* Which campaigns performed best?
+* Which shopper segments should I target?
+* Which features are contributing most to my revenue?
+* How can I improve shopper engagement?
 
-* Time consuming
-* Manual
-* Reactive
-* Difficult to scale
-* Dependent on engineering support
+Although the required data exists, answering these questions typically requires navigating multiple dashboards, writing SQL queries, manually analyzing reports, and collaborating across different teams.
 
-The objective of this platform is to significantly reduce the time required to answer these questions by combining data engineering, analytics, retrieval-augmented generation (RAG), and agentic AI into a single investigation workflow.
+The objective of this platform is to significantly reduce the effort required to investigate business questions by combining analytics, data engineering, retrieval-augmented generation (RAG), and agentic AI into a single investigation workflow.
 
 ---
 
-# Product Goals
+# Project Goals
 
 The platform aims to:
 
 * Build a complete customer intelligence platform instead of an isolated AI application.
-* Simulate realistic customer event generation similar to production systems.
-* Build an end-to-end customer data pipeline.
-* Organize customer data using appropriate storage layers.
-* Generate analytics-ready customer profiles and business metrics.
+* Simulate realistic shopper event generation similar to production systems.
+* Build an end-to-end data ingestion pipeline.
+* Organize data using well-defined storage layers.
+* Generate analytics-ready merchant and shopper profiles.
+* Generate business metrics and customer intelligence.
 * Enable semantic retrieval over business knowledge and derived insights.
-* Allow users to investigate customer and business questions using natural language.
+* Allow users to investigate business questions using natural language.
 * Use an intelligent AI agent capable of planning investigations, selecting tools, gathering evidence, reasoning over multiple data sources, and generating explainable answers.
 * Provide dashboards and visual analytics alongside AI-generated insights.
 * Demonstrate production-inspired software engineering, backend architecture, data engineering, and AI system design.
@@ -57,12 +116,43 @@ The platform aims to:
 
 ## In Scope
 
-### Customer Event Simulation
+### Merchant Event Sources
 
-A simulated event producer will generate realistic customer events representing user activity such as:
+The platform receives merchant-related events that represent how merchants interact with and use our SaaS platform.
 
-* Page views
+For this project, these production systems will be simulated through merchant event generators that continuously produce realistic merchant events.
+
+Example merchant events include:
+
+* Merchant onboarding
+* Application installation
+* Application uninstallation
+* Subscription creation
+* Subscription renewal
+* Subscription upgrade or downgrade
+* Subscription cancellation
+* Merchant profile updates
+* Platform feature enablement or disablement
+* Campaign creation, update, and deletion
+* Merchant configuration changes
+* Merchant login and platform usage
+
+These events provide insights into merchant lifecycle, platform adoption, feature usage, subscription health, and overall business performance.
+
+---
+
+### Shopper Event Sources
+
+The platform also receives shopper-related events generated by customers interacting with merchant storefronts.
+
+For this project, these production systems will be simulated through shopper event generators that continuously produce realistic shopper events.
+
+Example shopper events include:
+
 * Product views
+* Search activity
+* Wishlist actions
+* Save for Later actions
 * Add to Cart
 * Checkout
 * Purchases
@@ -70,88 +160,121 @@ A simulated event producer will generate realistic customer events representing 
 * Feature usage
 * Session activity
 
-The event producer represents an external production application and serves as the primary data source for the platform.
+These events capture shopper behavior throughout the customer journey and form the primary source for behavioral analytics, customer segmentation, campaign analysis, and AI-driven business insights.
+
 
 ---
 
 ### Data Ingestion Pipeline
 
-The platform will ingest customer events through a dedicated ingestion layer.
+The platform will ingest shopper events through a dedicated ingestion layer.
 
-The ingestion pipeline will perform:
+The pipeline will perform:
 
-* Data validation
+* Validation
 * Schema verification
 * Data quality checks
+* Normalization
 * Transformation
 * Enrichment
-* Normalization
 
-before persisting the processed data.
+before persisting processed data into appropriate storage layers.
 
 ---
 
 ### Data Platform
 
-The platform will organize data into multiple logical layers, each with a well-defined responsibility.
+The platform will organize information into multiple logical data layers.
 
 Examples include:
 
-* Raw event storage
-* Processed customer events
-* Customer profiles
+* Raw merchant events
+* Raw shopper events
+* Processed merchant events
+* Processed shopper events
+* Merchant profiles
+* Shopper profiles
 * Analytics-ready datasets
 * Segment definitions
+* Campaign metrics
 * Business metrics
 
-The primary databases remain the source of truth for all customer and business data.
+The platform correlates merchant events and shopper events to generate business intelligence and customer insights.
+
+The primary databases remain the source of truth for all business data.
 
 ---
 
-### Customer Analytics
+### Business Intelligence & Analytics
 
-The platform will generate business insights such as:
+Business intelligence is generated by combining merchant activity, shopper behavior, campaign performance, and product usage to provide a holistic view of platform performance and customer engagement.
+
+The platform will generate analytics across multiple domains.
+
+#### Merchant Analytics
+
+* Merchant health
+* Subscription analytics
+* Churn analysis
+* Feature adoption
+* Revenue contribution
+* Product usage
+
+#### Shopper Analytics
+
+* Customer journeys
+* Behavioral analysis
+* Conversion funnels
+* Purchase patterns
+* Cohort analysis
+* Segmentation
+
+#### Campaign Analytics
+
+* Campaign performance
+* Shopper engagement
+* Segment effectiveness
+
+#### Business Analytics
 
 * Revenue trends
-* Conversion metrics
-* Customer funnels
-* Cohort analysis
-* Customer segmentation
-* Campaign performance
-* Customer health indicators
-* Customer journey analysis
+* Platform adoption
+* Business growth
+* Feature impact
 
 ---
 
 ### AI Knowledge Layer
 
-The AI Knowledge Layer supports semantic retrieval and intelligent reasoning. It is **not** the primary source of truth.
+The AI Knowledge Layer supports semantic retrieval and intelligent reasoning.
 
-Rather than storing complete business records, it stores retrieval-oriented knowledge derived from the platform's data.
+It is not the primary source of truth.
+
+Instead, it stores retrieval-oriented knowledge derived from platform data.
 
 Examples include:
 
-* Customer behavior summaries
-* Segment summaries
+* Merchant summaries
+* Shopper behavior summaries
 * Campaign summaries
 * Business metric explanations
-* Business documentation
+* Product documentation
 * Investigation summaries
 * Frequently accessed business knowledge
 
-Each knowledge item is embedded for semantic search and includes metadata pointing back to the original source of truth.
+Each knowledge item is embedded for semantic retrieval and contains metadata referencing the original source of truth.
 
-Typical metadata includes:
+Metadata includes information such as:
 
 * Source system
-* Source table or collection
+* Entity type
 * Entity identifier
+* Source table or collection
 * Document or row reference
 * Time window
-* Entity type
-* Other retrieval-related attributes
+* Additional retrieval attributes
 
-The metadata enables the platform to retrieve the exact underlying records whenever detailed investigation is required.
+This enables the platform to retrieve exact business records whenever detailed investigation is required.
 
 ---
 
@@ -161,44 +284,42 @@ The platform supports two complementary retrieval strategies.
 
 #### Semantic Retrieval
 
-Semantic retrieval is used for exploratory or analytical questions where users describe concepts rather than exact entities.
+Semantic retrieval is used when users ask exploratory or analytical questions.
 
 Examples include:
 
 * Why did conversion decrease yesterday?
-* Which customer segments are behaving differently?
+* Which merchants are showing unusual behavior?
 * Explain recent retention changes.
-* Why are premium customers purchasing less?
+* Which shopper segments are becoming inactive?
 
-The AI agent performs semantic search over the AI Knowledge Layer to retrieve relevant summaries, business knowledge, and supporting context.
-
-Semantic retrieval helps the platform determine **where to investigate**.
+Semantic retrieval identifies relevant knowledge and supporting context to guide further investigation.
 
 ---
 
 #### Exact Entity Retrieval
 
-Exact retrieval is used when users reference known entities such as customers, campaigns, orders, or transactions.
+Exact retrieval is used when users reference known entities.
 
 Examples include:
 
-* Show orders for customer CUST-12345.
-* Display campaign CAMP-102 performance.
-* Find purchases made by [john@example.com](mailto:john@example.com).
+* Show orders for shopper [john@example.com](mailto:john@example.com).
+* Display merchant ABC's subscription details.
+* Show campaign CAMP-102 performance.
 
-In these situations, the AI agent invokes backend tools that query the primary databases directly.
+The AI agent invokes backend tools to retrieve authoritative business data directly from the primary data stores.
 
-Semantic retrieval may still provide supporting context, but authoritative business data is always retrieved from the source of truth.
+Semantic retrieval may provide supporting context, but the source of truth always remains the primary databases.
 
 ---
 
 ### Agentic AI Investigation Engine
 
-Instead of generating immediate responses, the AI follows an investigation workflow similar to how an experienced product analyst investigates business problems.
+Rather than generating immediate responses, the AI follows a structured investigation workflow similar to how an experienced business analyst investigates problems.
 
 The investigation process includes:
 
-* Understanding the user's intent
+* Understanding user intent
 * Planning an investigation
 * Selecting appropriate tools dynamically
 * Retrieving semantic and structured evidence
@@ -206,29 +327,30 @@ The investigation process includes:
 * Evaluating whether sufficient evidence has been collected
 * Performing additional investigation when required
 * Producing explainable conclusions
-* Recommending follow-up actions where appropriate
+* Recommending follow-up actions
 
-The objective is to gather sufficient evidence before generating an answer rather than responding immediately.
+The objective is to gather sufficient evidence before generating conclusions.
 
 ---
 
 ### Tool Layer
 
-The AI agent interacts with the platform through well-defined tools instead of directly accessing underlying databases.
+The AI agent interacts with the platform exclusively through well-defined backend tools.
 
 Example capabilities include:
 
 * Schema inspection
 * Data dictionary lookup
-* Customer profile retrieval
-* Revenue and analytics retrieval
-* Customer event retrieval
-* Segment retrieval
+* Merchant profile retrieval
+* Shopper profile retrieval
+* Analytics retrieval
+* Revenue metrics
 * Campaign retrieval
+* Customer journey retrieval
 * Vector search
 * Business documentation search
 
-Each tool exposes business capabilities rather than raw database operations.
+Each tool exposes business capabilities rather than direct database operations.
 
 ---
 
@@ -236,7 +358,7 @@ Each tool exposes business capabilities rather than raw database operations.
 
 The AI Gateway coordinates every interaction between the AI model and platform services.
 
-Its responsibilities include:
+Responsibilities include:
 
 * Tool orchestration
 * Semantic retrieval
@@ -246,36 +368,32 @@ Its responsibilities include:
 * Prompt construction
 * Data minimization
 * Sensitive data masking
-* Authorization and access control
+* Authorization
 * Response generation
 
 The AI model never communicates directly with the underlying databases.
 
-All interactions occur through controlled backend services exposed by the AI Gateway.
+All platform interactions occur through controlled backend services.
 
 ---
 
 ### Dashboards
 
-The platform will provide dashboards for visualizing:
+The platform provides role-based dashboards for both internal teams and merchants.
 
-* Business metrics
-* Customer analytics
-* Customer segments
-* Revenue trends
-* Conversion metrics
-* AI-generated insights
-* Investigation results
+Internal dashboards provide platform-wide visibility into merchant health, shopper behavior, business growth, campaign performance, and feature adoption.
+
+Merchant dashboards provide visibility into their own store's performance, shopper engagement, campaign analytics, revenue attribution, feature usage, and AI-powered recommendations.
 
 ---
 
 # Out of Scope
 
-The following capabilities are intentionally excluded from Version 1 of the project.
+The following capabilities are intentionally excluded from Version 1.
 
 * Production authentication providers
 * Multi-tenant deployment
-* Real customer datasets
+* Real merchant datasets
 * Large-scale distributed infrastructure
 * Production cloud deployment
 * Billing and subscription management
@@ -294,14 +412,14 @@ The project will be considered successful if it demonstrates:
 * Well-defined system architecture
 * Thoughtful AI integration rather than AI-first design
 * Explainable agentic investigation workflows
-* Clean separation between storage, retrieval, analytics, and AI reasoning
-* A realistic end-to-end platform that solves a meaningful business problem
+* Clear separation between storage, retrieval, analytics, and AI reasoning
+* A realistic end-to-end platform solving meaningful business problems
 
 ---
 
 # Project Philosophy
 
-Every architectural decision in this project should satisfy two questions:
+Every architectural decision in this project should satisfy two questions.
 
 1. Would a real company build the system this way?
 
