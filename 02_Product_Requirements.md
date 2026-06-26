@@ -302,11 +302,17 @@ Users should understand how the platform reached its conclusions.
 
 ---
 
-# MVP Scope
+# Product Roadmap
 
-Version 1 focuses on building a production-inspired customer intelligence platform with end-to-end functionality.
+The platform will be developed incrementally, with each release delivering meaningful business value while providing a solid foundation for future capabilities.
 
-The MVP includes:
+---
+
+## Prototype
+
+The prototype focuses on validating the end-to-end data flow through the platform.
+
+It includes:
 
 ### Data Platform
 
@@ -314,57 +320,108 @@ The MVP includes:
 * Shopper event generation
 * Event ingestion
 * Data validation
-* Data processing
 * Data storage
+
+### Analytics
+
+* Basic merchant and shopper data
+* Basic business metrics
+
+### User Interface
+
+* Simple dashboard for viewing generated data
+
+The objective of the prototype is to verify that events are generated, processed, stored, and made available for analytics.
 
 ---
 
-### Business Intelligence
+## Minimum Viable Product (MVP)
 
+The MVP delivers the first usable version of the platform for internal teams.
+
+It includes:
+
+### Data Platform
+
+* Merchant and shopper event ingestion
+* Data validation and processing
 * Merchant profiles
 * Shopper profiles
 * Customer journeys
-* Segmentation
 * Business metrics
-* Analytics dashboards
 
----
+### Business Intelligence
 
-### AI Platform
+* Merchant analytics
+* Shopper analytics
+* Campaign analytics
+* Revenue analytics
+* Internal dashboards
 
+### AI Investigation
+
+* Natural language business queries
 * AI Gateway
 * Tool orchestration
 * Semantic retrieval
 * Exact entity retrieval
-* Agentic investigation workflow
-* Working memory
-* Natural language investigations
+* Basic investigation workflow
 * Evidence-based responses
 
+The MVP should allow internal teams to investigate business questions without manually querying multiple systems.
+
 ---
 
-### User Experience
+## Version 1
 
-* Internal dashboards
+Version 1 focuses on improving the investigation experience and expanding the platform's business value.
+
+Enhancements include:
+
+### AI Improvements
+
+* Multi-step investigation workflow
+* Working memory during investigations
+* Reflection and evidence validation
+* Improved reasoning and recommendations
+
+### Platform Features
+
+* Investigation history
+* Audit trail
+* Better business insights
+* Improved dashboards
+* Enhanced segmentation
+* Campaign recommendations
+* Churn insights
+* Product usage recommendations
+
+### Merchant Experience
+
 * Merchant dashboard
-* AI investigation interface
-* Business recommendations
+* Merchant AI assistant
+* Store-specific analytics
+* Shopper insights for merchants
+* AI-generated recommendations for merchants
+
+The objective of Version 1 is to provide a polished, production-inspired customer intelligence platform serving both internal teams and merchants.
 
 ---
 
-# Future Enhancements
+## Future Enhancements
 
-The following capabilities are intentionally excluded from Version 1 but may be considered in future iterations.
+Future releases may include:
 
-* Multi-agent workflows
 * Engineering Intelligence Platform integration
 * Real-time streaming analytics
-* Automated campaign execution
 * Predictive forecasting
+* Automated campaign execution
 * Personalized AI assistants
+* Multi-agent investigations
 * Production cloud deployment
 * Multi-tenant architecture
-* Advanced role management
 * Fine-grained authorization
-* Mobile experience
 * External platform integrations
+* Mobile experience
+* Additional business intelligence capabilities
+
