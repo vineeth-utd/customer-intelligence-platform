@@ -445,3 +445,127 @@ The Data Ingestion Flow ensures that business information remains current and re
 The AI Investigation Flow consumes that business information to answer questions, explain business behaviour, and support decision making.
 
 Together, these workflows enable the platform to transform continuous merchant and shopper activity into meaningful business intelligence.
+
+---
+
+## 5. Architecture Principles
+
+The architecture of the Customer Intelligence Platform follows a few core principles that guide all design decisions.
+
+---
+
+### 5.1 Separation of Concerns
+
+Each layer in the system has a clear responsibility.
+
+* External Systems generate events
+* The Data Platform stores and prepares business data
+* The Business Intelligence Layer turns data into insights
+* The AI Layer handles investigations and explanations
+* The Presentation Layer shows information to users
+
+This keeps the system modular and easier to maintain.
+
+---
+
+### 5.2 Source of Truth Comes First
+
+The primary data stores are the source of truth for all business data.
+
+Any derived views, summaries, or AI-oriented representations must always trace back to the original data source.
+
+The platform should never treat AI-generated knowledge as the authoritative business record.
+
+---
+
+### 5.3 AI Supports the Product
+
+AI should improve the platform, not define it.
+
+The product must remain useful even if the AI layer is temporarily unavailable.
+
+Dashboards, analytics, and business data should still provide value on their own.
+
+---
+
+### 5.4 Controlled Access
+
+The AI layer should not directly access raw business data without control.
+
+All access should happen through platform services that enforce:
+
+* authentication
+* authorization
+* masking
+* business rules
+* safe data access
+
+This keeps the system secure and easier to audit.
+
+---
+
+### 5.5 Evidence Before Explanation
+
+The platform should gather relevant evidence before generating a conclusion.
+
+If the evidence is sufficient, the platform can explain the result.
+
+If the evidence is incomplete, the platform should say so instead of guessing.
+
+This helps keep responses grounded and trustworthy.
+
+---
+
+### 5.6 Data Minimization
+
+Only the minimum required data should be shared with the AI layer.
+
+Sensitive information should be masked or omitted whenever possible.
+
+The system should preserve business meaning while reducing unnecessary exposure of private data.
+
+---
+
+### 5.7 User Role Awareness
+
+Different users should only see the data and capabilities relevant to their role.
+
+Internal teams and merchants have different permissions, dashboards, and AI experiences.
+
+The system should always respect these boundaries.
+
+---
+
+### 5.8 Build for Extension
+
+The architecture should make it easy to add future capabilities without redesigning the entire platform.
+
+Examples include:
+
+* new analytics views
+* new investigation workflows
+* new dashboards
+* new business data sources
+* future engineering intelligence features
+
+The system should evolve in a controlled way rather than growing randomly.
+
+---
+
+### 5.9 Keep Explanations Understandable
+
+The platform should be simple to understand from both a user and engineering perspective.
+
+Architecture decisions should be explainable in plain language.
+
+This applies to documentation, internal design discussions, and future implementation work.
+
+---
+
+### 5.10 Prefer Practical Solutions
+
+The platform should use the simplest approach that solves the problem well.
+
+Components should be added because they are needed, not because they are trendy.
+
+This keeps the system practical, maintainable, and easier to reason about.
