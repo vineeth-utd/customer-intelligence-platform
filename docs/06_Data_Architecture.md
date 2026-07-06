@@ -228,3 +228,154 @@ For example, a merchant profile may indicate that a merchant is currently subscr
 Similarly, a shopper profile may identify a shopper as a high-value customer, while the underlying shopper events explain why through their browsing history, purchases, campaign interactions, and overall engagement.
 
 Keeping business events as a separate entity preserves the complete history of the platform while allowing current business views, profiles, customer journeys, business metrics, and AI knowledge to be derived from a single, consistent source of historical truth.
+
+---
+
+# 3. Logical Data Layers and Source of Truth Boundaries
+
+Business data serves different purposes throughout its lifecycle.
+
+Incoming events must be preserved for historical accuracy, processed into reliable business records, transformed into analytics-ready datasets, and eventually summarized into AI-oriented knowledge. Attempting to store all of these representations within a single data model would make the platform difficult to maintain, scale, and evolve.
+
+To address this, the Customer Intelligence Platform organizes business information into multiple logical data layers. Each layer has a clearly defined responsibility and represents a different stage in the lifecycle of business data.
+
+These layers describe **how business information evolves**, not **how it is physically stored**. A logical data layer may be implemented using one or more databases, tables, collections, or files depending on implementation requirements.
+
+---
+
+## 3.1 Logical Data Flow
+
+The high-level flow of business data through the platform is illustrated below.
+
+```text
+Business Events
+        │
+        ▼
+Raw Event Layer
+        │
+        ▼
+Processed Business Data Layer
+        │
+        ▼
+Derived Data Layer
+        │
+        ├──────────────► Dashboards & Analytics
+        │
+        └──────────────► AI Knowledge Layer
+```
+
+As business events move through the platform, they are progressively transformed into increasingly valuable business information while preserving clear ownership of the platform's source of truth.
+
+---
+
+## 3.2 Raw Event Layer
+
+The Raw Event Layer stores business events exactly as they are received from upstream systems.
+
+Its primary responsibility is to preserve an immutable history of business activity before any validation, transformation, or enrichment occurs.
+
+Examples of data stored within this layer include:
+
+* Merchant events
+* Shopper events
+* Campaign events
+* Platform events
+
+This layer serves as the historical record of everything that occurred within the platform and supports auditing, replay, debugging, and future reprocessing if business logic changes.
+
+Although this is a single logical layer, it may be implemented using multiple physical tables or collections based on the type of business event being stored.
+
+**Source of Truth:** Yes, for original business events.
+
+---
+
+## 3.3 Processed Business Data Layer
+
+The Processed Business Data Layer contains validated, standardized, and enriched business data derived from the raw event layer.
+
+At this stage, incoming events have been cleaned, normalized, and transformed into reliable business records that accurately represent the operational state of the platform.
+
+Examples include:
+
+* Merchants
+* Shoppers
+* Products
+* Campaigns
+* Platform Features
+
+This layer provides the authoritative operational view of the business and serves as the foundation for downstream analytics, reporting, and AI investigations.
+
+**Source of Truth:** Yes, for operational business entities.
+
+---
+
+## 3.4 Derived Data Layer
+
+The Derived Data Layer contains business information generated from the operational business data.
+
+Unlike the previous layers, this layer does not introduce new business facts. Instead, it organizes existing business data into forms that are easier to analyze and consume.
+
+Examples include:
+
+* Merchant Profiles
+* Shopper Profiles
+* Customer Journeys
+* Shopper Segments
+* Business Metrics
+* Campaign Metrics
+* Conversion Funnels
+* Revenue Aggregates
+
+These datasets improve analytical performance and simplify business intelligence workflows while remaining fully reproducible from the underlying business data.
+
+**Source of Truth:** No. These datasets can always be regenerated from the underlying operational data.
+
+---
+
+## 3.5 AI Knowledge Layer
+
+The AI Knowledge Layer stores retrieval-oriented knowledge generated from business data.
+
+Its purpose is not to store operational business records, but to organize business knowledge in a form that enables efficient semantic retrieval and AI-assisted investigations.
+
+Examples include:
+
+* Merchant summaries
+* Shopper behaviour summaries
+* Campaign summaries
+* Investigation summaries
+* Business metric explanations
+* Semantic embeddings
+
+Every knowledge item maintains references to the underlying business records from which it was derived.
+
+This ensures that AI-generated explanations remain grounded in verifiable business data.
+
+**Source of Truth:** No. The AI Knowledge Layer is a retrieval optimization layer built on top of the platform's business data.
+
+---
+
+## 3.6 Source of Truth Boundaries
+
+Different layers serve different purposes within the platform.
+
+Only layers that represent original or operational business data are considered authoritative. All other layers contain information derived from those primary sources.
+
+| Logical Data Layer | Source of Truth | Purpose |
+|--------------------|-----------------|---------|
+| Raw Event Layer | Yes | Preserves the complete history of business events. |
+| Processed Business Data Layer | Yes | Represents the authoritative operational state of the business. |
+| Derived Data Layer | No | Provides analytics-ready datasets generated from business data. |
+| AI Knowledge Layer | No | Provides retrieval-oriented knowledge for AI investigations. |
+
+Maintaining these boundaries ensures that business truth exists in only one place, while analytics and AI capabilities remain reproducible and fully traceable to the underlying business records.
+
+---
+
+## 3.7 Why This Separation Matters
+
+Separating business data into logical layers provides several important architectural benefits.
+
+It enables the platform to preserve historical business events, maintain a reliable operational view of the business, generate analytics without duplicating business truth, and support AI investigations using derived knowledge rather than raw operational data.
+
+This separation also improves maintainability by allowing each layer to evolve independently while preserving clear ownership of business data and ensuring that every insight can be traced back to its original source.
