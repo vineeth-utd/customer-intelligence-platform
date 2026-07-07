@@ -379,3 +379,343 @@ Separating business data into logical layers provides several important architec
 It enables the platform to preserve historical business events, maintain a reliable operational view of the business, generate analytics without duplicating business truth, and support AI investigations using derived knowledge rather than raw operational data.
 
 This separation also improves maintainability by allowing each layer to evolve independently while preserving clear ownership of business data and ensuring that every insight can be traced back to its original source.
+
+---
+
+# 4. Business Data Products
+
+The Customer Intelligence Platform continuously transforms operational business data into higher-level business data products that support analytics, dashboards, AI investigations, and business decision-making.
+
+Unlike the operational data stored within the platform's source-of-truth layers, business data products are derived by combining, aggregating, and analysing business events and operational entities. They provide a business-oriented view of the platform that is easier to consume than raw transactional data.
+
+These data products are generated continuously as new merchant and shopper activity enters the platform. Since they are derived from the platform's source-of-truth data, they can always be regenerated if business logic changes or additional historical data becomes available.
+
+The primary business data products maintained by the platform include:
+
+* Merchant Profiles
+* Shopper Profiles
+* Customer Journeys
+* Shopper Segments
+* Merchant Health
+* Campaign Analytics
+* Business Metrics
+* AI Knowledge Products
+
+Each of these data products serves a different business purpose while collectively enabling dashboards, analytics, and AI-assisted investigations.
+
+---
+
+## 4.1 Merchant Profile
+
+The Merchant Profile provides a unified business view of a merchant's relationship with the platform.
+
+Rather than requiring users to inspect multiple operational records, the Merchant Profile consolidates key business information into a single, analytics-ready representation that supports reporting, customer success, product analytics, sales, and AI investigations.
+
+The profile is continuously updated as new merchant events are processed, ensuring that it reflects the merchant's current business state while remaining traceable to the underlying operational data.
+
+A Merchant Profile may include information such as:
+
+* Merchant identity and account information
+* Subscription status and subscription history
+* Enabled platform features
+* Platform adoption and usage metrics
+* Campaign activity and performance
+* Business growth indicators
+* Revenue contribution
+* Merchant health indicators
+* Recent platform activity
+* Important business milestones
+
+The Merchant Profile serves as the primary business representation of a merchant throughout the platform.
+
+It is consumed by multiple platform capabilities, including:
+
+* Internal business dashboards
+* Customer Success workflows
+* Sales and account management
+* Product analytics
+* Merchant dashboards
+* AI-assisted investigations
+
+Although the Merchant Profile provides a consolidated view of merchant information, it is not the platform's source of truth.
+
+Instead, it is a derived business data product generated from the underlying operational business data and can always be regenerated if the underlying data changes.
+
+---
+
+## 4.2 Shopper Profile
+
+The Shopper Profile provides a unified business view of a shopper's interactions and relationship with a merchant.
+
+Rather than analysing individual behavioural events in isolation, the Shopper Profile consolidates shopper activity into a single, analytics-ready representation that helps the platform understand customer behaviour, engagement, purchasing patterns, and lifecycle.
+
+The profile is continuously updated as new shopper events are processed, ensuring that it reflects the shopper's latest behaviour while remaining traceable to the underlying operational data.
+
+A Shopper Profile may include information such as:
+
+* Shopper identity
+* Associated merchant
+* Demographic information, where available
+* Shopping preferences
+* Product interests and browsing behaviour
+* Purchase history
+* Wishlist and Save for Later activity
+* Cart and checkout behaviour
+* Campaign engagement
+* Customer lifecycle stage
+* Behavioural patterns and engagement metrics
+* Customer lifetime value and purchase frequency
+* Recent shopper activity
+
+The Shopper Profile serves as the primary business representation of a shopper throughout the platform.
+
+It is consumed by multiple platform capabilities, including:
+
+* Shopper analytics
+* Customer journey analysis
+* Shopper segmentation
+* Campaign targeting
+* Merchant dashboards
+* AI-assisted investigations
+
+Although the Shopper Profile provides a consolidated view of shopper behaviour, it is not the platform's source of truth.
+
+Instead, it is a derived business data product generated from the underlying operational business data and can always be regenerated if the underlying data changes.
+
+---
+
+## 4.3 Customer Journey
+
+A Customer Journey represents the sequence of interactions a shopper performs while engaging with a merchant's store.
+
+Rather than analysing individual events independently, the Customer Journey organizes related shopper activities into a chronological view that explains how a shopper progresses through different stages of the purchasing lifecycle.
+
+By connecting behavioural events across multiple sessions and interactions, the platform can identify how shoppers discover products, engage with platform features, respond to campaigns, and ultimately complete or abandon purchases.
+
+A Customer Journey may include interactions such as:
+
+* Product discovery and browsing
+* Product searches
+* Wishlist activity
+* Save for Later activity
+* Campaign interactions
+* Add to Cart
+* Checkout initiation
+* Purchase completion
+* Repeat purchases
+* Post-purchase engagement
+
+Customer Journeys provide important context that individual events cannot capture. They help explain how shopper behaviour evolves over time and where opportunities or points of friction exist within the shopping experience.
+
+These journeys support multiple business capabilities, including:
+
+* Conversion funnel analysis
+* Behavioural analytics
+* Campaign effectiveness analysis
+* Shopper segmentation
+* Merchant dashboards
+* AI-assisted investigations
+
+Customer Journeys are continuously updated as new shopper events are processed, ensuring that they accurately represent the shopper's latest interactions while preserving the complete sequence of behavioural activity.
+
+Although Customer Journeys provide a consolidated representation of shopper behaviour, they are not the platform's source of truth.
+
+Instead, they are a derived business data product generated by correlating chronological shopper events and can always be reconstructed from the underlying event history.
+
+---
+
+## 4.4 Shopper Segments
+
+Shopper Segments group shoppers with similar characteristics, behaviours, or purchasing patterns into meaningful business categories.
+
+Rather than analysing individual shoppers independently, segmentation enables the platform to identify groups of shoppers that exhibit similar behaviours, preferences, or engagement levels. These segments help merchants and internal business teams understand their customer base, personalize experiences, and make data-driven business decisions.
+
+Shopper Segments are continuously generated and updated using information derived from shopper profiles, customer journeys, purchasing behaviour, campaign engagement, and other behavioural indicators.
+
+Examples of shopper segments include:
+
+* New Shoppers
+* Returning Shoppers
+* High-Value Shoppers
+* Frequent Buyers
+* Inactive Shoppers
+* At-Risk Shoppers
+* Cart Abandoners
+* Wishlist-Focused Shoppers
+* Campaign-Responsive Shoppers
+* Loyal Customers
+
+The platform may also generate merchant-specific or business-specific segments based on configurable business rules and evolving shopper behaviour.
+
+Shopper Segments support multiple platform capabilities, including:
+
+* Targeted marketing campaigns
+* Personalized shopper experiences
+* Campaign audience selection
+* Customer behaviour analysis
+* Merchant dashboards
+* AI-assisted investigations
+
+Since shopper behaviour changes over time, segment membership is continuously re-evaluated as new shopper activity is processed.
+
+Although Shopper Segments provide valuable business insights, they are not the platform's source of truth.
+
+Instead, they are derived business data products generated from shopper profiles, customer journeys, and operational business data, and can always be regenerated as segmentation rules evolve.
+
+---
+
+## 4.5 Merchant Health
+
+Merchant Health provides an overall assessment of a merchant's engagement, adoption, and business performance within the platform.
+
+Rather than relying on a single metric, Merchant Health combines multiple business signals to provide a holistic view of how effectively a merchant is using the platform and whether they are demonstrating healthy growth or exhibiting signs of declining engagement.
+
+Merchant Health is continuously evaluated as new merchant activity, shopper behaviour, and business metrics become available, ensuring that it reflects the merchant's latest business state.
+
+A Merchant Health assessment may consider information such as:
+
+* Subscription status and lifecycle
+* Platform feature adoption
+* Merchant activity and platform usage
+* Campaign creation and engagement
+* Shopper engagement trends
+* Revenue and business growth
+* Conversion performance
+* Recent business activity
+* Historical business trends
+
+Merchant Health enables the platform to proactively identify merchants that may require additional support or present opportunities for growth.
+
+It supports multiple platform capabilities, including:
+
+* Customer Success workflows
+* Merchant retention analysis
+* Churn risk identification
+* Sales and account management
+* Internal business dashboards
+* AI-assisted investigations
+
+Merchant Health represents a continuously evolving business assessment rather than a static business record.
+
+Although it provides an overall view of a merchant's business condition, it is not the platform's source of truth.
+
+Instead, it is a derived business data product generated by analysing operational business data, merchant profiles, shopper behaviour, campaign performance, and other business metrics, and can always be recalculated as business rules or evaluation models evolve.
+
+---
+
+## 4.6 Campaign Analytics
+
+Campaign Analytics provides a comprehensive view of how marketing campaigns perform across different merchants, shopper segments, and business objectives.
+
+Rather than evaluating individual campaign interactions in isolation, Campaign Analytics consolidates campaign performance into meaningful business insights that help merchants and internal teams understand which campaigns drive shopper engagement, conversions, and revenue.
+
+Campaign Analytics is continuously updated as shoppers interact with campaigns and complete subsequent actions throughout their customer journeys.
+
+A Campaign Analytics data product may include information such as:
+
+* Campaign details and lifecycle
+* Target shopper segments
+* Campaign reach and delivery
+* Shopper engagement metrics
+* Click-through and interaction metrics
+* Conversion performance
+* Revenue attribution
+* Campaign effectiveness trends
+* Comparative campaign performance
+* Historical campaign analysis
+
+Campaign Analytics enables merchants and internal business teams to evaluate marketing effectiveness, identify successful engagement strategies, and optimize future campaigns.
+
+It supports multiple platform capabilities, including:
+
+* Marketing performance analysis
+* Campaign optimization
+* Shopper engagement analysis
+* Merchant dashboards
+* Business intelligence dashboards
+* AI-assisted investigations
+
+Campaign Analytics represents a continuously evolving analytical view of campaign performance rather than a collection of operational campaign records.
+
+Although it provides valuable business insights, it is not the platform's source of truth.
+
+Instead, it is a derived business data product generated from campaign events, shopper behaviour, customer journeys, and operational business data, and can always be regenerated as additional business activity becomes available.
+
+---
+
+## 4.7 Business Metrics
+
+Business Metrics provide a consolidated view of the overall performance and health of the platform.
+
+Rather than focusing on individual merchants, shoppers, or campaigns, Business Metrics aggregate information across multiple business domains to provide a high-level understanding of platform performance, customer engagement, product adoption, and business growth.
+
+Business Metrics are continuously updated as new merchant and shopper activity is processed, ensuring that dashboards and analytical workflows always reflect the latest state of the business.
+
+A Business Metrics data product may include information such as:
+
+* Revenue trends
+* Merchant growth
+* Shopper growth
+* Conversion rates
+* Shopper engagement metrics
+* Platform feature adoption
+* Campaign performance summaries
+* Subscription trends
+* Merchant retention and churn
+* Customer acquisition metrics
+* Business growth indicators
+
+Business Metrics enable both internal teams and merchants to monitor business performance, identify trends, measure the impact of business initiatives, and make informed decisions based on reliable, data-driven insights.
+
+It supports multiple platform capabilities, including:
+
+* Executive dashboards
+* Product analytics
+* Marketing analytics
+* Customer Success reporting
+* Merchant dashboards
+* AI-assisted investigations
+
+Business Metrics represent continuously evolving analytical views generated from operational business data and other business data products.
+
+Although they provide valuable insights into business performance, they are not the platform's source of truth.
+
+Instead, they are derived business data products generated from merchant activity, shopper behaviour, campaign analytics, operational business data, and other analytical datasets, and can always be recalculated as business logic, reporting requirements, or analytical models evolve.
+
+---
+
+## 4.8 AI Knowledge Products
+
+AI Knowledge Products organize business information into retrieval-oriented knowledge that supports AI-assisted investigations.
+
+Unlike operational business data and analytical data products, AI Knowledge Products are designed specifically to help the AI layer efficiently locate relevant business context, correlate related information, and generate grounded explanations during investigations.
+
+Rather than storing raw business records, these data products summarize and organize information in a form that is easier for semantic retrieval while maintaining references to the underlying source-of-truth data.
+
+AI Knowledge Products may include information such as:
+
+* Merchant summaries
+* Shopper behaviour summaries
+* Customer journey summaries
+* Campaign summaries
+* Business metric explanations
+* Investigation summaries
+* Business documentation
+* Frequently accessed business knowledge
+
+These knowledge products enable the AI to quickly identify relevant business context before retrieving authoritative operational data when detailed investigation is required.
+
+They support multiple platform capabilities, including:
+
+* Semantic search
+* AI-assisted investigations
+* Context retrieval
+* Business question answering
+* Investigation history
+* Explainable AI workflows
+
+AI Knowledge Products are continuously generated and refreshed as operational business data and analytical data products evolve, ensuring that AI investigations remain aligned with the latest state of the business.
+
+Although AI Knowledge Products improve retrieval efficiency and investigation quality, they are not the platform's source of truth.
+
+Instead, they are derived business data products generated from operational business data, business data products, and business documentation. Every knowledge product maintains traceability to the underlying business records, allowing the platform to validate AI-generated insights against authoritative data whenever detailed investigation is required.
