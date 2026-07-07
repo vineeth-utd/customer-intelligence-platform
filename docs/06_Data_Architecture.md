@@ -791,3 +791,83 @@ It enables:
 * Confidence that every analytical insight can be traced back to verifiable business data
 
 By preserving clear lineage throughout the data lifecycle, the platform ensures that business intelligence and AI-generated insights remain trustworthy, explainable, and fully grounded in the platform's source-of-truth data.
+
+---
+
+# 6. Data Governance
+
+Data Governance defines the policies and practices that ensure business data remains accurate, secure, consistent, and trustworthy throughout its lifecycle.
+
+As data flows through the Customer Intelligence Platform, it passes through multiple stages including ingestion, processing, analytics, and AI-assisted investigations. Data Governance ensures that every stage maintains the quality and integrity required to support reliable business decisions.
+
+Rather than introducing additional business capabilities, Data Governance establishes the standards that guide how data is validated, protected, maintained, and audited across the platform.
+
+---
+
+## 6.1 Data Quality
+
+Reliable business intelligence depends on the quality of the underlying data.
+
+As merchant and shopper events enter the platform, they are validated and standardized before becoming part of the platform's operational data.
+
+Data quality practices include:
+
+* Schema validation
+* Data type verification
+* Required field validation
+* Data normalization
+* Duplicate detection
+* Data consistency checks
+* Data enrichment where appropriate
+
+Maintaining high-quality operational data ensures that downstream business data products, dashboards, and AI investigations remain accurate and reliable.
+
+---
+
+## 6.2 Data Privacy
+
+The platform is designed to protect sensitive business and customer information throughout the data lifecycle.
+
+Access to business data is governed by user roles and business responsibilities, ensuring that users only access information relevant to their responsibilities.
+
+When business information is used by the AI layer, the platform follows the principle of data minimization by providing only the information required to complete an investigation.
+
+Data privacy practices include:
+
+* Role-based access to business data
+* Protection of sensitive customer information
+* Data masking where appropriate
+* Data minimization for AI investigations
+* Controlled access through platform services
+
+These practices help ensure that sensitive information remains protected while still enabling meaningful business analysis.
+
+---
+
+## 6.3 Data Retention
+
+Different categories of business data serve different purposes and therefore have different lifecycle requirements.
+
+Operational business data preserves the platform's business history, while derived business data products and AI knowledge can be regenerated from the underlying source-of-truth data whenever necessary.
+
+The platform therefore distinguishes between data that must be retained as part of the business record and data that can be refreshed or regenerated as business logic evolves.
+
+This approach reduces unnecessary duplication while ensuring that historical business information remains available for analytics, auditing, and future investigations.
+
+---
+
+## 6.4 Auditability
+
+The platform maintains sufficient information to understand how business insights and AI-assisted investigations were produced.
+
+Business data products preserve traceability to the operational data from which they were derived, while AI investigations maintain references to the business information used during each investigation.
+
+Examples of auditable information include:
+
+* Business data transformations
+* Business data product generation
+* AI investigation history
+* Data sources referenced during investigations
+* Business metrics used to support conclusions
+
+Maintaining comprehensive auditability improves transparency, simplifies troubleshooting, and increases confidence in both business intelligence and AI-generated insights.
