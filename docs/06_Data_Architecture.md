@@ -80,6 +80,18 @@ Products are central to shopper interactions and campaign performance. They prov
 
 ---
 
+### Order
+
+An Order represents a completed purchase made by a shopper from a merchant.
+
+Orders capture the commercial transaction resulting from a shopper's purchasing journey and provide the foundation for revenue analysis, conversion measurement, customer lifetime value, and purchase history.
+
+An Order is created from shopper purchase events and continues to evolve as its lifecycle progresses through states such as payment, fulfilment, delivery, cancellation, or return.
+
+Order information supports merchant analytics, shopper analytics, business metrics, customer journeys, and AI-assisted investigations.
+
+---
+
 ### Campaign
 
 A Campaign represents a merchant-initiated marketing activity designed to engage shoppers.
@@ -197,7 +209,9 @@ Merchant
    │
    ├── Enables Platform Features
    │
-   └── Serves Shoppers
+   ├── Serves Shoppers
+   │
+   └── Receives Orders
 
 Shopper
    │
@@ -205,12 +219,23 @@ Shopper
    │
    ├── Responds to Campaigns
    │
+   ├── Places Orders
+   │
    └── Generates Business Events
+
+Order
+   │
+   ├── Belongs to Merchant
+   │
+   ├── Belongs to Shopper
+   │
+   └── Contains Products
 
 Business Events
    │
-   └── Capture interactions involving Merchants, Shoppers,
-       Products, Campaigns, and Platform Features
+   └── Capture interactions involving Merchants, 
+       Shoppers, Products, Orders, 
+       Campaigns, and Platform Features
 ```
 
 These relationships allow the platform to correlate activity across multiple business domains and generate a unified view of customer behaviour and business performance.
@@ -300,6 +325,7 @@ Examples include:
 * Merchants
 * Shoppers
 * Products
+* Orders
 * Campaigns
 * Platform Features
 
@@ -422,6 +448,7 @@ A Merchant Profile may include information such as:
 * Campaign activity and performance
 * Business growth indicators
 * Revenue contribution
+* Merchant sales and order trends
 * Merchant health indicators
 * Recent platform activity
 * Important business milestones
@@ -501,7 +528,7 @@ A Customer Journey may include interactions such as:
 * Campaign interactions
 * Add to Cart
 * Checkout initiation
-* Purchase completion
+* Order placement and purchase completion
 * Repeat purchases
 * Post-purchase engagement
 
@@ -619,7 +646,7 @@ A Campaign Analytics data product may include information such as:
 * Shopper engagement metrics
 * Click-through and interaction metrics
 * Conversion performance
-* Revenue attribution
+* Order and revenue attribution
 * Campaign effectiveness trends
 * Comparative campaign performance
 * Historical campaign analysis
@@ -654,6 +681,7 @@ Business Metrics are continuously updated as new merchant and shopper activity i
 A Business Metrics data product may include information such as:
 
 * Revenue trends
+* Order volume
 * Merchant growth
 * Shopper growth
 * Conversion rates
