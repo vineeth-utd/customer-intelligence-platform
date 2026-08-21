@@ -197,3 +197,246 @@ It enables the platform to:
 * Improve user confidence through transparent reasoning.
 
 By following a structured investigation workflow, the AI acts as an intelligent business analyst that assists users in understanding business behaviour rather than functioning as a generic conversational chatbot.
+
+---
+
+# 3. Core AI Components
+
+The AI investigation system is composed of a small set of core architectural components that work together to understand business questions, gather evidence, reason over available information, and generate grounded responses.
+
+Each component has a clearly defined responsibility, allowing the platform to remain modular, secure, and extensible while ensuring that AI-generated insights remain consistent with the platform's authoritative business data.
+
+---
+
+## 3.1 Investigation Engine
+
+The Investigation Engine is the central reasoning component of the AI architecture.
+
+Rather than generating immediate responses, it coordinates the complete investigation process by understanding business questions, determining what information is required, gathering evidence, and evaluating whether sufficient information exists before producing findings.
+
+Its responsibilities include:
+
+* Understanding user intent
+* Planning investigations
+* Determining the required business information
+* Coordinating evidence gathering
+* Evaluating investigation completeness
+* Producing grounded findings
+* Recommending appropriate business actions
+
+The Investigation Engine focuses on business reasoning rather than data retrieval, relying on the platform's other AI components to access business information.
+
+---
+
+## 3.2 AI Gateway
+
+The AI Gateway acts as the controlled entry point between the AI model and the rest of the Customer Intelligence Platform.
+
+Rather than allowing the AI to directly access business data or platform services, every investigation request passes through the AI Gateway.
+
+Its responsibilities include:
+
+* Receiving investigation requests
+* Orchestrating business tool execution
+* Building investigation context
+* Applying authorization and data masking
+* Enforcing AI guardrails and business policies
+* Constructing prompts for the AI model
+* Coordinating interactions with the AI model
+* Validating and returning grounded responses
+
+By centralizing these responsibilities, the AI Gateway ensures that every investigation follows the platform's security, privacy, and explainability requirements.
+
+---
+
+## 3.3 Tool Layer
+
+The Tool Layer provides controlled access to the platform's business capabilities.
+
+Rather than exposing databases directly to the AI model, each tool encapsulates a well-defined business capability that retrieves or performs a specific business operation.
+
+Examples include:
+
+* Merchant Profile Retrieval
+* Shopper Profile Retrieval
+* Order Retrieval
+* Customer Journey Retrieval
+* Campaign Analytics Retrieval
+* Business Metrics Retrieval
+* Business Documentation Search
+* AI Knowledge Search
+
+Each tool is responsible for applying the platform's business rules while returning only the information required for the current investigation.
+
+This separation keeps business logic within the platform while allowing the AI to focus on investigation and reasoning.
+
+---
+
+## 3.4 AI Knowledge Layer
+
+The AI Knowledge Layer provides retrieval-oriented business knowledge that supports semantic search and intelligent investigations.
+
+Rather than storing operational business records, it maintains summaries and business knowledge that help the AI quickly identify relevant context before retrieving authoritative business data when necessary.
+
+Examples include:
+
+* Merchant summaries
+* Shopper behaviour summaries
+* Customer journey summaries
+* Campaign summaries
+* Business metric explanations
+* Investigation summaries
+* Business documentation
+
+Every knowledge item maintains traceability to the platform's source-of-truth data, ensuring that AI investigations remain grounded in verifiable business information.
+
+---
+
+## 3.5 Investigation Context
+
+The Investigation Context maintains the state of an active business investigation across multiple interactions.
+
+Rather than treating every user request as an independent question, the platform preserves investigation context so that follow-up questions can build upon previously gathered evidence without repeating the entire investigation.
+
+The investigation context may include information such as:
+
+* Current investigation objective
+* Business entities involved
+* Retrieved evidence
+* Business tools already executed
+* Intermediate findings
+* Previous AI observations
+* Follow-up questions
+
+Maintaining investigation context enables the AI to support natural, multi-step investigations while improving efficiency, reducing unnecessary data retrieval, and providing a more coherent user experience.
+
+---
+
+# 4. Information Retrieval Strategy
+
+Business questions vary significantly in complexity and therefore require different approaches for retrieving information.
+
+Some questions reference known business entities and can be answered by retrieving authoritative business records directly from the platform's source-of-truth data.
+
+Other questions require the AI to investigate business behaviour, correlate information across multiple business domains, and retrieve historical knowledge before sufficient evidence can be gathered.
+
+For this reason, the Customer Intelligence Platform supports multiple retrieval strategies, allowing the AI to select the most appropriate approach based on the user's business question.
+
+---
+
+## 4.1 Exact Entity Retrieval
+
+Exact Entity Retrieval is used when users reference specific business entities that are already known.
+
+Examples include:
+
+* Show Merchant ABC.
+* Retrieve Order ORD-10234.
+* Display Shopper John Smith.
+* Show Campaign CAMP-205 performance.
+
+For these requests, the AI retrieves authoritative business information directly through the platform's business tools without requiring semantic search.
+
+Characteristics of Exact Entity Retrieval include:
+
+* Deterministic retrieval of known business entities.
+* Direct access to source-of-truth business data.
+* Tool-based retrieval using controlled platform capabilities.
+* Minimal reasoning before data retrieval.
+
+This strategy provides fast, accurate access to operational business information while preserving the platform's security and access control policies.
+
+---
+
+## 4.2 Semantic Retrieval
+
+Semantic Retrieval is used when users ask exploratory or investigative business questions that cannot be answered through a single business record.
+
+Examples include:
+
+* Why did conversion decrease yesterday?
+* Explain recent merchant churn.
+* Which shopper segments are becoming inactive?
+* Have we encountered similar situations before?
+
+Rather than retrieving specific entities, the AI searches the AI Knowledge Layer to identify relevant business knowledge, historical investigations, behavioural summaries, and supporting context.
+
+Characteristics of Semantic Retrieval include:
+
+* Retrieval based on business meaning rather than exact identifiers.
+* Discovery of related business knowledge and historical context.
+* Support for exploratory investigations.
+* Retrieval of summarized business information before accessing detailed operational data.
+
+Semantic Retrieval enables the AI to rapidly identify relevant business context while avoiding unnecessary access to large volumes of operational data.
+
+---
+
+## 4.3 Hybrid Investigation
+
+Many business investigations require a combination of Exact Entity Retrieval and Semantic Retrieval.
+
+For example, when investigating a question such as:
+
+> Why did Merchant ABC's revenue decrease this month?
+
+the AI may perform an investigation similar to the following:
+
+```text
+Retrieve Merchant Profile
+          │
+          ▼
+Retrieve Business Metrics
+          │
+          ▼
+Search Historical Business Knowledge
+          │
+          ▼
+Retrieve Campaign Analytics
+          │
+          ▼
+Retrieve Order Information
+          │
+          ▼
+Correlate Evidence
+          │
+          ▼
+Generate Findings
+```
+
+During a single investigation, the AI may alternate between structured business retrieval and semantic knowledge retrieval multiple times until sufficient evidence has been collected.
+
+This hybrid approach enables the platform to answer complex business questions while remaining grounded in authoritative business data.
+
+---
+
+## 4.4 Selecting the Appropriate Retrieval Strategy
+
+The AI determines the appropriate retrieval strategy based on the user's intent rather than following a single retrieval approach for every request.
+
+| User Request | Retrieval Strategy |
+|--------------|-------------------|
+| Show Merchant ABC | Exact Entity Retrieval |
+| Retrieve Order ORD-10234 | Exact Entity Retrieval |
+| Show Shopper John Smith | Exact Entity Retrieval |
+| Why did conversion decrease yesterday? | Semantic Retrieval followed by Exact Entity Retrieval |
+| Why is Merchant ABC at risk of churn? | Hybrid Investigation |
+| Have we seen similar issues before? | Semantic Retrieval |
+
+Selecting the appropriate retrieval strategy allows the platform to efficiently answer both operational business queries and complex investigative questions without compromising accuracy or explainability.
+
+---
+
+## 4.5 Why Multiple Retrieval Strategies Matter
+
+Using a single retrieval strategy for every business question would either limit the AI's investigative capabilities or result in unnecessary retrieval of business information.
+
+By combining Exact Entity Retrieval, Semantic Retrieval, and Hybrid Investigations, the platform can:
+
+* Retrieve authoritative business data when exact information is required.
+* Discover relevant business knowledge during exploratory investigations.
+* Correlate evidence across multiple business domains.
+* Minimize unnecessary data retrieval.
+* Produce grounded and explainable business insights.
+
+This flexible retrieval strategy allows the AI to investigate business questions in a manner that closely resembles how experienced business analysts gather and evaluate evidence before reaching conclusions.
