@@ -440,3 +440,124 @@ By combining Exact Entity Retrieval, Semantic Retrieval, and Hybrid Investigatio
 * Produce grounded and explainable business insights.
 
 This flexible retrieval strategy allows the AI to investigate business questions in a manner that closely resembles how experienced business analysts gather and evaluate evidence before reaching conclusions.
+
+---
+
+# 5. Responsible AI and Security
+
+The Customer Intelligence Platform is designed to ensure that AI-assisted investigations remain secure, explainable, and aligned with the platform's business and privacy requirements.
+
+Rather than allowing unrestricted access to business information, the AI operates within clearly defined architectural boundaries that protect sensitive data, enforce business policies, and ensure that every investigation remains grounded in authoritative business information.
+
+These safeguards help maintain user trust while allowing the AI to provide meaningful business insights.
+
+---
+
+## 5.1 Controlled Access
+
+The AI does not communicate directly with the platform's operational data stores.
+
+All access to business information occurs through controlled platform capabilities exposed by the Tool Layer and coordinated by the AI Gateway.
+
+This ensures that every investigation follows the platform's security, authorization, and business policies before any information is retrieved.
+
+Controlled access practices include:
+
+* Tool-based access to business capabilities
+* Authorization checks before data retrieval
+* Role-based access to business information
+* Enforcement of business rules
+* Controlled interaction with platform services
+
+This approach protects sensitive business information while maintaining consistent access to authoritative data.
+
+---
+
+## 5.2 AI Guardrails
+
+The AI Gateway enforces the operational guardrails that govern every AI investigation.
+
+These guardrails ensure that the AI behaves consistently with the platform's business policies and remains within its intended responsibilities.
+
+Examples include:
+
+* Restricting access to approved business tools
+* Preventing direct access to operational databases
+* Enforcing business and security policies
+* Applying data masking where required
+* Limiting access to only the information required for an investigation
+* Ensuring investigations remain within authorized business boundaries
+
+By centralizing these responsibilities within the AI Gateway, the platform maintains consistent AI behaviour regardless of the underlying AI model.
+
+---
+
+## 5.3 Data Minimization
+
+The AI follows the principle of data minimization throughout every investigation.
+
+Rather than retrieving complete business records or large datasets, the platform provides only the information necessary to answer the user's business question.
+
+Data minimization practices include:
+
+* Retrieving only relevant business entities
+* Limiting unnecessary business data exposure
+* Masking sensitive information where appropriate
+* Providing summarized business knowledge whenever sufficient
+* Retrieving detailed operational data only when required
+
+This approach reduces unnecessary exposure of sensitive information while improving investigation efficiency.
+
+---
+
+## 5.4 Grounded Responses
+
+Every AI-generated response should be supported by evidence retrieved from the platform's business capabilities.
+
+The AI should never generate conclusions based on assumptions or information that cannot be verified using authoritative business data.
+
+Grounded responses require the AI to:
+
+* Base findings on retrieved business evidence
+* Correlate information across multiple business domains
+* Distinguish observations from recommendations
+* Clearly communicate when available evidence is insufficient
+* Avoid unsupported conclusions or speculation
+
+Maintaining grounded responses ensures that AI-generated insights remain trustworthy and consistent with the platform's source-of-truth data.
+
+---
+
+## 5.5 Explainability
+
+Business users should understand how the AI reached its conclusions.
+
+Rather than presenting recommendations without context, the platform explains the evidence and business reasoning that contributed to each investigation.
+
+Explainability includes:
+
+* Presenting supporting business evidence
+* Explaining relationships between business observations
+* Describing why recommendations were generated
+* Maintaining traceability to underlying business data
+* Supporting transparent business decision-making
+
+This enables users to validate AI-assisted investigations and make informed business decisions with confidence.
+
+---
+
+## 5.6 Safe Tool Usage
+
+The AI interacts with the Customer Intelligence Platform exclusively through approved business tools.
+
+Rather than generating direct database queries or bypassing platform services, every business operation is performed through controlled tool invocations.
+
+Safe tool usage ensures that:
+
+* Business logic remains within platform services
+* Security policies are consistently enforced
+* Business permissions are respected
+* Operational data remains protected
+* Tool execution remains auditable
+
+This separation of responsibilities allows the AI to focus on investigation and reasoning while the platform retains full control over business operations and data access.
