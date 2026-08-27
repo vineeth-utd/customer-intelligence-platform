@@ -330,3 +330,193 @@ All schema changes are version-controlled through incremental migration scripts,
 | Caching | Redis |
 | AI Knowledge Storage | Vector Database |
 | Database Migrations | Alembic |
+
+---
+
+# 4. AI Platform
+
+The AI Platform enables the Customer Intelligence Platform to investigate business questions, generate business knowledge, and provide grounded, explainable insights while maintaining strict separation between AI reasoning and business logic.
+
+The selected technologies should support structured investigations, controlled tool execution, semantic retrieval, and incremental knowledge generation while keeping the platform provider-agnostic and easy to extend.
+
+---
+
+## Large Language Model
+
+**Development Provider:** Groq
+
+**Production Provider:** OpenAI
+
+The platform is designed to remain independent of any single LLM provider through the AI Gateway.
+
+Groq is selected as the default development provider because it offers fast inference, supports modern open-weight models, provides native tool calling, and enables cost-effective development.
+
+The architecture also supports alternative providers such as OpenAI without requiring changes to the investigation workflow or business services.
+
+---
+
+## Agent Framework
+
+**Selected Technology:** LangGraph
+
+The Investigation Agent is implemented using LangGraph.
+
+The platform follows a structured investigation workflow consisting of multiple stages including understanding user intent, planning investigations, gathering evidence, evaluating findings, and generating grounded responses.
+
+LangGraph provides an explicit state-based workflow that closely matches the platform's investigation architecture while allowing the investigation process to remain transparent and easily extensible.
+
+Rather than relying on multiple collaborating agents, Version 1 uses a single Investigation Agent with a well-defined investigation workflow.
+
+---
+
+## Tool Calling
+
+**Selected Technology:** Native Provider Tool Calling
+
+The Investigation Agent interacts with the platform using native tool calling supported by the selected LLM provider.
+
+Rather than generating database queries directly, the language model selects the appropriate business tool together with the required parameters.
+
+The AI Gateway validates every tool request before invoking the corresponding backend capability.
+
+This approach keeps business logic within the platform while allowing the language model to focus on investigation and reasoning.
+
+---
+
+## AI Gateway
+
+**Selected Implementation:** Custom AI Gateway
+
+The AI Gateway acts as the controlled entry point between the Investigation Agent and the rest of the platform.
+
+It is responsible for enforcing platform policies, executing business tools, protecting sensitive information, and ensuring that every AI response remains grounded in authoritative business data.
+
+The AI Gateway is responsible for:
+
+* User request validation
+* Guardrails and policy enforcement
+* Authentication and authorization
+* Tool registry and tool call validation
+* Tool execution
+* Tool response processing
+* Data minimization
+* Sensitive data masking
+* Investigation context construction
+* Prompt construction
+* Response grounding and validation
+* Audit logging
+
+Separating these responsibilities from the language model ensures that the AI remains secure, explainable, and consistent with the platform's business rules.
+
+---
+
+## AI Agents
+
+The AI Platform consists of two independent AI agents.
+
+### Investigation Agent
+
+The Investigation Agent interacts directly with users.
+
+Its responsibilities include:
+
+* Understanding business questions
+* Planning investigations
+* Selecting business tools
+* Gathering evidence
+* Evaluating investigation completeness
+* Producing grounded explanations
+* Recommending business actions
+
+### Knowledge Generation Agent
+
+The Knowledge Generation Agent operates as a background process.
+
+Its responsibilities include:
+
+* Generating business summaries from derived business data
+* Producing retrieval-oriented knowledge
+* Preparing content for semantic search
+* Keeping the AI Knowledge Layer up to date
+
+The two agents operate independently and solve different business problems without introducing unnecessary multi-agent orchestration.
+
+---
+
+## Embedding Model
+
+**Selected Technology:** BGE Embeddings
+
+The platform uses the BGE embedding model to convert business summaries into vector representations suitable for semantic retrieval.
+
+BGE provides high-quality semantic embeddings, integrates well with Python, and avoids unnecessary dependency on proprietary embedding APIs while delivering strong retrieval performance.
+
+---
+
+## Vector Database
+
+**Selected Technology:** Qdrant
+
+Qdrant is selected as the platform's vector database.
+
+It provides efficient semantic similarity search, metadata filtering, incremental updates, and production-ready vector indexing while remaining fully open source.
+
+The platform stores both embeddings and associated business metadata, allowing semantic retrieval to be combined with business-specific filtering during AI investigations.
+
+---
+
+## AI Knowledge Pipeline
+
+The platform generates AI knowledge incrementally from derived business data rather than directly from raw business events.
+
+The high-level pipeline is illustrated below.
+
+```text
+Derived Business Data
+        │
+        ▼
+Summary Builder
+        │
+        ▼
+LLM
+        │
+        ▼
+Natural Language Summary
+        │
+        ▼
+Embedding Generation
+        │
+        ▼
+Qdrant
+```
+
+The Summary Builder prepares structured business facts that are provided to the language model.
+
+The language model converts those facts into concise business summaries suitable for semantic retrieval.
+
+The resulting summaries are embedded and stored within Qdrant together with their associated business metadata.
+
+This approach keeps business logic deterministic while using AI only to generate business understanding suitable for semantic search.
+
+---
+
+## AI Knowledge
+
+The AI Knowledge Layer stores business understanding rather than operational business data.
+
+Examples of AI knowledge include:
+
+* Merchant summaries
+* Merchant journey summaries
+* Shopper behaviour summaries
+* Shopper journey summaries
+* Product summaries
+* Category summaries
+* Campaign summaries
+* Feature adoption summaries
+* Business summaries
+* Investigation summaries
+
+Different knowledge types follow different refresh strategies depending on the nature of the business information.
+
+Current business understanding is refreshed periodically, while historical business knowledge such as investigation summaries and business summaries is preserved to support future semantic retrieval and business investigations.
