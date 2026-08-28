@@ -194,6 +194,18 @@ This approach produces realistic business data that supports meaningful analytic
 
 ---
 
+### Future Enhancement
+
+Future versions of the platform may incorporate LLM-assisted synthetic data generation to improve the realism and diversity of generated business scenarios.
+
+Rather than generating every business event directly, the language model would generate realistic merchant and shopper behaviour templates that capture business patterns such as merchant growth, feature adoption, shopper journeys, campaign interactions, and churn scenarios.
+
+These behaviour templates would then be consumed by the deterministic event generators to produce large volumes of realistic business events while maintaining consistency, scalability, and low generation cost.
+
+This approach combines AI-generated behavioural realism with deterministic event generation, allowing the platform to simulate complex business scenarios without requiring the language model to generate every individual event.
+
+---
+
 ## Event Processing Pipeline
 
 Incoming events are processed through a structured ingestion pipeline before becoming part of the platform's operational business data.
