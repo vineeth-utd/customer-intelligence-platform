@@ -520,3 +520,232 @@ Examples of AI knowledge include:
 Different knowledge types follow different refresh strategies depending on the nature of the business information.
 
 Current business understanding is refreshed periodically, while historical business knowledge such as investigation summaries and business summaries is preserved to support future semantic retrieval and business investigations.
+
+---
+
+# 5. Frontend
+
+The Frontend provides the user interface through which internal teams and merchants interact with the Customer Intelligence Platform.
+
+It is responsible for presenting business dashboards, analytics, customer journeys, AI-assisted investigations, and business insights while providing a responsive and intuitive user experience.
+
+The selected technologies should support modern web development, rich data visualization, strong type safety, and efficient interaction with the platform's backend services.
+
+---
+
+## Frontend Framework
+
+**Selected Technology:** React.js
+
+React is selected as the frontend framework for the Customer Intelligence Platform.
+
+The platform primarily consists of dashboard views, analytical reports, AI-assisted investigations, business tables, charts, and timeline-based visualizations. React's component-based architecture naturally supports these user interfaces while enabling reusable and maintainable application development.
+
+Its mature ecosystem, strong community support, and seamless integration with the selected backend technologies make it well suited for the platform.
+
+---
+
+## Frontend Language
+
+**Selected Technology:** TypeScript
+
+TypeScript is selected as the frontend programming language.
+
+The frontend communicates extensively with backend APIs returning complex business entities such as merchants, shoppers, campaigns, investigations, analytics, and business metrics.
+
+Strong typing improves development productivity by detecting integration errors during development rather than at runtime while making the frontend easier to maintain as the platform evolves.
+
+---
+
+## Styling
+
+**Selected Technology:** Tailwind CSS
+
+Tailwind CSS is selected as the primary styling framework.
+
+Its utility-first approach enables rapid UI development while maintaining consistent styling across dashboards, analytical pages, AI interfaces, and administrative views.
+
+The framework also supports responsive design and simplifies long-term UI maintenance.
+
+---
+
+## Data Visualization
+
+**Selected Technology:** Apache ECharts
+
+Apache ECharts is selected as the primary charting library.
+
+The Customer Intelligence Platform relies heavily on business dashboards and analytical visualizations including trend analysis, revenue metrics, conversion funnels, customer journeys, feature adoption, campaign performance, and business growth.
+
+Apache ECharts provides a comprehensive set of interactive visualization capabilities while remaining open source and highly extensible for future analytical requirements.
+
+---
+
+## Server State Management
+
+**Selected Technology:** TanStack Query
+
+The frontend uses TanStack Query to manage server-side state.
+
+Rather than repeatedly requesting the same business information from the backend, TanStack Query manages data fetching, caching, background refresh, request deduplication, and cache invalidation.
+
+This reduces unnecessary API calls while providing a responsive user experience across dashboards, investigations, and analytical views.
+
+---
+
+## Local State Management
+
+**Selected Technology:** React State
+
+Local component state is managed using React's built-in state management capabilities.
+
+Component-specific interactions such as dialog visibility, filters, form inputs, and UI behaviour remain localized to individual components without introducing unnecessary global state management complexity.
+
+---
+
+## Client-side Routing
+
+**Selected Technology:** React Router
+
+React Router is selected for client-side navigation.
+
+It enables seamless navigation between dashboards, merchant views, shopper analytics, investigations, and administrative pages while maintaining a single-page application experience.
+
+---
+
+## Frontend Summary
+
+| Component | Selected Technology |
+|-----------|---------------------|
+| Frontend Framework | React.js |
+| Frontend Language | TypeScript |
+| Styling | Tailwind CSS |
+| Data Visualization | Apache ECharts |
+| Server State Management | TanStack Query |
+| Local State Management | React State |
+| Client-side Routing | React Router |
+
+---
+
+# 6. Infrastructure & Deployment
+
+The Customer Intelligence Platform is designed to run consistently across different development environments while remaining easy to deploy, test, and maintain.
+
+The selected infrastructure technologies focus on simplifying local development, supporting automated validation, and providing a production-inspired deployment workflow without introducing unnecessary operational complexity.
+
+---
+
+## Containerization
+
+**Selected Technology:** Docker
+
+Each major platform component is packaged as an independent Docker container.
+
+Containerization provides a consistent runtime environment by packaging the application together with its required runtime, dependencies, and configuration.
+
+This eliminates environment-specific issues while ensuring that the platform behaves consistently across different development machines.
+
+The primary platform components include:
+
+* Frontend
+* Backend
+* PostgreSQL
+* Apache Kafka
+* Redis
+* Qdrant
+* OpenSearch
+
+---
+
+## Local Environment Orchestration
+
+**Selected Technology:** Docker Compose
+
+Docker Compose is used to orchestrate the complete local development environment.
+
+It starts all platform services, configures networking between containers, manages service dependencies, and provides a reproducible local development environment through a single command.
+
+This allows the complete Customer Intelligence Platform to be started without manually installing or configuring individual infrastructure components.
+
+---
+
+## Scheduled Processing
+
+**Selected Technology:** APScheduler
+
+The platform uses APScheduler to execute periodic background jobs.
+
+Examples include:
+
+* Profile generation
+* Business metric generation
+* AI Knowledge Pipeline execution
+
+These scheduled jobs operate independently of the event ingestion pipeline and process only the incremental business data identified through the platform's processing state.
+
+---
+
+## Observability
+
+**Selected Technology:** OpenSearch
+
+OpenSearch is used for centralized application logging.
+
+The platform records structured logs across backend services, event processing, AI investigations, and infrastructure components to simplify debugging, troubleshooting, and operational visibility.
+
+Examples include:
+
+* API requests
+* Kafka consumer activity
+* Investigation execution
+* Tool invocation
+* Processing failures
+* Dead letter events
+
+OpenSearch Dashboards provides searchable log visualization for development and operational analysis.
+
+Future platform versions may introduce Prometheus and Grafana for infrastructure metrics, monitoring, and alerting.
+
+---
+
+## Continuous Integration
+
+**Selected Technology:** GitHub Actions
+
+GitHub Actions is used to automate Continuous Integration workflows.
+
+Each code change is automatically validated by executing development workflows such as:
+
+* Dependency installation
+* Static analysis
+* Automated testing
+* Docker image builds
+
+This helps ensure that code quality is continuously validated before deployment.
+
+---
+
+## Frontend Deployment
+
+**Selected Technology:** Vercel
+
+The frontend is deployed using Vercel.
+
+Vercel integrates directly with GitHub and automatically builds and deploys the frontend whenever new changes are pushed to the repository.
+
+This provides a simple deployment workflow while allowing rapid iteration during development.
+
+Backend deployment remains outside the scope of the current implementation and may be introduced as part of future production deployment.
+
+---
+
+## Infrastructure Summary
+
+| Component | Selected Technology |
+|-----------|---------------------|
+| Containerization | Docker |
+| Local Environment | Docker Compose |
+| Scheduled Processing | APScheduler |
+| Logging & Observability | OpenSearch |
+| Continuous Integration | GitHub Actions |
+| Frontend Deployment | Vercel |
