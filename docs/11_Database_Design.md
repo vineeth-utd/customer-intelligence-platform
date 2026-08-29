@@ -1,0 +1,134 @@
+# 1. Database Design Goals
+
+The Database Design defines how the Customer Intelligence Platform's business data is physically organized and stored within PostgreSQL.
+
+Building upon the logical data architecture established in the previous design documents, this document translates business entities, data products, and relationships into an implementation-ready relational database schema. It defines the operational tables, derived tables, event tables, and investigation tables that together form the platform's persistent data layer.
+
+Rather than focusing on database-specific implementation details such as SQL syntax or migration scripts, this document defines the database schema, table responsibilities, relationships, and key design decisions that guide implementation.
+
+The database should remain aligned with the platform's architecture while providing a reliable, scalable, and maintainable foundation for business operations, analytics, and AI-assisted investigations.
+
+Specifically, the database should:
+
+* Organize business data into well-defined relational tables.
+* Maintain operational business data as the platform's source of truth.
+* Preserve complete business event history through immutable event storage.
+* Support efficient generation of derived business data products.
+* Maintain referential integrity across related business entities.
+* Enable efficient querying for dashboards, analytics, and AI investigations.
+* Remain normalized while allowing appropriate optimization for analytical workloads.
+* Support future platform growth without requiring significant schema redesign.
+
+Throughout this document, every database design decision should answer one fundamental question:
+
+> **How should this business information be represented within the database?**
+
+Maintaining a well-defined database schema ensures that business data remains consistent, traceable, and aligned with the overall system architecture while providing a stable foundation for backend services, analytics, and AI capabilities.
+
+---
+
+# 2. Database Design Overview
+
+The Customer Intelligence Platform uses PostgreSQL as its primary database to store operational business data, historical business events, derived business data products, and investigation records.
+
+The database schema is designed to reflect the logical data architecture established earlier while providing a normalized and implementation-ready relational model. Each category of data has a clearly defined purpose, ensuring that operational business data remains the platform's source of truth while derived data and investigation data support analytics and AI-assisted workflows.
+
+At a high level, business data flows through the database as illustrated below.
+
+```text
+Merchant & Shopper Events
+            │
+            ▼
+      Event Tables
+            │
+            ▼
+   Operational Tables
+            │
+            ▼
+    Derived Tables
+            │
+     ┌──────┴──────┐
+     ▼             ▼
+ Dashboards   AI Knowledge Pipeline
+
+            Investigation
+                 │
+                 ▼
+      Investigation Tables
+```
+
+The database is organized into four logical categories of tables:
+
+* **Event Tables** preserve the immutable history of merchant, shopper, campaign, and platform events.
+* **Operational Tables** maintain the current business state and serve as the platform's source of truth.
+* **Derived Tables** store analytics-ready data products generated from operational data to support dashboards and business intelligence.
+* **Investigation Tables** maintain AI investigation history, supporting evidence, and user conversations.
+
+Although these categories represent different stages of the data lifecycle, they coexist within the same relational database and work together to support the platform's business workflows.
+
+This organization ensures that transactional operations, analytical queries, and AI-assisted investigations all operate on a consistent and well-structured data foundation while maintaining clear ownership of business data throughout its lifecycle.
+
+---
+
+# 3. Database Organization
+
+The database is organized into logical categories of tables based on the role they play within the platform rather than the business domain they represent.
+
+This organization mirrors the platform's data lifecycle, allowing operational data, historical events, derived business data, and AI investigation data to coexist within a single relational database while maintaining clear ownership and responsibilities for each category.
+
+The overall organization is illustrated below.
+
+```text
+                   PostgreSQL
+                        │
+      ┌─────────────────┼─────────────────┐
+      ▼                 ▼                 ▼
+ Event Tables    Operational Tables   Investigation Tables
+                        │
+                        ▼
+                 Derived Tables
+```
+
+## 3.1 Event Tables
+
+Event Tables store the immutable history of business activity generated by merchants, shoppers, campaigns, and the platform itself.
+
+These tables preserve the original events received by the platform and support auditing, replay, debugging, and regeneration of downstream business data.
+
+---
+
+## 3.2 Operational Tables
+
+Operational Tables represent the current state of the business and serve as the platform's primary source of truth.
+
+They store the core business entities used throughout the platform, including merchants, shoppers, products, orders, campaigns, and platform features.
+
+All business operations performed by the backend are ultimately persisted within these tables.
+
+---
+
+## 3.3 Derived Tables
+
+Derived Tables contain analytics-ready business data generated from the operational tables.
+
+These tables support dashboards, reporting, business intelligence, and AI-assisted investigations by organizing operational data into forms that are easier to query and consume.
+
+Since they are generated from operational data, they can be refreshed or regenerated whenever business logic evolves.
+
+---
+
+## 3.4 Investigation Tables
+
+Investigation Tables maintain the history of AI-assisted investigations performed within the platform.
+
+They store investigation metadata, user conversations, supporting evidence, and other information required to preserve investigation history and support follow-up interactions.
+
+These tables complement the operational business data without becoming part of the platform's source of truth.
+
+---
+
+## 3.5 Why This Organization Matters
+
+Organizing the database into logical table categories provides a clear separation between transactional business data, historical event data, analytical data products, and AI investigation data.
+
+This structure keeps the database easy to understand, simplifies maintenance, and ensures that each category of data evolves independently while remaining consistent with the platform's overall architecture.
