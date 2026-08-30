@@ -640,7 +640,8 @@ Its responsibilities include:
 
 * Receiving incoming events.
 * Validating event structure.
-* Delegating processing to the appropriate business services.
+* Determining the event type.
+* Delegating processing to the appropriate business services based on the event type.
 * Recording processing outcomes.
 * Supporting retry mechanisms for failed events.
 

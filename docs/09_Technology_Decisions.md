@@ -213,39 +213,51 @@ Incoming events are processed through a structured ingestion pipeline before bec
 The high-level processing flow is illustrated below.
 
 ```text
-Event Generator
-        │
-        ▼
-Kafka
-        │
-        ▼
-Consumer
-        │
-        ▼
-Validation
-        │
-        ▼
-Normalization
-        │
-        ▼
-Optional Enrichment
-        │
-        ▼
-Raw Event Storage
-        │
-        ▼
-Operational Business Data
+Merchant Event Generator      Shopper Event Generator      Campaign Event Generator
+            │                          │                            │
+            ▼                          ▼                            ▼
+   Merchant Events Topic      Shopper Events Topic      Campaign Events Topic
+            │                          │                            │
+            ▼                          ▼                            ▼
+    Merchant Consumer         Shopper Consumer         Campaign Consumer
+            │                          │                            │
+            ▼                          ▼                            ▼
+        Event Tables              Event Tables              Event Tables
+                      │
+                      ▼
+               Business Services
+                      │
+                      ▼
+          Operational Business Data
 ```
 
-The processing pipeline performs:
+Each business domain publishes events to a dedicated Kafka topic, allowing consumers to process merchant, shopper, and campaign events independently.
 
-* Schema validation
-* Required field validation
-* Data normalization
-* Optional data enrichment
-* Idempotent writes to operational business data
+Consumers first persist incoming events into the corresponding event tables before delegating processing to the appropriate business services based on the event type.
 
-Kafka offsets are committed only after successful processing, allowing failed messages to be safely retried without data loss.
+Business services perform deterministic processing to update the platform's operational business data while preserving the original event history for auditing, replay, and downstream processing.
+
+This design keeps event ingestion reliable, scalable, and fully aligned with the platform's layered backend architecture.
+
+---
+
+## Event Routing Strategy
+
+The platform follows a deterministic event processing strategy.
+
+Business events are first categorized by Kafka topic according to their business domain.
+
+For example:
+
+* Merchant Events
+* Shopper Events
+* Campaign Events
+
+Dedicated consumers process each topic independently before routing events based on their `event_type`.
+
+Rather than relying on AI or dynamic interpretation, each event type maps deterministically to the appropriate backend business service responsible for updating the platform's operational business data.
+
+This approach ensures predictable behaviour, simplifies debugging, and maintains consistency across all event-driven workflows.
 
 ---
 
