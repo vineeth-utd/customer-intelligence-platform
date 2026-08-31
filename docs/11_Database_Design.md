@@ -132,3 +132,993 @@ These tables complement the operational business data without becoming part of t
 Organizing the database into logical table categories provides a clear separation between transactional business data, historical event data, analytical data products, and AI investigation data.
 
 This structure keeps the database easy to understand, simplifies maintenance, and ensures that each category of data evolves independently while remaining consistent with the platform's overall architecture.
+
+---
+
+# 4. Database Tables
+
+The Customer Intelligence Platform organizes its relational schema into four logical categories of tables. Each category represents a different type of business information and serves a distinct purpose within the platform.
+
+This section defines the tables that make up each category together with their purpose, relationships, and important business attributes.
+
+---
+
+## 4.1 Operational Tables
+
+Operational Tables represent the current state of the business and form the platform's primary source of truth.
+
+These tables store the core business entities that are continuously accessed and updated by backend services. Unlike event tables, they represent the latest state of each business object rather than its historical evolution.
+
+---
+
+### Merchant
+
+**Purpose**
+
+Stores the current operational information for merchants using the platform.
+
+**Primary Key**
+
+`merchant_id`
+
+**Important Columns**
+
+`merchant_id, shopify_store_id, merchant_name, email, country, timezone, app_install_status, last_install_status_updated_at, last_active_at, created_at, updated_at`
+
+**Relationships**
+
+* One Merchant has one active Subscription.
+* One Merchant owns many Products.
+* One Merchant owns many Campaigns.
+* One Merchant has many Shoppers.
+* One Merchant receives many Orders.
+* One Merchant enables many Platform Features.
+* One Merchant defines many Shopper Segments.
+
+**Indexes**
+
+* Primary Key (`merchant_id`)
+* Unique (`shopify_store_id`)
+* Index (`app_install_status`)
+* Index (`last_active_at`)
+
+---
+
+### Subscription Plan
+
+**Purpose**
+
+Defines the subscription plans offered by the platform together with their pricing.
+
+**Primary Key**
+
+`plan_id`
+
+**Important Columns**
+
+`plan_id, plan_name, description, monthly_price, annual_price, created_at, updated_at`
+
+**Relationships**
+
+* One Subscription Plan is used by many Subscriptions.
+* One Subscription Plan provides access to many Platform Features.
+
+---
+
+### Subscription
+
+**Purpose**
+
+Stores the current subscription associated with each merchant.
+
+**Primary Key**
+
+`subscription_id`
+
+**Important Columns**
+
+`subscription_id, merchant_id, plan_id, status, billing_cycle, amount_paid, started_at, renewal_at, cancelled_at, created_at, updated_at`
+
+**Relationships**
+
+* One Subscription belongs to one Merchant.
+* One Subscription references one Subscription Plan.
+
+**Indexes**
+
+* Primary Key (`subscription_id`)
+* Index (`merchant_id`)
+* Index (`status`)
+
+---
+
+### Platform Feature
+
+**Purpose**
+
+Defines the platform features that merchants can access and enable.
+
+Examples include Wishlist, Save For Later, Back in Stock, Recommendations, Nudges, Multiple Wishlists, and third-party integrations.
+
+**Primary Key**
+
+`feature_id`
+
+**Important Columns**
+
+`feature_id, feature_name, feature_category, description, created_at, updated_at`
+
+**Relationships**
+
+* One Platform Feature can belong to many Subscription Plans.
+* One Platform Feature can be enabled by many Merchants.
+
+---
+
+### Plan Feature
+
+**Purpose**
+
+Defines which platform features are available for each subscription plan.
+
+**Primary Key**
+
+Composite Primary Key (`plan_id`, `feature_id`)
+
+**Relationships**
+
+* Many-to-Many between Subscription Plan and Platform Feature.
+
+---
+
+### Merchant Feature
+
+**Purpose**
+
+Stores the current feature configuration for each merchant.
+
+**Primary Key**
+
+Composite Primary Key (`merchant_id`, `feature_id`)
+
+**Important Columns**
+
+`merchant_id, feature_id, is_enabled, updated_at`
+
+**Relationships**
+
+* Many-to-Many between Merchant and Platform Feature.
+
+---
+
+### Shopper
+
+**Purpose**
+
+Stores the current operational information for shoppers belonging to merchants.
+
+**Primary Key**
+
+`shopper_id`
+
+**Important Columns**
+
+`shopper_id, merchant_id, email, first_name, last_name, country, state, city, timezone, first_seen_at, last_seen_at, created_at, updated_at`
+
+**Relationships**
+
+* One Shopper belongs to one Merchant.
+* One Shopper places many Orders.
+
+**Indexes**
+
+* Primary Key (`shopper_id`)
+* Unique (`merchant_id`, `email`)
+* Index (`merchant_id`)
+* Index (`last_seen_at`)
+
+---
+
+### Shopper Segment
+
+**Purpose**
+
+Defines the logical shopper segments available within a merchant's store.
+
+This table stores the segment definition rather than the shoppers belonging to the segment. Segment memberships are generated separately and maintained as derived data.
+
+**Primary Key**
+
+`segment_id`
+
+**Important Columns**
+
+`segment_id, merchant_id, segment_name, segment_definition, created_at, updated_at`
+
+**Relationships**
+
+* One Shopper Segment belongs to one Merchant.
+* One Shopper Segment can be referenced by many Campaigns.
+
+---
+
+### Product
+
+**Purpose**
+
+Stores the products offered by merchants.
+
+**Primary Key**
+
+`product_id`
+
+**Important Columns**
+
+`product_id, merchant_id, product_name, category, status, created_at, updated_at`
+
+**Relationships**
+
+* One Product belongs to one Merchant.
+* One Product has many Product Variants.
+
+---
+
+### Product Variant
+
+**Purpose**
+
+Stores the purchasable variants of a product.
+
+Shoppers interact with product variants through wishlist, cart, checkout, and order workflows.
+
+**Primary Key**
+
+`variant_id`
+
+**Important Columns**
+
+`variant_id, product_id, sku, variant_name, price, currency, inventory_quantity, status, created_at, updated_at`
+
+**Relationships**
+
+* One Product Variant belongs to one Product.
+* One Product Variant can appear in many Order Items.
+
+---
+
+### Campaign
+
+**Purpose**
+
+Stores merchant-created marketing campaigns.
+
+**Primary Key**
+
+`campaign_id`
+
+**Important Columns**
+
+`campaign_id, merchant_id, segment_id, campaign_name, campaign_type, campaign_medium, status, start_at, end_at, created_at, updated_at`
+
+**Relationships**
+
+* One Campaign belongs to one Merchant.
+* One Campaign targets one Shopper Segment.
+
+---
+
+### Order
+
+**Purpose**
+
+Stores customer orders placed with merchants.
+
+**Primary Key**
+
+`order_id`
+
+**Important Columns**
+
+`order_id, merchant_id, shopper_id, order_status, currency, total_amount, placed_at, completed_at, created_at, updated_at`
+
+**Relationships**
+
+* One Order belongs to one Merchant.
+* One Order belongs to one Shopper.
+* One Order contains many Order Items.
+
+---
+
+### Order Item
+
+**Purpose**
+
+Stores the individual product variants purchased within an order.
+
+**Primary Key**
+
+`order_item_id`
+
+**Important Columns**
+
+`order_item_id, order_id, variant_id, quantity, unit_price, line_total`
+
+**Relationships**
+
+* One Order Item belongs to one Order.
+* One Order Item references one Product Variant.
+
+---
+
+## 4.2 Event Tables
+
+Event Tables preserve the immutable history of business activity received or generated by the platform.
+
+Merchant, shopper, and campaign events are received through their respective Kafka topics and stored in domain-specific event tables. Each event is processed deterministically based on its `event_type`, after which the appropriate Business Services update the operational tables.
+
+Event-specific attributes are stored within a JSONB `payload`, allowing different event types to carry different information without introducing large numbers of nullable columns.
+
+---
+
+### Merchant Event
+
+**Purpose**
+
+Stores events representing merchant lifecycle, subscription, feature adoption, configuration, and platform activity.
+
+Example event types include:
+
+`MERCHANT_CREATED, APP_INSTALLED, APP_UNINSTALLED, SUBSCRIPTION_STARTED, SUBSCRIPTION_RENEWED, SUBSCRIPTION_UPGRADED, SUBSCRIPTION_DOWNGRADED, SUBSCRIPTION_CANCELLED, FEATURE_ENABLED, FEATURE_DISABLED, MERCHANT_CONFIGURATION_UPDATED, MERCHANT_LOGIN`
+
+**Primary Key**
+
+`merchant_event_id`
+
+**Important Columns**
+
+`merchant_event_id, merchant_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+
+**Relationships**
+
+* One Merchant can have many Merchant Events.
+* Individual event types may update Merchant, Subscription, or Merchant Feature operational data.
+
+**Indexes**
+
+* Primary Key (`merchant_event_id`)
+* Index (`merchant_id`, `event_timestamp`)
+* Index (`event_type`)
+* Index (`processed`)
+
+---
+
+### Shopper Event
+
+**Purpose**
+
+Stores behavioural events generated as shoppers interact with merchant storefronts and platform features.
+
+Example event types include:
+
+`SESSION_STARTED, SESSION_ENDED, PRODUCT_VIEWED, PRODUCT_SEARCHED, WISHLIST_ADDED, WISHLIST_REMOVED, SAVE_FOR_LATER_ADDED, SAVE_FOR_LATER_REMOVED, ADD_TO_CART, REMOVE_FROM_CART, CHECKOUT_STARTED, PURCHASE_COMPLETED, RECOMMENDATION_VIEWED, RECOMMENDATION_CLICKED`
+
+Events that relate to a specific product variant include the relevant identifier within the event payload, while events such as session activity or checkout initiation do not require a product association.
+
+**Primary Key**
+
+`shopper_event_id`
+
+**Important Columns**
+
+`shopper_event_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+
+**Relationships**
+
+* One Merchant can have many Shopper Events.
+* One Shopper can have many Shopper Events.
+* Event payloads may reference Product Variants, Orders, or other relevant business entities.
+
+**Indexes**
+
+* Primary Key (`shopper_event_id`)
+* Index (`merchant_id`, `event_timestamp`)
+* Index (`shopper_id`, `event_timestamp`)
+* Index (`event_type`)
+* Index (`processed`)
+
+---
+
+### Campaign Event
+
+**Purpose**
+
+Stores delivery-level and engagement-level events generated by merchant campaigns.
+
+Each campaign interaction is stored independently. For example, a campaign delivering emails to multiple shoppers generates individual delivery events rather than a single aggregate campaign delivery event.
+
+Example event types include:
+
+`EMAIL_DELIVERED, EMAIL_OPENED, EMAIL_CLICKED, SMS_DELIVERED, SMS_CLICKED, PUSH_DELIVERED, PUSH_OPENED, AD_VIEWED, AD_CLICKED, CAMPAIGN_CONVERTED`
+
+**Primary Key**
+
+`campaign_event_id`
+
+**Important Columns**
+
+`campaign_event_id, campaign_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+
+**Relationships**
+
+* One Campaign can have many Campaign Events.
+* One Shopper can generate many Campaign Events.
+* Campaign Events can later be correlated with Shopper Events and Orders to support campaign attribution and customer journey analysis.
+
+**Indexes**
+
+* Primary Key (`campaign_event_id`)
+* Index (`campaign_id`, `event_timestamp`)
+* Index (`shopper_id`, `event_timestamp`)
+* Index (`event_type`)
+* Index (`processed`)
+
+---
+
+### Platform Event
+
+**Purpose**
+
+Stores events generated internally by platform processes rather than external merchant, shopper, or campaign activity.
+
+Examples include:
+
+`MERCHANT_PROFILE_GENERATED, SHOPPER_PROFILE_GENERATED, SEGMENT_MEMBERSHIP_REFRESHED, BUSINESS_METRICS_GENERATED, AI_KNOWLEDGE_GENERATED, RECOMMENDATION_GENERATED, SCHEDULED_JOB_COMPLETED`
+
+Platform Events are written by internal backend processes after the corresponding operation occurs and do not require ingestion through Kafka in Version 1.
+
+**Primary Key**
+
+`platform_event_id`
+
+**Important Columns**
+
+`platform_event_id, event_type, event_version, event_timestamp, payload, source, created_at`
+
+**Indexes**
+
+* Primary Key (`platform_event_id`)
+* Index (`event_type`)
+* Index (`event_timestamp`)
+
+---
+
+### Event Processing State
+
+Events received through Kafka are initially persisted with `processed = false` and `processed_at = null`.
+
+After the event has been successfully processed and the required operational business data has been updated, the event is marked as processed.
+
+```text
+Kafka Event
+     │
+     ▼
+Event Table
+     │
+     ▼
+Determine Event Type
+     │
+     ▼
+Business Service
+     │
+     ▼
+Operational Tables
+     │
+     ▼
+processed = true
+processed_at = timestamp
+     │
+     ▼
+Kafka Offset Commit
+```
+
+Processing remains deterministic and does not involve AI. The `event_type` identifies the required business operation, while `event_version` identifies the expected structure of the event payload and allows event schemas to evolve without breaking existing consumers.
+
+Event tables remain append-only after ingestion except for processing metadata such as `processed` and `processed_at`, preserving the original business event for auditing, replay, debugging, and future reprocessing.
+
+---
+
+## 4.3 Derived Tables
+
+Derived Tables store analytics-ready business data generated from the platform's event and operational data.
+
+These tables are not sources of truth. They are generated using deterministic business logic and can be refreshed or regenerated whenever the underlying business data or calculation logic changes.
+
+Derived data is organized into profiles, journeys, segmentation, merchant intelligence, campaign analytics, and business metrics.
+
+---
+
+### Profiles
+
+Profiles provide consolidated, current business representations of merchants and shoppers.
+
+#### Merchant Profile
+
+**Purpose**
+
+Provides an analytics-ready representation of a merchant's overall business activity and performance.
+
+**Primary Key**
+
+`merchant_id`
+
+**Important Columns**
+
+`merchant_id, total_shoppers, total_products, total_orders, total_revenue, average_order_value, conversion_rate, total_campaigns, active_campaign_count, enabled_feature_count, last_order_at, last_campaign_at, generated_at`
+
+**Relationships**
+
+* One Merchant has one Merchant Profile.
+
+Time-windowed measurements such as revenue or orders during the last 30 days are maintained through daily metrics rather than duplicated within the profile.
+
+---
+
+#### Shopper Profile
+
+**Purpose**
+
+Provides a consolidated representation of a shopper's purchasing behaviour, engagement, and preferences.
+
+**Primary Key**
+
+`shopper_id`
+
+**Important Columns**
+
+`shopper_id, total_orders, total_spend, average_order_value, customer_lifetime_value, purchase_frequency, wishlist_item_count, save_for_later_item_count, cart_abandonment_count, campaign_engagement_count, preferred_category, preferred_size, last_purchase_at, last_activity_at, lifecycle_stage, generated_at`
+
+**Relationships**
+
+* One Shopper has one Shopper Profile.
+
+`total_spend` represents historical spending, while `customer_lifetime_value` represents an estimated customer value calculated from shopper purchasing behaviour.
+
+---
+
+### Journeys
+
+Journeys organize chronological business events into meaningful sequences that represent how shoppers and merchants interact with the platform over time.
+
+Journey construction remains deterministic. Events are grouped using entity identity, event timestamps, session information, and configured journey boundaries such as periods of inactivity or completed purchases.
+
+AI-generated journey summaries are created separately by the AI Knowledge Pipeline and are not stored as derived business truth.
+
+#### Customer Journey
+
+**Purpose**
+
+Represents a sequence of related shopper interactions within a merchant's store.
+
+**Primary Key**
+
+`journey_id`
+
+**Important Columns**
+
+`journey_id, merchant_id, shopper_id, started_at, ended_at, journey_status, converted, order_id, entry_source, generated_at`
+
+**Relationships**
+
+* One Shopper can have many Customer Journeys.
+* One Customer Journey can contain many Customer Journey Events.
+* A converted Customer Journey may reference an Order.
+
+---
+
+#### Customer Journey Event
+
+**Purpose**
+
+Associates individual business events with a Customer Journey while preserving their chronological order and source lineage.
+
+**Primary Key**
+
+`journey_event_id`
+
+**Important Columns**
+
+`journey_event_id, journey_id, source_event_category, source_event_id, event_type, event_timestamp, sequence_number`
+
+**Relationships**
+
+* One Customer Journey contains many Customer Journey Events.
+* Each Journey Event references the originating business event.
+
+---
+
+#### Merchant Journey
+
+**Purpose**
+
+Represents the evolution of a merchant's relationship with the platform across onboarding, subscription activity, feature adoption, campaign usage, engagement, and lifecycle changes.
+
+**Primary Key**
+
+`merchant_journey_id`
+
+**Important Columns**
+
+`merchant_journey_id, merchant_id, started_at, ended_at, journey_status, generated_at`
+
+**Relationships**
+
+* One Merchant can have multiple Merchant Journeys.
+* One Merchant Journey contains many Merchant Journey Events.
+
+---
+
+#### Merchant Journey Event
+
+**Purpose**
+
+Associates merchant lifecycle events with a Merchant Journey while preserving their chronological sequence and source lineage.
+
+**Primary Key**
+
+`merchant_journey_event_id`
+
+**Important Columns**
+
+`merchant_journey_event_id, merchant_journey_id, source_event_id, event_type, event_timestamp, sequence_number`
+
+**Relationships**
+
+* One Merchant Journey contains many Merchant Journey Events.
+* Each Merchant Journey Event references the originating Merchant Event.
+
+---
+
+### Segmentation
+
+#### Shopper Segment Member
+
+**Purpose**
+
+Stores the shoppers that currently satisfy each operational Shopper Segment definition.
+
+Segment membership is generated deterministically by evaluating segment rules against shopper profiles, journeys, orders, and other relevant business data.
+
+**Primary Key**
+
+Composite Primary Key (`segment_id`, `shopper_id`)
+
+**Important Columns**
+
+`segment_id, shopper_id, generated_at`
+
+**Relationships**
+
+* One Shopper Segment can contain many Shoppers.
+* One Shopper can belong to many Shopper Segments.
+
+Segment membership represents the current generated state and can be regenerated as shopper behaviour changes.
+
+---
+
+### Merchant Intelligence
+
+#### Merchant Health
+
+**Purpose**
+
+Provides a deterministic assessment of merchant health using merchant engagement, feature adoption, business performance, subscription activity, and lifecycle signals.
+
+**Primary Key**
+
+`merchant_id`
+
+**Important Columns**
+
+`merchant_id, health_score, health_status, churn_risk_score, engagement_score, feature_adoption_score, business_performance_score, calculated_at`
+
+**Relationships**
+
+* One Merchant has one current Merchant Health assessment.
+
+`health_status` categorizes the overall health score into business states such as `HEALTHY`, `NEEDS_ATTENTION`, and `AT_RISK`.
+
+The underlying scores are calculated using deterministic business rules. AI may explain the resulting assessment but does not generate the authoritative health scores.
+
+---
+
+### Campaign Analytics
+
+Campaign analytics are maintained at both daily and lifetime levels, allowing the platform to support time-series analysis while providing efficient access to overall campaign performance.
+
+#### Campaign Analytics Daily
+
+**Purpose**
+
+Stores daily campaign delivery, engagement, conversion, and attributed revenue metrics.
+
+**Primary Key**
+
+Composite Primary Key (`campaign_id`, `metric_date`)
+
+**Important Columns**
+
+`campaign_id, metric_date, delivered_count, opened_count, clicked_count, converted_count, attributed_order_count, attributed_revenue, open_rate, click_through_rate, conversion_rate, generated_at`
+
+**Relationships**
+
+* One Campaign has many daily Campaign Analytics records.
+
+---
+
+#### Campaign Analytics
+
+**Purpose**
+
+Stores the current lifetime performance summary for a campaign.
+
+**Primary Key**
+
+`campaign_id`
+
+**Important Columns**
+
+`campaign_id, delivered_count, opened_count, clicked_count, converted_count, attributed_order_count, attributed_revenue, open_rate, click_through_rate, conversion_rate, generated_at`
+
+**Relationships**
+
+* One Campaign has one current Campaign Analytics summary.
+
+Campaign attribution is derived by correlating campaign interactions with subsequent shopper journeys and orders.
+
+---
+
+### Business Metrics
+
+Business metrics are stored at a daily grain and aggregated at query time to support arbitrary analytical periods such as the last 7 days, last 30 days, monthly trends, or custom date ranges.
+
+This avoids maintaining separate datasets for every possible reporting window while providing efficient time-series analysis.
+
+---
+
+#### Merchant Metrics Daily
+
+**Purpose**
+
+Stores daily commerce, shopper engagement, conversion funnel, and platform engagement metrics for each merchant.
+
+**Primary Key**
+
+Composite Primary Key (`merchant_id`, `metric_date`)
+
+**Important Columns**
+
+`merchant_id, metric_date, revenue, order_count, unique_shoppers, new_shoppers, session_count, converted_session_count, product_view_count, wishlist_add_count, save_for_later_count, add_to_cart_count, checkout_count, purchase_count, conversion_rate, average_order_value, platform_login_count, campaign_created_count, feature_enable_count, feature_disable_count, generated_at`
+
+**Relationships**
+
+* One Merchant has many daily Merchant Metrics records.
+
+Conversion rate is calculated using converted sessions relative to total sessions.
+
+Time-windowed merchant metrics are generated by aggregating the required daily records rather than storing separate 7-day, 30-day, or monthly values.
+
+---
+
+#### Platform Metrics Daily
+
+**Purpose**
+
+Stores daily platform-wide SaaS and business performance metrics.
+
+**Primary Key**
+
+`metric_date`
+
+**Important Columns**
+
+`metric_date, active_merchants, new_merchants, installed_merchants, uninstalled_merchants, new_subscriptions, subscription_upgrades, subscription_downgrades, subscription_cancellations, total_revenue, total_orders, active_shoppers, generated_at`
+
+These metrics support platform-wide dashboards and trend analysis for Product, Sales, Customer Success, and Leadership teams.
+
+---
+
+#### Feature Metrics Daily
+
+**Purpose**
+
+Stores daily adoption and usage metrics for individual platform features.
+
+**Primary Key**
+
+Composite Primary Key (`feature_id`, `metric_date`)
+
+**Important Columns**
+
+`feature_id, metric_date, eligible_merchant_count, enabled_merchant_count, active_merchant_count, feature_event_count, adoption_rate, usage_rate, generated_at`
+
+**Relationships**
+
+* One Platform Feature has many daily Feature Metrics records.
+
+These metrics support feature adoption analysis, product usage monitoring, and merchant health calculations.
+
+---
+
+### Metric Aggregation
+
+Daily metrics provide the common analytical grain used throughout the platform.
+
+```text
+Daily Metrics
+     │
+     ├──── Last 7 Days
+     ├──── Last 30 Days
+     ├──── Monthly
+     ├──── Quarterly
+     └──── Custom Date Range
+```
+
+Additive metrics such as revenue, orders, and event counts can be aggregated directly across daily records.
+
+Calculated metrics such as conversion rate and average order value are recalculated from their underlying counts and totals rather than averaging daily percentages. This ensures that aggregated metrics remain mathematically accurate across different reporting periods.
+
+---
+
+## 4.4 Investigation Tables
+
+Investigation Tables maintain the durable history of AI-assisted investigations performed within the platform.
+
+They preserve user conversations, tool executions, supporting evidence, and investigation metadata so that investigations can be resumed, audited, reviewed, and referenced later.
+
+The relational database stores the authoritative investigation history, while retrieval-oriented investigation summaries are generated separately and stored within the AI Knowledge Layer.
+
+---
+
+### Investigation
+
+**Purpose**
+
+Represents a complete AI-assisted business investigation initiated by a user.
+
+An investigation may focus on a specific merchant or represent a broader platform-level business question.
+
+**Primary Key**
+
+`investigation_id`
+
+**Important Columns**
+
+`investigation_id, created_by, merchant_id, title, objective, status, started_at, completed_at, created_at, updated_at`
+
+**Relationships**
+
+* One Investigation can contain many Investigation Messages.
+* One Investigation can contain many Tool Executions.
+* One Investigation can contain many Evidence records.
+* An Investigation may optionally reference a Merchant.
+
+`created_by` stores the application user identifier responsible for creating the investigation. This can later be replaced with a foreign key to the platform's user identity model when authentication is introduced.
+
+Investigation status may include values such as `ACTIVE`, `COMPLETED`, and `FAILED`.
+
+---
+
+### Investigation Message
+
+**Purpose**
+
+Stores the conversation between the user and the AI assistant throughout an investigation.
+
+System prompts and internal AI instructions are not stored as investigation messages because they remain part of the AI implementation rather than the user conversation history.
+
+**Primary Key**
+
+`message_id`
+
+**Important Columns**
+
+`message_id, investigation_id, role, content, sequence_number, created_at`
+
+**Relationships**
+
+* One Investigation can contain many Investigation Messages.
+
+`role` identifies whether the message was generated by the `USER` or `ASSISTANT`.
+
+`sequence_number` provides deterministic conversational ordering independent of message timestamps.
+
+---
+
+### Investigation Tool Execution
+
+**Purpose**
+
+Records the business tools executed by the Investigation Agent while gathering information for an investigation.
+
+This table provides an audit trail of what capabilities were invoked, what information was requested, and what sanitized information was made available to the AI.
+
+**Primary Key**
+
+`tool_execution_id`
+
+**Important Columns**
+
+`tool_execution_id, investigation_id, tool_name, tool_input, tool_output, status, started_at, completed_at`
+
+**Relationships**
+
+* One Investigation can contain many Tool Executions.
+* One Tool Execution can produce multiple Evidence records.
+
+`tool_input` and `tool_output` are stored as JSONB to support different tool contracts.
+
+`tool_output` represents the sanitized and minimized result provided to the Investigation Agent after AI Gateway policies such as data minimization and sensitive data masking have been applied. Raw internal query results are not unnecessarily duplicated within the investigation history.
+
+---
+
+### Investigation Evidence
+
+**Purpose**
+
+Stores the specific business evidence that materially supports the findings and conclusions produced during an investigation.
+
+Tool Executions describe what information was retrieved, while Investigation Evidence identifies which information was actually used to support the final explanation.
+
+**Primary Key**
+
+`evidence_id`
+
+**Important Columns**
+
+`evidence_id, investigation_id, tool_execution_id, evidence_type, source_type, source_reference, evidence_summary, created_at`
+
+**Relationships**
+
+* One Investigation can contain many Evidence records.
+* An Evidence record may reference the Tool Execution that retrieved it.
+* Evidence maintains traceability to the underlying business data used during the investigation.
+
+`evidence_summary` stores the relevant business observation used during the investigation.
+
+`source_type` identifies the type of underlying business information, such as merchant metrics, campaign analytics, merchant profiles, customer journeys, or AI knowledge.
+
+`source_reference` is stored as JSONB and contains the identifiers required to locate or reproduce the underlying source data without duplicating the complete business dataset.
+
+For example:
+
+```json
+{
+  "merchant_id": "merchant-123",
+  "start_date": "2026-08-01",
+  "end_date": "2026-08-30"
+}
+```
+
+This creates a traceable relationship between AI-generated findings and the authoritative business information supporting them.
+
+---
+
+### Investigation Persistence Model
+
+The investigation tables collectively provide durable investigation context.
+
+```text
+Investigation
+     │
+     ├──── Investigation Messages
+     │
+     ├──── Tool Executions
+     │            │
+     │            └──── Evidence
+     │
+     └──── Investigation Evidence
+```
+
+During an active investigation, the Investigation Agent maintains temporary working context such as the current objective, collected evidence, intermediate findings, and investigation progress.
+
+The database preserves the durable investigation history required for follow-up conversations, auditing, explainability, and future retrieval. Completed investigations may subsequently be summarized by the AI Knowledge Pipeline and stored as retrieval-oriented knowledge without replacing the authoritative investigation records.
