@@ -167,7 +167,7 @@ Stores the current operational information for merchants using the platform.
 
 **Relationships**
 
-* One Merchant has one active Subscription.
+* One Merchant can have many Subscriptions over time, with at most one active Subscription.
 * One Merchant owns many Products.
 * One Merchant owns many Campaigns.
 * One Merchant has many Shoppers.
@@ -221,7 +221,7 @@ Stores the current subscription associated with each merchant.
 
 **Relationships**
 
-* One Subscription belongs to one Merchant.
+* One Merchant can have many Subscriptions over time, with at most one active Subscription.
 * One Subscription references one Subscription Plan.
 
 **Indexes**
@@ -472,11 +472,11 @@ Example event types include:
 
 **Primary Key**
 
-`merchant_event_id`
+`event_id`
 
 **Important Columns**
 
-`merchant_event_id, merchant_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, merchant_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 
@@ -485,7 +485,7 @@ Example event types include:
 
 **Indexes**
 
-* Primary Key (`merchant_event_id`)
+* Primary Key (`event_id`)
 * Index (`merchant_id`, `event_timestamp`)
 * Index (`event_type`)
 * Index (`processed`)
@@ -506,11 +506,11 @@ Events that relate to a specific product variant include the relevant identifier
 
 **Primary Key**
 
-`shopper_event_id`
+`event_id`
 
 **Important Columns**
 
-`shopper_event_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 
@@ -520,7 +520,7 @@ Events that relate to a specific product variant include the relevant identifier
 
 **Indexes**
 
-* Primary Key (`shopper_event_id`)
+* Primary Key (`event_id`)
 * Index (`merchant_id`, `event_timestamp`)
 * Index (`shopper_id`, `event_timestamp`)
 * Index (`event_type`)
@@ -542,11 +542,11 @@ Example event types include:
 
 **Primary Key**
 
-`campaign_event_id`
+`event_id`
 
 **Important Columns**
 
-`campaign_event_id, campaign_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, campaign_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 
@@ -556,7 +556,7 @@ Example event types include:
 
 **Indexes**
 
-* Primary Key (`campaign_event_id`)
+* Primary Key (`event_id`)
 * Index (`campaign_id`, `event_timestamp`)
 * Index (`shopper_id`, `event_timestamp`)
 * Index (`event_type`)
@@ -578,15 +578,15 @@ Platform Events are written by internal backend processes after the correspondin
 
 **Primary Key**
 
-`platform_event_id`
+`event_id`
 
 **Important Columns**
 
-`platform_event_id, event_type, event_version, event_timestamp, payload, source, created_at`
+`event_id, event_type, event_version, event_timestamp, payload, source, created_at`
 
 **Indexes**
 
-* Primary Key (`platform_event_id`)
+* Primary Key (`event_id`)
 * Index (`event_type`)
 * Index (`event_timestamp`)
 
@@ -627,11 +627,16 @@ Event tables remain append-only after ingestion except for processing metadata s
 
 ---
 
-## 4.3 Derived Tables
+## 4.3 Derived Tables and Materialized Views
 
-Derived Tables store analytics-ready business data generated from the platform's event and operational data.
+Derived data stores analytics-ready business information generated from the platform's event and operational data.
 
-These tables are not sources of truth. They are generated using deterministic business logic and can be refreshed or regenerated whenever the underlying business data or calculation logic changes.
+Derived data is not a source of truth. It is generated using deterministic business logic and can be refreshed or regenerated whenever the underlying business data or calculation logic changes.
+
+The platform uses two forms of derived persistence:
+
+* **Derived Tables** store incrementally generated business state and historical analytical data that is maintained over time.
+* **Materialized Views** provide reproducible aggregate summaries over derived and operational data where maintaining another physical table would unnecessarily duplicate calculated information.
 
 Derived data is organized into profiles, journeys, segmentation, merchant intelligence, campaign analytics, and business metrics.
 
@@ -640,6 +645,8 @@ Derived data is organized into profiles, journeys, segmentation, merchant intell
 ### Profiles
 
 Profiles provide consolidated, current business representations of merchants and shoppers.
+
+Profiles are maintained as derived tables because they are incrementally regenerated as the underlying business activity changes.
 
 #### Merchant Profile
 
@@ -833,9 +840,15 @@ The underlying scores are calculated using deterministic business rules. AI may 
 
 ### Campaign Analytics
 
-Campaign analytics are maintained at both daily and lifetime levels, allowing the platform to support time-series analysis while providing efficient access to overall campaign performance.
+Campaign analytics are maintained at both daily and lifetime levels.
+
+Daily analytics are persisted as historical derived data, while the current lifetime campaign summary is exposed through a materialized view generated from those daily records.
 
 #### Campaign Analytics Daily
+
+**Storage Type**
+
+Derived Table
 
 **Purpose**
 
@@ -853,39 +866,47 @@ Composite Primary Key (`campaign_id`, `metric_date`)
 
 * One Campaign has many daily Campaign Analytics records.
 
+Campaign attribution is derived by correlating campaign interactions with subsequent shopper journeys and orders.
+
 ---
 
 #### Campaign Analytics
 
+**Storage Type**
+
+Materialized View
+
 **Purpose**
 
-Stores the current lifetime performance summary for a campaign.
-
-**Primary Key**
-
-`campaign_id`
+Provides the current lifetime performance summary for each campaign by aggregating Campaign Analytics Daily records.
 
 **Important Columns**
 
-`campaign_id, delivered_count, opened_count, clicked_count, converted_count, attributed_order_count, attributed_revenue, open_rate, click_through_rate, conversion_rate, generated_at`
+`campaign_id, delivered_count, opened_count, clicked_count, converted_count, attributed_order_count, attributed_revenue, open_rate, click_through_rate, conversion_rate`
 
 **Relationships**
 
 * One Campaign has one current Campaign Analytics summary.
 
-Campaign attribution is derived by correlating campaign interactions with subsequent shopper journeys and orders.
+Additive metrics are aggregated from daily records, while rates are recalculated from their underlying counts rather than averaging daily percentages.
+
+Because this summary is fully reproducible from Campaign Analytics Daily, a materialized view avoids maintaining a second derived table containing duplicated lifetime metrics.
 
 ---
 
 ### Business Metrics
 
-Business metrics are stored at a daily grain and aggregated at query time to support arbitrary analytical periods such as the last 7 days, last 30 days, monthly trends, or custom date ranges.
+Business metrics are persisted at a daily grain and aggregated to support analytical periods such as the last 7 days, last 30 days, monthly trends, or custom date ranges.
 
-This avoids maintaining separate datasets for every possible reporting window while providing efficient time-series analysis.
+Daily records preserve historical analytical state, while selected frequently consumed current or lifetime summaries are exposed through materialized views.
 
 ---
 
 #### Merchant Metrics Daily
+
+**Storage Type**
+
+Derived Table
 
 **Purpose**
 
@@ -907,9 +928,15 @@ Conversion rate is calculated using converted sessions relative to total session
 
 Time-windowed merchant metrics are generated by aggregating the required daily records rather than storing separate 7-day, 30-day, or monthly values.
 
+A separate Merchant Metrics materialized view is not maintained because the Merchant Profile already provides the platform's current consolidated merchant-level business representation.
+
 ---
 
 #### Platform Metrics Daily
+
+**Storage Type**
+
+Derived Table
 
 **Purpose**
 
@@ -927,7 +954,31 @@ These metrics support platform-wide dashboards and trend analysis for Product, S
 
 ---
 
+#### Platform Metrics
+
+**Storage Type**
+
+Materialized View
+
+**Purpose**
+
+Provides a current platform-wide business summary by aggregating historical Platform Metrics Daily records together with the current operational state where required.
+
+**Important Columns**
+
+`total_merchants, active_merchants, total_revenue, total_orders, active_shoppers, active_subscriptions`
+
+The materialized view provides efficient access to frequently requested platform-level summary metrics without requiring dashboards to repeatedly aggregate the complete daily metric history.
+
+Historical and time-windowed platform analysis continues to use Platform Metrics Daily.
+
+---
+
 #### Feature Metrics Daily
+
+**Storage Type**
+
+Derived Table
 
 **Purpose**
 
@@ -949,6 +1000,28 @@ These metrics support feature adoption analysis, product usage monitoring, and m
 
 ---
 
+#### Feature Metrics
+
+**Storage Type**
+
+Materialized View
+
+**Purpose**
+
+Provides the current adoption and usage summary for each Platform Feature.
+
+**Important Columns**
+
+`feature_id, eligible_merchant_count, enabled_merchant_count, active_merchant_count, total_feature_events, adoption_rate, usage_rate`
+
+**Relationships**
+
+* One Platform Feature has one current Feature Metrics summary.
+
+The materialized view provides efficient feature-level comparisons and current adoption reporting while Feature Metrics Daily preserves historical usage and adoption trends.
+
+---
+
 ### Metric Aggregation
 
 Daily metrics provide the common analytical grain used throughout the platform.
@@ -961,11 +1034,15 @@ Daily Metrics
      ├──── Monthly
      ├──── Quarterly
      └──── Custom Date Range
+     │
+     └──── Selected Current / Lifetime Materialized Views
 ```
 
 Additive metrics such as revenue, orders, and event counts can be aggregated directly across daily records.
 
-Calculated metrics such as conversion rate and average order value are recalculated from their underlying counts and totals rather than averaging daily percentages. This ensures that aggregated metrics remain mathematically accurate across different reporting periods.
+Calculated metrics such as conversion rate, adoption rate, and average order value are recalculated from their underlying counts and totals rather than averaging daily percentages. This ensures that aggregated metrics remain mathematically accurate across different reporting periods.
+
+Materialized views are used only for frequently consumed aggregate summaries that are fully reproducible from the underlying data. They do not replace the daily metric tables or become independent sources of business truth.
 
 ---
 
@@ -1122,3 +1199,240 @@ Investigation
 During an active investigation, the Investigation Agent maintains temporary working context such as the current objective, collected evidence, intermediate findings, and investigation progress.
 
 The database preserves the durable investigation history required for follow-up conversations, auditing, explainability, and future retrieval. Completed investigations may subsequently be summarized by the AI Knowledge Pipeline and stored as retrieval-oriented knowledge without replacing the authoritative investigation records.
+
+---
+
+# 5. Relationships & Data Integrity
+
+The database enforces relationships and integrity rules to ensure that operational, event, derived, and investigation data remain consistent throughout the platform.
+
+Foreign keys, uniqueness constraints, lifecycle rules, and application-level validation work together to prevent invalid relationships while preserving the historical business data required for analytics, auditing, and AI-assisted investigations.
+
+---
+
+## 5.1 Referential Integrity
+
+Relationships between database entities are enforced through foreign keys wherever a direct relational dependency exists.
+
+Examples include:
+
+* Shoppers reference their Merchant.
+* Products reference their Merchant.
+* Product Variants reference their Product.
+* Orders reference their Merchant and Shopper.
+* Order Items reference their Order and Product Variant.
+* Campaigns reference their Merchant and target Shopper Segment.
+* Subscriptions reference their Merchant and Subscription Plan.
+* Derived records reference the operational entities from which they are generated.
+
+Foreign keys ensure that dependent records cannot reference business entities that do not exist.
+
+Merchant-scoped relationships are additionally validated by the Business Service Layer to ensure that related entities belong to the same Merchant.
+
+---
+
+## 5.2 Lifecycle and Deletion Rules
+
+Core business and historical records are retained rather than automatically deleted through cascading relationships.
+
+Lifecycle changes are represented through appropriate status fields. For example, an uninstalled merchant remains within the database with an updated installation status so that historical orders, events, campaigns, analytics, and investigations remain traceable.
+
+As a general rule:
+
+* Operational business records are retained when historical relationships depend on them.
+* Event records are preserved as historical business evidence.
+* Investigation records are preserved for auditability and explainability.
+* Derived records may be deleted and regenerated because they are reproducible from authoritative business data.
+
+Cascade deletion should therefore be used only for dependent data whose removal cannot destroy meaningful business history.
+
+---
+
+## 5.3 Uniqueness and Business Constraints
+
+Database constraints are used to enforce business rules that can be expressed reliably at the persistence layer.
+
+Important constraints include:
+
+* `shopify_store_id` uniquely identifies a Merchant.
+* (`merchant_id`, `email`) uniquely identifies a Shopper within a Merchant.
+* (`merchant_id`, `feature_id`) uniquely identifies a Merchant Feature configuration.
+* (`plan_id`, `feature_id`) uniquely identifies a Plan Feature entitlement.
+* (`segment_id`, `shopper_id`) uniquely identifies current Shopper Segment membership.
+* Daily metric tables contain at most one record for each entity and metric date.
+
+A Merchant may maintain multiple historical Subscription records, but can have at most one active Subscription at a time.
+
+Business rules that depend on multiple entities or workflow state are additionally enforced within the Business Service Layer.
+
+---
+
+## 5.4 Event Idempotency
+
+Every business event is assigned a globally unique UUID `event_id` when the event is created.
+
+For merchant, shopper, and campaign events, the identifier is generated by the event producer before the event is published to Kafka. Platform Events receive their identifier when they are generated internally.
+
+The same `event_id` remains associated with the event throughout ingestion, persistence, processing, replay, and lineage tracking.
+
+```text
+Event Producer
+      │
+      ▼
+Generate event_id
+      │
+      ▼
+Kafka
+      │
+      ▼
+Event Table
+      │
+      ▼
+Business Processing
+```
+
+`event_id` serves as the primary key of each event table, preventing a redelivered Kafka event from being persisted and processed as a new business event.
+
+This provides idempotent event processing while preserving a stable identifier that downstream data products can use for lineage and traceability.
+
+---
+
+## 5.5 Optional Relationships
+
+Relationships are required unless the underlying business relationship is genuinely optional.
+
+Examples of optional relationships include:
+
+* An Investigation may not reference a Merchant when investigating platform-wide behaviour.
+* A Customer Journey may not reference an Order when the journey does not result in a purchase.
+* Investigation Evidence may exist without a Tool Execution when the evidence originates from another supported investigation source.
+
+Nullable foreign keys are therefore introduced only where the business model explicitly permits the relationship to be absent.
+
+---
+
+## 5.6 Derived Data Integrity
+
+Derived data must always remain connected to the authoritative operational entities from which it was generated.
+
+Examples include:
+
+```text
+Merchant Profile       → Merchant
+Shopper Profile        → Shopper
+Merchant Health        → Merchant
+Campaign Analytics     → Campaign
+Shopper Segment Member → Shopper + Shopper Segment
+Feature Metrics Daily  → Platform Feature
+```
+
+Derived records may be refreshed or regenerated as business logic evolves, but they must never exist as orphaned records without their corresponding operational entities.
+
+This preserves traceability between analytical data products and the platform's source-of-truth business data.
+
+---
+
+# 6. Performance Considerations
+
+The database should support efficient operational queries, event processing, dashboards, analytics, and AI-assisted investigations without introducing unnecessary optimization complexity.
+
+Performance optimizations should be driven by actual access patterns and database growth rather than applied prematurely across the entire schema.
+
+---
+
+## 6.1 Indexing Strategy
+
+Indexes should primarily support frequently used filtering, relationship, and ordering patterns.
+
+Common indexing patterns include:
+
+* Primary and unique identifiers.
+* Foreign keys frequently used for entity retrieval.
+* Merchant-scoped queries.
+* Entity and timestamp combinations for chronological data.
+* Status fields used frequently for operational filtering.
+* Composite keys used by daily metrics and relationship tables.
+
+Composite indexes should reflect actual query patterns rather than indexing every possible column combination.
+
+---
+
+## 6.2 Event Querying
+
+Event tables are expected to become some of the largest tables within the platform.
+
+The primary access pattern is chronological retrieval for a particular merchant, shopper, or campaign. Composite indexes combining the relevant entity identifier with `event_timestamp` support these queries efficiently.
+
+Event payloads are stored as JSONB for schema flexibility. Generic JSONB indexes are not introduced initially because event routing and most retrieval operations rely on relational columns such as `event_id`, `event_type`, entity identifiers, and timestamps.
+
+Targeted JSONB indexes may be introduced if specific payload attributes later become frequent query paths.
+
+---
+
+## 6.3 Analytical Querying
+
+Daily metric tables provide the primary foundation for historical and time-series analytics.
+
+Queries for periods such as the last 7 days, last 30 days, monthly trends, or custom date ranges aggregate the required daily records rather than repeatedly processing raw event history.
+
+Frequently consumed current or lifetime analytical summaries are exposed through selected materialized views, including:
+
+* Campaign Analytics
+* Platform Metrics
+* Feature Metrics
+
+Profiles, Merchant Health, journeys, and other incrementally generated business data remain persisted as derived tables.
+
+This combination provides efficient analytical access while avoiding unnecessary duplication of derived information.
+
+---
+
+## 6.4 Materialized View Refresh
+
+Materialized views are refreshed as their underlying daily metrics change rather than maintained as independent sources of business data.
+
+Their refresh frequency should reflect the freshness requirements of the consuming dashboards and analytical workflows.
+
+Materialized views remain fully reproducible from their underlying data and can therefore be rebuilt whenever calculation logic or historical data changes.
+
+Additional materialized views should only be introduced when repeated analytical queries demonstrate a clear performance benefit.
+
+---
+
+## 6.5 Table Partitioning
+
+Event tables may eventually contain significantly more records than operational or derived tables.
+
+Time-based PostgreSQL partitioning using `event_timestamp` may be introduced when event volume justifies the additional operational complexity.
+
+Partitioning is not required initially. Appropriate indexing and query optimization should be used first, with partitioning introduced based on observed database growth and query performance.
+
+---
+
+## 6.6 Query Efficiency
+
+Database queries should retrieve only the information required by the requesting business capability.
+
+Large result sets should use filtering and pagination where appropriate. Analytical workloads should prefer profiles, daily metrics, materialized views, and other derived data products instead of repeatedly scanning raw event history.
+
+Database performance should be measured during implementation, with additional indexes, partitioning, caching, or query optimizations introduced only when supported by actual performance requirements.
+
+---
+
+# 7. Database Design Principles
+
+The database design follows a small set of principles that preserve consistency, traceability, performance, and maintainability throughout the platform.
+
+* Operational tables represent the current authoritative state of the business.
+* Event tables preserve historical business activity and use stable UUIDs for idempotent processing and lineage.
+* Core business and historical records are retained rather than removed through cascading deletion.
+* Relationships are enforced through foreign keys and business-level validation where appropriate.
+* Derived data remains reproducible from authoritative business data and never becomes a new source of truth.
+* Incrementally generated business state and historical analytical data are maintained as derived tables.
+* Reproducible, frequently consumed aggregate summaries may be exposed through materialized views instead of duplicating the same derived information across multiple tables.
+* Stable business definitions, such as Shopper Segments, remain operational while changing analytical state, such as Segment Membership, remains derived.
+* Daily metrics provide the common analytical grain from which larger reporting periods and aggregate summaries are calculated.
+* Calculated metrics are recomputed from their underlying values rather than incorrectly aggregating previously calculated percentages.
+* Database optimizations are introduced based on actual query patterns, data volume, and measured performance rather than anticipated scale.
+
+These principles ensure that PostgreSQL provides a reliable source-of-truth data foundation while efficiently supporting operational workflows, analytics, dashboards, data engineering pipelines, and AI-assisted investigations.
