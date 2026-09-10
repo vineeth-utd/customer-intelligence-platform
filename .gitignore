@@ -1,2 +1,11 @@
 # Docs
 docs/00_Project_Design_Journal.md
+
+# Python
+backend/.venv/
+# Python bytecode and caches (local development only)
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+# Local environment variables (do not commit secrets)
+backend/.env
