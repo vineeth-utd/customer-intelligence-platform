@@ -17,6 +17,10 @@ RUN uv sync --frozen --no-cache
 # Copy application source
 COPY app/ ./app/
 
+# Copy Alembic migration tooling
+COPY alembic.ini ./alembic.ini
+COPY migrations/ ./migrations/
+
 EXPOSE 8000
 
 # Run via uv so the project virtual environment is used
