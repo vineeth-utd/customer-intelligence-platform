@@ -1,5 +1,11 @@
 from app.models.campaign import Campaign
 from app.models.event import CampaignEvent, MerchantEvent, PlatformEvent, ShopperEvent
+from app.models.investigation import (
+    Investigation,
+    InvestigationEvidence,
+    InvestigationMessage,
+    InvestigationToolExecution,
+)
 from app.models.journey import CustomerJourney, CustomerJourneyEvent, MerchantJourney, MerchantJourneyEvent
 from app.models.merchant import (
     MerchantFeature,
@@ -29,6 +35,10 @@ __all__ = [
     "CustomerJourney",
     "CustomerJourneyEvent",
     "FeatureMetricsDaily",
+    "Investigation",
+    "InvestigationEvidence",
+    "InvestigationMessage",
+    "InvestigationToolExecution",
     "Merchant",
     "MerchantEvent",
     "MerchantFeature",
