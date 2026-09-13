@@ -10,6 +10,12 @@ from app.models.merchant import (
     SubscriptionPlan,
 )
 from app.models.merchant_health import MerchantHealth
+from app.models.metrics import (
+    CampaignAnalyticsDaily,
+    FeatureMetricsDaily,
+    MerchantMetricsDaily,
+    PlatformMetricsDaily,
+)
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductVariant
 from app.models.profile import MerchantProfile, ShopperProfile
@@ -18,21 +24,25 @@ from app.models.shopper import Shopper, ShopperSegment
 
 __all__ = [
     "Campaign",
+    "CampaignAnalyticsDaily",
     "CampaignEvent",
     "CustomerJourney",
     "CustomerJourneyEvent",
+    "FeatureMetricsDaily",
     "Merchant",
     "MerchantEvent",
     "MerchantFeature",
     "MerchantHealth",
     "MerchantJourney",
     "MerchantJourneyEvent",
+    "MerchantMetricsDaily",
     "MerchantProfile",
     "Order",
     "OrderItem",
     "PlanFeature",
     "PlatformEvent",
     "PlatformFeature",
+    "PlatformMetricsDaily",
     "Product",
     "ProductVariant",
     "Shopper",
