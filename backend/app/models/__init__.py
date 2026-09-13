@@ -1,4 +1,5 @@
 from app.models.campaign import Campaign
+from app.models.event import CampaignEvent, MerchantEvent, PlatformEvent, ShopperEvent
 from app.models.merchant import (
     MerchantFeature,
     Merchant,
@@ -13,15 +14,19 @@ from app.models.shopper import Shopper, ShopperSegment
 
 __all__ = [
     "Campaign",
+    "CampaignEvent",
     "Merchant",
+    "MerchantEvent",
     "MerchantFeature",
     "Order",
     "OrderItem",
     "PlanFeature",
+    "PlatformEvent",
     "PlatformFeature",
     "Product",
     "ProductVariant",
     "Shopper",
+    "ShopperEvent",
     "ShopperSegment",
     "Subscription",
     "SubscriptionPlan",
