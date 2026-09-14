@@ -97,6 +97,7 @@ services:
       POSTGRES_USER: cip_user
       POSTGRES_PASSWORD: cip_password
       POSTGRES_DB: cip_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       postgres:
         condition: service_healthy

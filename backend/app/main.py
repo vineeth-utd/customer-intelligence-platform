@@ -1,9 +1,28 @@
-from fastapi import FastAPI
-from app.config.settings import settings
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-app = FastAPI(title=settings.app_name)
+from fastapi import FastAPI
+
+from app.config.settings import settings
+from app.kafka.producer import event_producer
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    try:
+        await event_producer.start()
+    except Exception:
+        logger.warning("Kafka producer failed to start; continuing without Kafka publishing", exc_info=True)
+    yield
+    await event_producer.stop()
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "environment": settings.environment}
-

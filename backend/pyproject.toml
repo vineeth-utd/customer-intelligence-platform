@@ -5,6 +5,7 @@ description = "Customer Intelligence Platform Backend"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiokafka>=0.14.0",
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
     "fastapi>=0.141.1",
@@ -14,3 +15,12 @@ dependencies = [
     "sqlalchemy>=2.0.52,<2.1",
     "uvicorn>=0.52.4",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

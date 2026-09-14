@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     postgres_password: str = "cip_password"
     postgres_db: str = "cip_db"
 
+    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_merchant_events_topic: str = "cip.merchant.events"
+    kafka_shopper_events_topic: str = "cip.shopper.events"
+    kafka_campaign_events_topic: str = "cip.campaign.events"
+
     class Config:
         env_file = ".env"
 
