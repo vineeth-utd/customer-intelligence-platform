@@ -83,3 +83,21 @@ def test_tick_returns_valid_merchant_event_envelopes():
         for envelope in generator.tick():
             assert isinstance(envelope, MerchantEventEnvelope)
             assert envelope.event_version == 1
+
+
+def test_configuration_update_is_reflected_in_merchant_state():
+    generator = MerchantLifecycleGenerator(population_size=1, seed=5)
+    generator.generate_population()
+    state = generator._merchants[0]
+
+    observed_fields = set()
+    for _ in range(50):
+        envelopes = generator._perform_action(state, "config_update")
+        if not envelopes:
+            continue
+        field_name, new_value = next(iter(envelopes[0].payload["changed_values"].items()))
+        observed_fields.add(field_name)
+        if field_name in ("timezone", "country"):
+            assert getattr(state, field_name) == new_value
+
+    assert {"timezone", "country"}.issubset(observed_fields)

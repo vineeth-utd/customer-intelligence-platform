@@ -185,6 +185,10 @@ class MerchantLifecycleGenerator:
         if action == "config_update":
             field_name = self._rng.choice(_CONFIG_FIELDS)
             new_value = self._new_config_value(field_name, state)
+            if field_name == "timezone":
+                state.timezone = new_value
+            elif field_name == "country":
+                state.country = new_value
             return [
                 self._build_envelope(
                     state,
