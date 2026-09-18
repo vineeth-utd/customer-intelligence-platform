@@ -7,11 +7,12 @@ from pydantic import ValidationError
 
 from app.config.settings import settings
 from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
-from app.data_access.product_events import insert_product_event
+from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
 from app.db.session import AsyncSessionLocal
 from app.schemas.events.envelope import MerchantEventEnvelope, ProductEventEnvelope
 from app.schemas.events.registry import get_payload_schema
 from app.services.merchant import process_merchant_event
+from app.services.product import process_product_event
 
 logger = logging.getLogger(__name__)
 
@@ -161,21 +162,24 @@ merchant_event_consumer = MerchantEventConsumer()
 
 
 class ProductEventConsumer:
-    """Foundation Kafka consumer for the product event topic.
+    """Kafka consumer for the product event topic.
 
-    Validates each incoming message against the versioned envelope/payload
-    contracts and persists accepted events into product_events with their
-    initial (unprocessed) state. Deterministic business-service routing,
-    operational-table updates, and processed-state completion are out of
-    scope here (Unit 3.5D), mirroring how MerchantEventConsumer worked
-    before Unit 3.4's business-processing completion.
+    Per message: validate -> persist into product_events (own committed
+    transaction) -> if not already processed, run Product business
+    processing and mark processed=true/processed_at in one transaction ->
+    commit the Kafka offset for that message.
 
-    Offset commits are deferred entirely to Unit 3.5D: this class never
-    calls commit(), so every run re-reads the full topic from the
-    beginning. That is safe because persistence is idempotent (event_id is
-    the product_events primary key), and it avoids advancing offsets in a
-    way that would let 3.5D's business processing silently miss events that
-    were persisted here but never actually business-processed.
+    A message that fails validation can never succeed on redelivery, so it
+    is logged and its offset is committed past (forward progress). A
+    message that fails business processing is logged and re-raised without
+    committing its offset - the consumer stops rather than skipping ahead,
+    since Kafka's per-partition offset commit is a single monotonic
+    watermark and there is no dead-letter mechanism to preserve the ability
+    to redeliver a skipped message later. Restarting the consumer resumes
+    from the last committed offset, redelivering the failed message.
+    Redelivery in general is safe: persistence is idempotent (event_id is
+    the product_events primary key) and 3.5D's handlers are idempotent
+    state-setters, so reprocessing an unfinished event is harmless.
     """
 
     def __init__(self, *, group_id: str | None = None) -> None:
@@ -215,6 +219,10 @@ class ProductEventConsumer:
     async def _handle_message(self, message: ConsumerRecord) -> None:
         envelope = self._validate(message)
         if envelope is None:
+            # Malformed/unregistered messages can never succeed on
+            # redelivery - commit past them so a poison message doesn't
+            # block the partition indefinitely.
+            await self._commit_message(message)
             return
 
         async with AsyncSessionLocal() as session:
@@ -224,6 +232,37 @@ class ProductEventConsumer:
             logger.info("Persisted product event %s (%s)", envelope.event_id, envelope.event_type.value)
         else:
             logger.info("Skipped duplicate product event %s (%s)", envelope.event_id, envelope.event_type.value)
+
+        async with AsyncSessionLocal() as session:
+            existing = await get_product_event(session, envelope.event_id)
+            already_processed = existing is not None and existing.processed
+
+        if already_processed:
+            logger.info("Skipped already-processed product event %s (%s)", envelope.event_id, envelope.event_type.value)
+        else:
+            try:
+                async with AsyncSessionLocal() as session:
+                    await process_product_event(session, envelope)
+                    await mark_product_event_processed(session, envelope.event_id, datetime.now(timezone.utc))
+                    await session.commit()
+            except Exception:
+                logger.error(
+                    "Failed to process product event %s (%s) for product %s; offset not committed",
+                    envelope.event_id,
+                    envelope.event_type.value,
+                    envelope.product_id,
+                    exc_info=True,
+                )
+                raise
+            logger.info("Processed product event %s (%s)", envelope.event_id, envelope.event_type.value)
+
+        await self._commit_message(message)
+
+    async def _commit_message(self, message: ConsumerRecord) -> None:
+        if self._consumer is None:
+            raise RuntimeError("ProductEventConsumer is not started; cannot commit offsets")
+        topic_partition = TopicPartition(message.topic, message.partition)
+        await self._consumer.commit({topic_partition: OffsetAndMetadata(message.offset + 1, "")})
 
     def _validate(self, message: ConsumerRecord) -> ProductEventEnvelope | None:
         try:

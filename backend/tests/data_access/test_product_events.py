@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.data_access.product_events import get_product_event, insert_product_event
+from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
 from app.db.session import AsyncSessionLocal, engine
 from app.models.event import ProductEvent
 from app.schemas.events.envelope import ProductEventEnvelope
@@ -99,3 +99,30 @@ async def test_insert_product_event_is_idempotent_on_duplicate_event_id(db_sessi
 
 async def test_get_product_event_returns_none_for_unknown_event_id(db_session):
     assert await get_product_event(db_session, uuid.uuid4()) is None
+
+
+async def test_mark_product_event_processed_sets_processed_state(db_session, product_ref):
+    merchant_id, product_id = product_ref
+    envelope = _envelope(merchant_id, product_id)
+    await insert_product_event(db_session, envelope)
+    processed_at = datetime.now(timezone.utc)
+
+    await mark_product_event_processed(db_session, envelope.event_id, processed_at)
+    await db_session.commit()
+
+    row = await get_product_event(db_session, envelope.event_id)
+    assert row.processed is True
+    assert row.processed_at is not None
+
+
+async def test_mark_product_event_processed_is_idempotent(db_session, product_ref):
+    merchant_id, product_id = product_ref
+    envelope = _envelope(merchant_id, product_id)
+    await insert_product_event(db_session, envelope)
+
+    await mark_product_event_processed(db_session, envelope.event_id, datetime.now(timezone.utc))
+    await mark_product_event_processed(db_session, envelope.event_id, datetime.now(timezone.utc))
+    await db_session.commit()
+
+    row = await get_product_event(db_session, envelope.event_id)
+    assert row.processed is True

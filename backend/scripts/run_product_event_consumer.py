@@ -1,10 +1,9 @@
 """Standalone entrypoint for the product event Kafka consumer.
 
-Runs independently of the FastAPI app: starts the product event consumer
-and persists validated events into product_events with their initial
-(unprocessed) state until interrupted. Deterministic business-service
-routing, operational-table updates, and processed-state completion are not
-implemented yet (Unit 3.5D); this script only validates and persists.
+Runs independently of the FastAPI app: starts the product event consumer,
+which validates, persists, and business-processes each Product event, marks
+it processed, and commits its Kafka offset - until interrupted or a
+processing failure stops the loop (see ProductEventConsumer's docstring).
 
 Usage (from backend/):
     uv run python -m scripts.run_product_event_consumer

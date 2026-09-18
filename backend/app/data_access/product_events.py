@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,3 +42,9 @@ async def get_product_event(session: AsyncSession, event_id: uuid.UUID) -> Produ
     stmt = select(ProductEvent).where(ProductEvent.event_id == event_id).execution_options(populate_existing=True)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def mark_product_event_processed(session: AsyncSession, event_id: uuid.UUID, processed_at: datetime) -> None:
+    """Mark a product event as successfully processed. Does not commit."""
+    stmt = update(ProductEvent).where(ProductEvent.event_id == event_id).values(processed=True, processed_at=processed_at)
+    await session.execute(stmt)
