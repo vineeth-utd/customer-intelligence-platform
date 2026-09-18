@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -19,6 +20,7 @@ class Product(Base):
     )
     product_name: Mapped[str] = mapped_column(String, nullable=False)
     category: Mapped[str | None] = mapped_column(String)
+    vendor: Mapped[str | None] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -40,8 +42,9 @@ class ProductVariant(Base):
     )
     sku: Mapped[str] = mapped_column(String, nullable=False)
     variant_name: Mapped[str] = mapped_column(String, nullable=False)
-    price: Mapped[float] = mapped_column(Numeric, nullable=False)
-    currency: Mapped[str] = mapped_column(String, nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    size: Mapped[str | None] = mapped_column(String)
+    color: Mapped[str | None] = mapped_column(String)
     inventory_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

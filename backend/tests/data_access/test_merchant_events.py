@@ -47,6 +47,7 @@ async def merchant(db_session: AsyncSession):
         email="test-merchant@example.com",
         country="US",
         timezone="America/New_York",
+        store_currency="USD",
         app_install_status="installed",
     )
     db_session.add(merchant_row)

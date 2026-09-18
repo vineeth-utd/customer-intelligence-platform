@@ -12,6 +12,14 @@ from app.schemas.events.payloads.merchant import (
     SubscriptionStartedPayload,
     SubscriptionUpgradedPayload,
 )
+from app.schemas.events.payloads.product import (
+    ProductArchivedPayload,
+    ProductCreatedPayload,
+    ProductUpdatedPayload,
+    ProductVariantArchivedPayload,
+    ProductVariantCreatedPayload,
+    ProductVariantUpdatedPayload,
+)
 
 __all__ = [
     "MerchantCreatedPayload",
@@ -26,4 +34,10 @@ __all__ = [
     "FeatureDisabledPayload",
     "MerchantConfigurationUpdatedPayload",
     "MerchantLoginPayload",
+    "ProductCreatedPayload",
+    "ProductUpdatedPayload",
+    "ProductArchivedPayload",
+    "ProductVariantCreatedPayload",
+    "ProductVariantUpdatedPayload",
+    "ProductVariantArchivedPayload",
 ]

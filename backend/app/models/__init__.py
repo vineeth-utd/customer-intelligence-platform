@@ -1,5 +1,5 @@
 from app.models.campaign import Campaign
-from app.models.event import CampaignEvent, MerchantEvent, PlatformEvent, ShopperEvent
+from app.models.event import CampaignEvent, MerchantEvent, PlatformEvent, ProductEvent, ShopperEvent
 from app.models.investigation import (
     Investigation,
     InvestigationEvidence,
@@ -54,6 +54,7 @@ __all__ = [
     "PlatformFeature",
     "PlatformMetricsDaily",
     "Product",
+    "ProductEvent",
     "ProductVariant",
     "Shopper",
     "ShopperEvent",

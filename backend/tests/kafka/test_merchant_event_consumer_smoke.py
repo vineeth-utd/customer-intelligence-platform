@@ -69,6 +69,7 @@ async def merchant():
         email="consumer-smoke@example.com",
         country="US",
         timezone="America/New_York",
+        store_currency="USD",
         app_install_status="installed",
     )
     session.add(merchant_row)

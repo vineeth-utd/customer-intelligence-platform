@@ -4,7 +4,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 
-from app.schemas.events.event_types import CampaignEventType, MerchantEventType, PlatformEventType, ShopperEventType
+from app.schemas.events.event_types import (
+    CampaignEventType,
+    MerchantEventType,
+    PlatformEventType,
+    ProductEventType,
+    ShopperEventType,
+)
 
 
 class BaseEventEnvelope(BaseModel):
@@ -33,6 +39,12 @@ class BaseEventEnvelope(BaseModel):
 class MerchantEventEnvelope(BaseEventEnvelope):
     event_type: MerchantEventType
     merchant_id: UUID
+
+
+class ProductEventEnvelope(BaseEventEnvelope):
+    event_type: ProductEventType
+    merchant_id: UUID
+    product_id: UUID
 
 
 class ShopperEventEnvelope(BaseEventEnvelope):

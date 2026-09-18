@@ -158,6 +158,7 @@ Implement the first real event-driven data flow through the platform.
 * Implement merchant event generator.
 * Implement shopper event generator.
 * Introduce campaign event generation where required by the Prototype flow.
+* Align Product/Product Variant operational schema and define Product event contracts required by the Shopper flow.
 * Configure domain-specific Kafka topics.
 * Implement Kafka producers.
 * Implement domain-specific Kafka consumers.

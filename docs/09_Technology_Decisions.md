@@ -213,25 +213,25 @@ Incoming events are processed through a structured ingestion pipeline before bec
 The high-level processing flow is illustrated below.
 
 ```text
-Merchant Event Generator      Shopper Event Generator      Campaign Event Generator
-            │                          │                            │
-            ▼                          ▼                            ▼
-   Merchant Events Topic      Shopper Events Topic      Campaign Events Topic
-            │                          │                            │
-            ▼                          ▼                            ▼
-    Merchant Consumer         Shopper Consumer         Campaign Consumer
-            │                          │                            │
-            ▼                          ▼                            ▼
-        Event Tables              Event Tables              Event Tables
-                      │
-                      ▼
-               Business Services
-                      │
-                      ▼
-          Operational Business Data
+   Merchant Event Generator      Shopper Event Generator       Campaign Event Generator      Product Event Generator
+              │                             │                             │                             │
+              ▼                             ▼                             ▼                             ▼
+    Merchant Events Topic          Shopper Events Topic         Campaign Events Topic          Product Events Topic
+              │                             │                             │                             │
+              ▼                             ▼                             ▼                             ▼
+      Merchant Consumer              Shopper Consumer             Campaign Consumer              Product Consumer
+              │                             │                             │                             │
+              ▼                             ▼                             ▼                             ▼
+         Event Tables                  Event Tables                  Event Tables                  Event Tables
+                                                    │
+                                                    ▼
+                                             Business Services
+                                                    │
+                                                    ▼
+                                       Operational Business Data
 ```
 
-Each business domain publishes events to a dedicated Kafka topic, allowing consumers to process merchant, shopper, and campaign events independently.
+Each business domain publishes events to a dedicated Kafka topic, allowing consumers to process merchant, shopper, campaign, and product events independently.
 
 Consumers first persist incoming events into the corresponding event tables before delegating processing to the appropriate business services based on the event type.
 
@@ -252,6 +252,7 @@ For example:
 * Merchant Events
 * Shopper Events
 * Campaign Events
+* Product Events
 
 Dedicated consumers process each topic independently before routing events based on their `event_type`.
 
