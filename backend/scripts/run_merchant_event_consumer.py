@@ -1,10 +1,9 @@
 """Standalone entrypoint for the merchant event Kafka consumer.
 
-Runs independently of the FastAPI app: starts the merchant event consumer
-and persists validated events into merchant_events with their initial
-(unprocessed) state until interrupted. Deterministic business-service
-routing, operational-table updates, and processed-state completion are not
-implemented yet (Unit 3.4); this script only validates and persists.
+Runs independently of the FastAPI app: starts the merchant event consumer,
+which validates, persists, and business-processes each Merchant event,
+marks it processed, and commits its Kafka offset - until interrupted or a
+processing failure stops the loop (see MerchantEventConsumer's docstring).
 
 Usage (from backend/):
     uv run python -m scripts.run_merchant_event_consumer

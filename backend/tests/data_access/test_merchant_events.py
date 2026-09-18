@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.data_access.merchant_events import insert_merchant_event
+from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
 from app.db.session import AsyncSessionLocal, engine
 from app.models.event import MerchantEvent
 from app.models.merchant import Merchant
@@ -95,3 +95,32 @@ async def test_insert_merchant_event_is_idempotent_on_duplicate_event_id(db_sess
         select(func.count()).select_from(MerchantEvent).where(MerchantEvent.event_id == envelope.event_id)
     )
     assert count == 1
+
+
+async def test_get_merchant_event_returns_none_for_unknown_event_id(db_session):
+    assert await get_merchant_event(db_session, uuid.uuid4()) is None
+
+
+async def test_mark_merchant_event_processed_sets_processed_state(db_session, merchant):
+    envelope = _envelope(merchant.merchant_id)
+    await insert_merchant_event(db_session, envelope)
+    processed_at = datetime.now(timezone.utc)
+
+    await mark_merchant_event_processed(db_session, envelope.event_id, processed_at)
+    await db_session.commit()
+
+    row = await get_merchant_event(db_session, envelope.event_id)
+    assert row.processed is True
+    assert row.processed_at is not None
+
+
+async def test_mark_merchant_event_processed_is_idempotent(db_session, merchant):
+    envelope = _envelope(merchant.merchant_id)
+    await insert_merchant_event(db_session, envelope)
+
+    await mark_merchant_event_processed(db_session, envelope.event_id, datetime.now(timezone.utc))
+    await mark_merchant_event_processed(db_session, envelope.event_id, datetime.now(timezone.utc))
+    await db_session.commit()
+
+    row = await get_merchant_event(db_session, envelope.event_id)
+    assert row.processed is True
