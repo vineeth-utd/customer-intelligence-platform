@@ -13,6 +13,7 @@ EVENT_TOPICS = (
     settings.kafka_merchant_events_topic,
     settings.kafka_shopper_events_topic,
     settings.kafka_campaign_events_topic,
+    settings.kafka_product_events_topic,
 )
 
 

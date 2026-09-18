@@ -89,6 +89,17 @@ async def get_merchant_by_id(session: AsyncSession, merchant_id: uuid.UUID) -> M
     return result.scalar_one_or_none()
 
 
+async def list_installed_merchants(session: AsyncSession) -> list[Merchant]:
+    """Return all merchants whose app_install_status is 'installed'.
+
+    Used by the product generator runner to obtain the set of eligible
+    merchant contexts. Returns an empty list when no merchants qualify.
+    """
+    stmt = select(Merchant).where(Merchant.app_install_status == "installed").order_by(Merchant.merchant_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def create_merchant(
     session: AsyncSession,
     *,
