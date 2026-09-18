@@ -196,12 +196,18 @@ Defines the subscription plans offered by the platform together with their prici
 
 **Important Columns**
 
-`plan_id, plan_name, description, monthly_price, annual_price, created_at, updated_at`
+`plan_id, plan_key, plan_name, description, monthly_price, annual_price, created_at, updated_at`
+
+`plan_key` is the stable, machine-readable business identifier for the plan (e.g. `starter`, `pro`) defined in the shared reference-data catalog. Producer event contracts and reference-data initialization reference plans by `plan_key` rather than by `plan_id`, since `plan_id` is only assigned once the row is persisted.
 
 **Relationships**
 
 * One Subscription Plan is used by many Subscriptions.
 * One Subscription Plan provides access to many Platform Features.
+
+**Constraints**
+
+* Unique, not-null (`plan_key`)
 
 ---
 
@@ -246,12 +252,18 @@ Examples include Wishlist, Save For Later, Back in Stock, Recommendations, Nudge
 
 **Important Columns**
 
-`feature_id, feature_name, feature_category, description, created_at, updated_at`
+`feature_id, feature_key, feature_name, feature_category, description, created_at, updated_at`
+
+`feature_key` is the stable, machine-readable business identifier for the feature (e.g. `wishlist`, `klaviyo`) defined in the shared reference-data catalog. Producer event contracts and reference-data initialization reference features by `feature_key` rather than by `feature_id`, since `feature_id` is only assigned once the row is persisted.
 
 **Relationships**
 
 * One Platform Feature can belong to many Subscription Plans.
 * One Platform Feature can be enabled by many Merchants.
+
+**Constraints**
+
+* Unique, not-null (`feature_key`)
 
 ---
 

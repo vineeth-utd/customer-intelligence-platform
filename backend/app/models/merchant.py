@@ -42,6 +42,7 @@ class SubscriptionPlan(Base):
     plan_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
+    plan_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     plan_name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String)
     monthly_price: Mapped[float] = mapped_column(Numeric, nullable=False)
@@ -88,6 +89,7 @@ class PlatformFeature(Base):
     feature_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
+    feature_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     feature_name: Mapped[str] = mapped_column(String, nullable=False)
     feature_category: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String)
