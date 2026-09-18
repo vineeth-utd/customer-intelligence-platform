@@ -29,7 +29,7 @@ _INSTALL_CHANNELS = ("shopify_app_store", "partner_referral", "direct_signup")
 _LOGIN_CHANNELS = ("admin_dashboard", "mobile_app")
 _UNINSTALL_REASONS = ("too_expensive", "missing_features", "switched_platform", "no_longer_needed")
 _CANCELLATION_REASONS = ("too_expensive", "missing_features", "switched_platform", "no_longer_needed")
-_CONFIG_FIELDS = ("timezone", "country", "store_currency", "notification_email")
+_CONFIG_FIELDS = ("timezone", "country")
 _STARTING_PLANS = (PlanKey.FREE, PlanKey.STARTER, PlanKey.PRO)
 _ACTION_TICK_PROBABILITY = 0.6
 _ACTIONS = ("login", "feature_enable", "feature_disable", "config_update", "renew", "upgrade", "downgrade", "cancel")
@@ -263,11 +263,7 @@ class MerchantLifecycleGenerator:
     def _new_config_value(self, field_name: str, state: MerchantState) -> str:
         if field_name == "timezone":
             return self._rng.choice([tz for tz in _TIMEZONES if tz != state.timezone] or list(_TIMEZONES))
-        if field_name == "country":
-            return self._rng.choice([country for country in _COUNTRIES if country != state.country] or list(_COUNTRIES))
-        if field_name == "store_currency":
-            return self._rng.choice(("USD", "CAD", "GBP", "AUD", "EUR"))
-        return f"updated-{field_name}@example.com"
+        return self._rng.choice([country for country in _COUNTRIES if country != state.country] or list(_COUNTRIES))
 
     def _build_envelope(self, state: MerchantState, event_type: MerchantEventType, payload) -> MerchantEventEnvelope:
         return MerchantEventEnvelope(
