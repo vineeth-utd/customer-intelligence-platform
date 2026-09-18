@@ -163,7 +163,7 @@ Stores the current operational information for merchants using the platform.
 
 **Important Columns**
 
-`merchant_id, shopify_store_id, merchant_name, email, country, timezone, app_install_status, last_install_status_updated_at, last_active_at, created_at, updated_at`
+`merchant_id, shopify_store_id, merchant_name, email, country, timezone, store_currency, app_install_status, last_install_status_updated_at, last_active_at, created_at, updated_at`
 
 **Relationships**
 

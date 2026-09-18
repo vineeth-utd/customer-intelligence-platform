@@ -38,7 +38,7 @@ from app.schemas.events.payloads.merchant import (
     SubscriptionUpgradedPayload,
 )
 
-_SUPPORTED_CONFIGURATION_FIELDS = {"timezone", "country"}
+_SUPPORTED_CONFIGURATION_FIELDS = {"timezone", "country", "store_currency"}
 
 
 class UnresolvedReferenceError(RuntimeError):
@@ -81,6 +81,7 @@ async def _handle_merchant_created(session: AsyncSession, envelope: MerchantEven
         email=payload.email,
         country=payload.country,
         timezone=payload.timezone,
+        store_currency=payload.store_currency,
         app_install_status="pending_install",
     )
 

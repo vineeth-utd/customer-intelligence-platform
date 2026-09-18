@@ -97,7 +97,7 @@ def test_configuration_update_is_reflected_in_merchant_state():
             continue
         field_name, new_value = next(iter(envelopes[0].payload["changed_values"].items()))
         observed_fields.add(field_name)
-        if field_name in ("timezone", "country"):
+        if field_name in ("timezone", "country", "store_currency"):
             assert getattr(state, field_name) == new_value
 
-    assert {"timezone", "country"}.issubset(observed_fields)
+    assert {"timezone", "country", "store_currency"}.issubset(observed_fields)

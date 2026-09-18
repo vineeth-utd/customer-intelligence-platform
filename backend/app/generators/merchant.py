@@ -29,7 +29,7 @@ _INSTALL_CHANNELS = ("shopify_app_store", "partner_referral", "direct_signup")
 _LOGIN_CHANNELS = ("admin_dashboard", "mobile_app")
 _UNINSTALL_REASONS = ("too_expensive", "missing_features", "switched_platform", "no_longer_needed")
 _CANCELLATION_REASONS = ("too_expensive", "missing_features", "switched_platform", "no_longer_needed")
-_CONFIG_FIELDS = ("timezone", "country")
+_CONFIG_FIELDS = ("timezone", "country", "store_currency")
 _STARTING_PLANS = (PlanKey.FREE, PlanKey.STARTER, PlanKey.PRO)
 _ACTION_TICK_PROBABILITY = 0.6
 _ACTIONS = ("login", "feature_enable", "feature_disable", "config_update", "renew", "upgrade", "downgrade", "cancel")
@@ -37,6 +37,7 @@ _ACTION_WEIGHTS = (5, 2, 2, 1, 2, 1, 1, 1)
 
 _PLANS_BY_PRICE = [entry.plan_key for entry in sorted(PLAN_CATALOG.values(), key=lambda entry: entry.monthly_price)]
 
+_CURRENCIES = ("USD", "CAD", "GBP", "AUD", "EUR")
 
 class _Stage(str, Enum):
     ACTIVE = "active"
@@ -52,6 +53,7 @@ class MerchantState:
     email: str
     country: str
     timezone: str
+    store_currency: str
     plan_key: PlanKey
     billing_cycle: BillingCycle
     enabled_features: set[FeatureKey] = field(default_factory=set)
@@ -82,6 +84,7 @@ class MerchantLifecycleGenerator:
             email = f"merchant{index:05d}@example.com"
             country = self._rng.choice(_COUNTRIES)
             timezone_name = self._rng.choice(_TIMEZONES)
+            store_currency = self._rng.choice(_CURRENCIES)
             plan_key = self._rng.choice(_STARTING_PLANS)
             billing_cycle = self._rng.choice(list(BillingCycle))
 
@@ -92,6 +95,7 @@ class MerchantLifecycleGenerator:
                 email=email,
                 country=country,
                 timezone=timezone_name,
+                store_currency=store_currency,
                 plan_key=plan_key,
                 billing_cycle=billing_cycle,
             )
@@ -107,6 +111,7 @@ class MerchantLifecycleGenerator:
                         email=email,
                         country=country,
                         timezone=timezone_name,
+                        store_currency=store_currency,
                     ),
                 )
             )
@@ -189,6 +194,8 @@ class MerchantLifecycleGenerator:
                 state.timezone = new_value
             elif field_name == "country":
                 state.country = new_value
+            elif field_name == "store_currency":
+                state.store_currency = new_value
             return [
                 self._build_envelope(
                     state,
@@ -263,6 +270,8 @@ class MerchantLifecycleGenerator:
     def _new_config_value(self, field_name: str, state: MerchantState) -> str:
         if field_name == "timezone":
             return self._rng.choice([tz for tz in _TIMEZONES if tz != state.timezone] or list(_TIMEZONES))
+        if field_name == "store_currency":
+            return self._rng.choice([c for c in _CURRENCIES if c != state.store_currency] or list(_CURRENCIES))
         return self._rng.choice([country for country in _COUNTRIES if country != state.country] or list(_COUNTRIES))
 
     def _build_envelope(self, state: MerchantState, event_type: MerchantEventType, payload) -> MerchantEventEnvelope:

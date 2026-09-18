@@ -98,6 +98,7 @@ async def create_merchant(
     email: str,
     country: str,
     timezone: str,
+    store_currency: str,
     app_install_status: str,
 ) -> None:
     """Insert a merchants row for this merchant_id if one doesn't exist yet.
@@ -114,6 +115,7 @@ async def create_merchant(
             email=email,
             country=country,
             timezone=timezone,
+            store_currency=store_currency,
             app_install_status=app_install_status,
         )
         .on_conflict_do_nothing(index_elements=["merchant_id"])

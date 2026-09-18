@@ -19,6 +19,7 @@ class Merchant(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     country: Mapped[str] = mapped_column(String, nullable=False)
     timezone: Mapped[str] = mapped_column(String, nullable=False)
+    store_currency: Mapped[str] = mapped_column(String, nullable=False)
     app_install_status: Mapped[str] = mapped_column(String, nullable=False, index=True)
     last_install_status_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

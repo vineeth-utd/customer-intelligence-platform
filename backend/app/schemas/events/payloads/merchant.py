@@ -16,6 +16,7 @@ class MerchantCreatedPayload(BaseModel):
     email: str
     country: str
     timezone: str
+    store_currency: str
 
 
 @register_event_payload(MerchantEventType.APP_INSTALLED.value, 1)

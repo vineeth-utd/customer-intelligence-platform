@@ -86,6 +86,7 @@ async def test_full_merchant_lifecycle_produces_expected_operational_state(db_se
                     "email": "acme@example.com",
                     "country": "US",
                     "timezone": "America/New_York",
+                    "store_currency": "USD",
                 },
             ),
         )
@@ -200,6 +201,7 @@ async def test_feature_enable_then_disable_updates_merchant_feature_row(db_sessi
                     "email": "acme@example.com",
                     "country": "US",
                     "timezone": "America/New_York",
+                    "store_currency": "USD",
                 },
             ),
         )
@@ -235,6 +237,7 @@ async def test_subscription_started_is_replay_safe(db_session):
                     "email": "acme@example.com",
                     "country": "US",
                     "timezone": "America/New_York",
+                    "store_currency": "USD",
                 },
             ),
         )
@@ -263,6 +266,7 @@ async def test_merchant_created_is_idempotent(db_session):
                 "email": "acme@example.com",
                 "country": "US",
                 "timezone": "America/New_York",
+                "store_currency": "USD",
             },
         )
         await process_merchant_event(db_session, created_envelope)
@@ -312,7 +316,7 @@ async def test_unsupported_configuration_field_raises(db_session):
             await process_merchant_event(
                 db_session,
                 _envelope(
-                    merchant_id, MerchantEventType.MERCHANT_CONFIGURATION_UPDATED, {"changed_values": {"store_currency": "USD"}}
+                    merchant_id, MerchantEventType.MERCHANT_CONFIGURATION_UPDATED, {"changed_values": {"notification_email": "test@example.com"}}
                 ),
             )
     finally:
