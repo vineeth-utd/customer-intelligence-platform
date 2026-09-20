@@ -64,18 +64,58 @@ async def _handle_campaign_updated(session: AsyncSession, envelope: CampaignEven
     if unsupported:
         raise UnsupportedConfigurationFieldError(f"Unsupported campaign fields: {sorted(unsupported)}")
 
+    from datetime import datetime
+    import uuid
+
+    # Normalize and validate changed_values
+    for field in ["start_at", "end_at"]:
+        if field in payload.changed_values:
+            val = payload.changed_values[field]
+            if val is not None:
+                if isinstance(val, str):
+                    try:
+                        val_dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+                        if val_dt.tzinfo is None:
+                            val_dt = val_dt.replace(tzinfo=UTC)
+                        payload.changed_values[field] = val_dt
+                    except ValueError as e:
+                        raise UnsupportedConfigurationFieldError(f"Invalid datetime format for {field}: {e}")
+                elif isinstance(val, datetime):
+                    if val.tzinfo is None:
+                        val = val.replace(tzinfo=UTC)
+                    payload.changed_values[field] = val
+                else:
+                    raise UnsupportedConfigurationFieldError(f"Invalid type for {field}")
+
+    if "segment_id" in payload.changed_values:
+        val = payload.changed_values["segment_id"]
+        if val is None:
+            raise UnsupportedConfigurationFieldError("segment_id cannot be None")
+        if isinstance(val, str):
+            try:
+                payload.changed_values["segment_id"] = uuid.UUID(val)
+            except ValueError as e:
+                raise UnsupportedConfigurationFieldError(f"Invalid UUID for segment_id: {e}")
+        elif not isinstance(val, uuid.UUID):
+            raise UnsupportedConfigurationFieldError("Invalid type for segment_id")
+
+    for string_field in ["campaign_name", "status"]:
+        if string_field in payload.changed_values:
+            val = payload.changed_values[string_field]
+            if val is None:
+                raise UnsupportedConfigurationFieldError(f"{string_field} cannot be None")
+            if not isinstance(val, str):
+                raise UnsupportedConfigurationFieldError(f"Invalid type for {string_field}")
+
     campaign = await get_campaign(session, envelope.campaign_id)
     if campaign is None:
         raise UnresolvedReferenceError(f"Campaign {envelope.campaign_id} not found")
 
     if "segment_id" in payload.changed_values:
+        segment_id = payload.changed_values["segment_id"]
         segments = await get_merchant_segments(session, campaign.merchant_id)
-        # convert the string back to UUID since payload values are JSON
-        import uuid
-        segment_id = uuid.UUID(payload.changed_values["segment_id"]) if isinstance(payload.changed_values["segment_id"], str) else payload.changed_values["segment_id"]
         if segment_id not in [s.segment_id for s in segments]:
             raise UnresolvedReferenceError(f"Segment {segment_id} not found for Merchant {campaign.merchant_id}")
-        payload.changed_values["segment_id"] = segment_id
 
     update_campaign_fields(campaign, payload.changed_values)
 

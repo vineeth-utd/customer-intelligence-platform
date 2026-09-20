@@ -199,3 +199,109 @@ async def test_campaign_converted(db_session: AsyncSession, setup_data):
     assert analytics.attributed_order_count == 1
     assert float(analytics.attributed_revenue) == 100.50
 
+
+@pytest.mark.asyncio
+async def test_campaign_updated_valid_iso_datetime(db_session: AsyncSession, setup_data):
+    campaign_id = uuid.uuid4()
+    # Create campaign
+    env_create = build_envelope(
+        CampaignEventType.CAMPAIGN_CREATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {
+            "campaign_name": "My Campaign",
+            "campaign_type": "email",
+            "campaign_medium": "newsletter",
+            "segment_id": str(setup_data["segment_id"]),
+            "status": "draft",
+        }
+    )
+    await process_campaign_event(db_session, env_create)
+    await db_session.commit()
+
+    # Update with valid ISO strings for start_at and end_at
+    env_update = build_envelope(
+        CampaignEventType.CAMPAIGN_UPDATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {
+            "changed_values": {
+                "start_at": "2026-09-21T10:00:00Z",
+                "end_at": "2026-10-21T10:00:00+00:00",
+                "status": "active"
+            }
+        }
+    )
+    await process_campaign_event(db_session, env_update)
+    await db_session.commit()
+
+    stmt = select(Campaign).where(Campaign.campaign_id == campaign_id)
+    campaign = (await db_session.execute(stmt)).scalar_one()
+    assert campaign.status == "active"
+    assert campaign.start_at == datetime(2026, 9, 21, 10, 0, 0, tzinfo=timezone.utc)
+    assert campaign.end_at == datetime(2026, 10, 21, 10, 0, 0, tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_campaign_updated_invalid_values(db_session: AsyncSession, setup_data):
+    campaign_id = uuid.uuid4()
+    # Create campaign
+    env_create = build_envelope(
+        CampaignEventType.CAMPAIGN_CREATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {
+            "campaign_name": "My Campaign",
+            "campaign_type": "email",
+            "campaign_medium": "newsletter",
+            "segment_id": str(setup_data["segment_id"]),
+            "status": "draft",
+        }
+    )
+    await process_campaign_event(db_session, env_create)
+    await db_session.commit()
+
+    # Test invalid datetime string
+    env_update_invalid_dt = build_envelope(
+        CampaignEventType.CAMPAIGN_UPDATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {"changed_values": {"start_at": "not-a-datetime"}}
+    )
+    with pytest.raises(UnsupportedConfigurationFieldError, match="Invalid datetime format"):
+        await process_campaign_event(db_session, env_update_invalid_dt)
+
+    # Test invalid UUID for segment_id
+    env_update_invalid_uuid = build_envelope(
+        CampaignEventType.CAMPAIGN_UPDATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {"changed_values": {"segment_id": "not-a-uuid"}}
+    )
+    with pytest.raises(UnsupportedConfigurationFieldError, match="Invalid UUID for segment_id"):
+        await process_campaign_event(db_session, env_update_invalid_uuid)
+
+    # Test None for segment_id
+    env_update_none_segment = build_envelope(
+        CampaignEventType.CAMPAIGN_UPDATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {"changed_values": {"segment_id": None}}
+    )
+    with pytest.raises(UnsupportedConfigurationFieldError, match="segment_id cannot be None"):
+        await process_campaign_event(db_session, env_update_none_segment)
+
+    # Test None for start_at and end_at (should pass)
+    env_update_none_dates = build_envelope(
+        CampaignEventType.CAMPAIGN_UPDATED.value,
+        campaign_id,
+        setup_data["merchant_id"],
+        {"changed_values": {"start_at": None, "end_at": None}}
+    )
+    await process_campaign_event(db_session, env_update_none_dates)
+    await db_session.commit()
+
+    stmt = select(Campaign).where(Campaign.campaign_id == campaign_id)
+    campaign = (await db_session.execute(stmt)).scalar_one()
+    assert campaign.start_at is None
+    assert campaign.end_at is None
