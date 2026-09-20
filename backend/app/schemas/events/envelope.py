@@ -51,6 +51,7 @@ class ShopperEventEnvelope(BaseEventEnvelope):
     event_type: ShopperEventType
     merchant_id: UUID
     shopper_id: UUID
+    session_id: UUID
 
 
 class CampaignEventEnvelope(BaseEventEnvelope):

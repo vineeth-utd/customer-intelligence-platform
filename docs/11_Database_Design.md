@@ -317,6 +317,8 @@ Stores the current operational information for shoppers belonging to merchants.
 
 `shopper_id, merchant_id, email, first_name, last_name, country, state, city, timezone, first_seen_at, last_seen_at, created_at, updated_at`
 
+`email` is nullable to natively support anonymous shoppers. `shopper_id` is the stable identifier across anonymous and identified activity.
+
 **Relationships**
 
 * One Shopper belongs to one Merchant.
@@ -562,7 +564,7 @@ Events that relate to a specific product variant include the relevant identifier
 
 **Important Columns**
 
-`event_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, merchant_id, shopper_id, session_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 
@@ -575,6 +577,7 @@ Events that relate to a specific product variant include the relevant identifier
 * Primary Key (`event_id`)
 * Index (`merchant_id`, `event_timestamp`)
 * Index (`shopper_id`, `event_timestamp`)
+* Index (`session_id`)
 * Index (`event_type`)
 * Index (`processed`)
 

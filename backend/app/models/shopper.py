@@ -18,7 +18,7 @@ class Shopper(Base):
     merchant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("merchants.merchant_id"), nullable=False, index=True
     )
-    email: Mapped[str] = mapped_column(String, nullable=False)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
     first_name: Mapped[str | None] = mapped_column(String)
     last_name: Mapped[str | None] = mapped_column(String)
     country: Mapped[str | None] = mapped_column(String)

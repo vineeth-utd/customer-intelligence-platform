@@ -20,6 +20,22 @@ from app.schemas.events.payloads.product import (
     ProductVariantCreatedPayload,
     ProductVariantUpdatedPayload,
 )
+from app.schemas.events.payloads.shopper import (
+    AddToCartPayload,
+    CheckoutStartedPayload,
+    ProductSearchedPayload,
+    ProductViewedPayload,
+    PurchaseCompletedPayload,
+    RecommendationClickedPayload,
+    RecommendationViewedPayload,
+    RemoveFromCartPayload,
+    SaveForLaterAddedPayload,
+    SaveForLaterRemovedPayload,
+    SessionEndedPayload,
+    SessionStartedPayload,
+    WishlistAddedPayload,
+    WishlistRemovedPayload,
+)
 
 __all__ = [
     "MerchantCreatedPayload",
@@ -40,4 +56,18 @@ __all__ = [
     "ProductVariantCreatedPayload",
     "ProductVariantUpdatedPayload",
     "ProductVariantArchivedPayload",
+    "AddToCartPayload",
+    "CheckoutStartedPayload",
+    "ProductSearchedPayload",
+    "ProductViewedPayload",
+    "PurchaseCompletedPayload",
+    "RecommendationClickedPayload",
+    "RecommendationViewedPayload",
+    "RemoveFromCartPayload",
+    "SaveForLaterAddedPayload",
+    "SaveForLaterRemovedPayload",
+    "SessionEndedPayload",
+    "SessionStartedPayload",
+    "WishlistAddedPayload",
+    "WishlistRemovedPayload",
 ]
