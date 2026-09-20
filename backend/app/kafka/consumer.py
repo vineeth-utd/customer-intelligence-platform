@@ -27,6 +27,10 @@ from app.services.merchant import process_merchant_event
 from app.services.product import process_product_event
 from app.services.shopper import process_shopper_event
 from app.services.campaign import process_campaign_event
+from app.services import merchant as merchant_svc
+from app.services import product as product_svc
+from app.services import shopper as shopper_svc
+from app.services import campaign as campaign_svc
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +290,11 @@ class MerchantEventConsumer(BaseEventConsumer[MerchantEventEnvelope]):
             process_event_fn=process_merchant_event,
             mark_processed_fn=mark_merchant_event_processed,
             domain_name="merchant",
+            dlq_topic=settings.kafka_merchant_dlq_topic,
+            business_exceptions=(
+                merchant_svc.UnresolvedReferenceError,
+                merchant_svc.UnsupportedConfigurationFieldError,
+            ),
         )
 
     def get_context_id(self, envelope: MerchantEventEnvelope) -> uuid.UUID:
@@ -306,6 +315,13 @@ class ProductEventConsumer(BaseEventConsumer[ProductEventEnvelope]):
             process_event_fn=process_product_event,
             mark_processed_fn=mark_product_event_processed,
             domain_name="product",
+            dlq_topic=settings.kafka_product_dlq_topic,
+            business_exceptions=(
+                product_svc.UnresolvedReferenceError,
+                product_svc.UnsupportedProductFieldError,
+                product_svc.UnsupportedVariantFieldError,
+                product_svc.InvalidChangedValueError,
+            ),
         )
 
     def get_context_id(self, envelope: ProductEventEnvelope) -> uuid.UUID:
@@ -326,6 +342,12 @@ class ShopperEventConsumer(BaseEventConsumer[ShopperEventEnvelope]):
             process_event_fn=process_shopper_event,
             mark_processed_fn=mark_shopper_event_processed,
             domain_name="shopper",
+            dlq_topic=settings.kafka_shopper_dlq_topic,
+            business_exceptions=(
+                shopper_svc.IdentityConflictError,
+                shopper_svc.UnresolvedReferenceError,
+                shopper_svc.InsufficientInventoryError,
+            ),
         )
 
     def get_context_id(self, envelope: ShopperEventEnvelope) -> uuid.UUID:
@@ -346,6 +368,12 @@ class CampaignEventConsumer(BaseEventConsumer[CampaignEventEnvelope]):
             process_event_fn=process_campaign_event,
             mark_processed_fn=mark_campaign_event_processed,
             domain_name="campaign",
+            dlq_topic=settings.kafka_campaign_dlq_topic,
+            business_exceptions=(
+                campaign_svc.UnresolvedReferenceError,
+                campaign_svc.UnsupportedConfigurationFieldError,
+                campaign_svc.AttributionError,
+            ),
         )
 
     def get_context_id(self, envelope: CampaignEventEnvelope) -> uuid.UUID:
