@@ -13,6 +13,7 @@ from app.schemas.events.event_types import (
     ProductEventType,
     ShopperEventType,
 )
+from app.schemas.events.dlq import DeadLetterRecord
 from app.schemas.events.registry import get_payload_schema, register_event_payload
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "ProductEventType",
     "register_event_payload",
     "get_payload_schema",
+    "DeadLetterRecord",
 ]

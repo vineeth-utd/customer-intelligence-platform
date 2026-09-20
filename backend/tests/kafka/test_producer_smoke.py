@@ -16,6 +16,7 @@ from app.config.settings import settings
 from app.kafka.producer import EventProducer
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
+from app.schemas.events.dlq import DeadLetterRecord
 
 
 @pytest.fixture
@@ -53,3 +54,41 @@ async def test_publish_reaches_the_merchant_topic(started_producer: EventProduce
         assert envelope.model_dump_json().encode("utf-8") == message.value
     finally:
         await consumer.stop()
+
+async def test_publish_record_reaches_dlq_topic(started_producer: EventProducer):
+    record = DeadLetterRecord(
+        original_topic="cip.merchant.events",
+        original_partition=0,
+        original_offset=100,
+        consumer_group_id="cip-merchant-event-consumer",
+        failure_stage="processing",
+        error_type="ValueError",
+        error_message="Simulated DLQ error",
+        failed_at=datetime.now(timezone.utc),
+        original_message_base64="aGVsbG8=",
+    )
+
+    consumer = AIOKafkaConsumer(
+        settings.kafka_merchant_events_dlq_topic,
+        bootstrap_servers=settings.kafka_bootstrap_servers,
+        auto_offset_reset="latest",
+        enable_auto_commit=False,
+    )
+    await consumer.start()
+    try:
+        await started_producer.publish_record(settings.kafka_merchant_events_dlq_topic, record)
+        message = await consumer.getone()
+        assert record.model_dump_json().encode("utf-8") == message.value
+    finally:
+        await consumer.stop()
+
+async def test_publish_surfaces_failures():
+    producer = EventProducer()
+    # Not started yet
+    with pytest.raises(RuntimeError, match="not started"):
+        await producer.publish_record("some_topic", DeadLetterRecord(
+            original_topic="t", original_partition=0, original_offset=0,
+            consumer_group_id="g", failure_stage="validation", error_type="E",
+            error_message="M", failed_at=datetime.now(timezone.utc),
+            original_message_base64="Yg==",
+        ))

@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     kafka_shopper_events_topic: str = "cip.shopper.events"
     kafka_campaign_events_topic: str = "cip.campaign.events"
     kafka_product_events_topic: str = "cip.product.events"
+    
+    kafka_merchant_events_dlq_topic: str = "cip.merchant.events.dlq"
+    kafka_shopper_events_dlq_topic: str = "cip.shopper.events.dlq"
+    kafka_campaign_events_dlq_topic: str = "cip.campaign.events.dlq"
+    kafka_product_events_dlq_topic: str = "cip.product.events.dlq"
     kafka_merchant_consumer_group_id: str = "cip-merchant-event-consumer"
     kafka_product_consumer_group_id: str = "cip-product-event-consumer"
     kafka_shopper_consumer_group_id: str = "cip-shopper-event-consumer"
