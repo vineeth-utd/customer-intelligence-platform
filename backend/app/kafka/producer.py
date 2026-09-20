@@ -58,7 +58,7 @@ class EventProducer:
         key_bytes = key.encode("utf-8") if key is not None else None
         await self._producer.send_and_wait(topic, value=value, key=key_bytes)
 
-    async def publish_dlq(self, topic: str, record: DeadLetterRecord) -> None:
+    async def publish_record(self, topic: str, record: DeadLetterRecord) -> None:
         if self._producer is None:
             raise RuntimeError("EventProducer is not started; Kafka publishing is unavailable")
         value = record.model_dump_json().encode("utf-8")

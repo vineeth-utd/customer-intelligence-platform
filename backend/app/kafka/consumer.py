@@ -225,7 +225,7 @@ class BaseEventConsumer(Generic[EnvelopeT]):
             event_type=event_type,
         )
 
-        await event_producer.publish_dlq(self._dlq_topic, record)
+        await event_producer.publish_record(self._dlq_topic, record)
 
     async def _commit_message(self, message: ConsumerRecord) -> None:
         if self._consumer is None:

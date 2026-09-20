@@ -64,7 +64,7 @@ class MockConsumer(BaseEventConsumer[MerchantEventEnvelope]):
 
 @pytest.fixture
 def mock_producer():
-    with patch("app.kafka.producer.event_producer.publish_dlq", new_callable=AsyncMock) as m:
+    with patch("app.kafka.producer.event_producer.publish_record", new_callable=AsyncMock) as m:
         yield m
 
 
@@ -85,7 +85,7 @@ async def test_validation_failure_dlq_publish_and_commit(mock_producer):
     consumer = MockConsumer(None, None, None, None)
     
     with patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
-        message = ConsumerRecord("cip.test.events", 0, 10, 0, 0, 0, b"", b"invalid json", 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=10, timestamp=0, timestamp_type=0, key=b"", value=b"invalid json", checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         await consumer._handle_message(message)
 
         # DLQ published
@@ -106,7 +106,7 @@ async def test_validation_failure_extracts_metadata_from_json(mock_producer):
     with patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
         event_id = str(uuid.uuid4())
         raw_json = json.dumps({"event_id": event_id, "event_type": "MERCHANT_LOGIN", "invalid": "schema"}).encode("utf-8")
-        message = ConsumerRecord("cip.test.events", 0, 11, 0, 0, 0, b"", raw_json, 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=11, timestamp=0, timestamp_type=0, key=b"", value=raw_json, checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         await consumer._handle_message(message)
 
         # DLQ published
@@ -125,7 +125,7 @@ async def test_validation_dlq_publication_failure_halts(mock_producer):
     with patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
         mock_producer.side_effect = RuntimeError("Kafka down")
 
-        message = ConsumerRecord("cip.test.events", 0, 12, 0, 0, 0, b"", b"invalid json", 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=12, timestamp=0, timestamp_type=0, key=b"", value=b"invalid json", checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         
         with pytest.raises(RuntimeError, match="Kafka down"):
             await consumer._handle_message(message)
@@ -154,7 +154,7 @@ async def test_business_failure_dlq_publish_and_commit(mock_producer, base_envel
          patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
 
         raw_json = base_envelope.model_dump_json().encode("utf-8")
-        message = ConsumerRecord("cip.test.events", 0, 13, 0, 0, 0, b"", raw_json, 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=13, timestamp=0, timestamp_type=0, key=b"", value=raw_json, checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         
         await consumer._handle_message(message)
 
@@ -189,7 +189,7 @@ async def test_unexpected_exception_halts_no_dlq(mock_producer, base_envelope):
          patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
 
         raw_json = base_envelope.model_dump_json().encode("utf-8")
-        message = ConsumerRecord("cip.test.events", 0, 14, 0, 0, 0, b"", raw_json, 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=14, timestamp=0, timestamp_type=0, key=b"", value=raw_json, checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         
         with pytest.raises(MockUnexpectedError):
             await consumer._handle_message(message)
@@ -220,7 +220,7 @@ async def test_business_failure_dlq_publication_failure_halts(mock_producer, bas
          patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
 
         raw_json = base_envelope.model_dump_json().encode("utf-8")
-        message = ConsumerRecord("cip.test.events", 0, 15, 0, 0, 0, b"", raw_json, 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=15, timestamp=0, timestamp_type=0, key=b"", value=raw_json, checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         
         with pytest.raises(RuntimeError, match="Kafka down"):
             await consumer._handle_message(message)
@@ -232,7 +232,7 @@ async def test_dlq_disabled_mode_validation(mock_producer):
     consumer = MockConsumer(None, None, None, None, dlq_topic=None)
     
     with patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
-        message = ConsumerRecord("cip.test.events", 0, 16, 0, 0, 0, b"", b"invalid json", 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=16, timestamp=0, timestamp_type=0, key=b"", value=b"invalid json", checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         await consumer._handle_message(message)
 
         mock_producer.assert_not_called()
@@ -258,7 +258,7 @@ async def test_dlq_disabled_mode_business_error(mock_producer, base_envelope):
          patch.object(consumer, "_commit_message", new_callable=AsyncMock) as commit_spy:
 
         raw_json = base_envelope.model_dump_json().encode("utf-8")
-        message = ConsumerRecord("cip.test.events", 0, 17, 0, 0, 0, b"", raw_json, 0, 0, 0, 0)
+        message = ConsumerRecord(topic="cip.test.events", partition=0, offset=17, timestamp=0, timestamp_type=0, key=b"", value=raw_json, checksum=0, serialized_key_size=0, serialized_value_size=0, headers=())
         
         with pytest.raises(MockError):
             await consumer._handle_message(message)
