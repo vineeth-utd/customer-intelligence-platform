@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from app.kafka.consumer import shopper_event_consumer
+from app.kafka.producer import event_producer
 
 logger = logging.getLogger(__name__)
 

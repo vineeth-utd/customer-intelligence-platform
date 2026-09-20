@@ -12,16 +12,21 @@ import asyncio
 import logging
 
 from app.kafka.consumer import campaign_event_consumer
+from app.kafka.producer import event_producer
 
 logger = logging.getLogger(__name__)
 
 
 async def _run() -> None:
-    await campaign_event_consumer.start()
+    await event_producer.start()
     try:
-        await campaign_event_consumer.run_forever()
+        await campaign_event_consumer.start()
+        try:
+            await campaign_event_consumer.run_forever()
+        finally:
+            await campaign_event_consumer.stop()
     finally:
-        await campaign_event_consumer.stop()
+        await event_producer.stop()
 
 
 def main() -> None:
