@@ -1,3 +1,17 @@
+from app.schemas.events.payloads.campaign import (
+    AdClickedPayload,
+    AdViewedPayload,
+    CampaignConvertedPayload,
+    CampaignCreatedPayload,
+    CampaignUpdatedPayload,
+    EmailClickedPayload,
+    EmailDeliveredPayload,
+    EmailOpenedPayload,
+    PushDeliveredPayload,
+    PushOpenedPayload,
+    SmsClickedPayload,
+    SmsDeliveredPayload,
+)
 from app.schemas.events.payloads.merchant import (
     AppInstalledPayload,
     AppUninstalledPayload,
@@ -38,6 +52,18 @@ from app.schemas.events.payloads.shopper import (
 )
 
 __all__ = [
+    "CampaignCreatedPayload",
+    "CampaignUpdatedPayload",
+    "EmailDeliveredPayload",
+    "EmailOpenedPayload",
+    "EmailClickedPayload",
+    "SmsDeliveredPayload",
+    "SmsClickedPayload",
+    "PushDeliveredPayload",
+    "PushOpenedPayload",
+    "AdViewedPayload",
+    "AdClickedPayload",
+    "CampaignConvertedPayload",
     "MerchantCreatedPayload",
     "AppInstalledPayload",
     "AppUninstalledPayload",

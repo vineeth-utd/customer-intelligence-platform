@@ -474,7 +474,7 @@ Merchant, shopper, campaign, and product events are received through their respe
 
 Event-specific attributes are stored within a JSONB `payload`, allowing different event types to carry different information without introducing large numbers of nullable columns.
 
-Merchant, shopper, campaign, and product entity identifiers on these tables (`merchant_id`, `shopper_id`, `campaign_id`, `product_id`) are required lineage/correlation identifiers, but they are intentionally **not** enforced as database foreign keys to the corresponding operational tables. Event persistence must succeed independently of whether the referenced operational entity has been created yet - for example, a merchant's first event (`MERCHANT_CREATED`) is ingested before the Business Service Layer creates the corresponding `Merchant` row. Referential integrity for these identifiers is therefore an application-level (Business Service) concern rather than a database constraint; operational tables (e.g. `Subscription.merchant_id`, `MerchantFeature.merchant_id`) retain enforced foreign keys as usual.
+Merchant, shopper, campaign, and product entity identifiers on these tables (`merchant_id`, `shopper_id`, `campaign_id`, `product_id`) are primary lineage/correlation identifiers. While mostly required, `shopper_id` is optional on `campaign_events` to support campaign lifecycle events (creation, updates) and anonymous ad interactions. These identifiers are intentionally **not** enforced as database foreign keys to the corresponding operational tables. Event persistence must succeed independently of whether the referenced operational entity has been created yet - for example, a merchant's first event (`MERCHANT_CREATED`) is ingested before the Business Service Layer creates the corresponding `Merchant` row. Referential integrity for these identifiers is therefore an application-level (Business Service) concern rather than a database constraint; operational tables (e.g. `Subscription.merchant_id`, `MerchantFeature.merchant_id`) retain enforced foreign keys as usual.
 
 ---
 
@@ -593,7 +593,7 @@ Each campaign interaction is stored independently. For example, a campaign deliv
 
 Example event types include:
 
-`EMAIL_DELIVERED, EMAIL_OPENED, EMAIL_CLICKED, SMS_DELIVERED, SMS_CLICKED, PUSH_DELIVERED, PUSH_OPENED, AD_VIEWED, AD_CLICKED, CAMPAIGN_CONVERTED`
+`CAMPAIGN_CREATED, CAMPAIGN_UPDATED, EMAIL_DELIVERED, EMAIL_OPENED, EMAIL_CLICKED, SMS_DELIVERED, SMS_CLICKED, PUSH_DELIVERED, PUSH_OPENED, AD_VIEWED, AD_CLICKED, CAMPAIGN_CONVERTED`
 
 **Primary Key**
 
@@ -601,7 +601,7 @@ Example event types include:
 
 **Important Columns**
 
-`event_id, campaign_id, merchant_id, shopper_id, event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, campaign_id, merchant_id, shopper_id (nullable), event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 

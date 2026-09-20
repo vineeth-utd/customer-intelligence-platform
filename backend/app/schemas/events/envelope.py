@@ -58,7 +58,7 @@ class CampaignEventEnvelope(BaseEventEnvelope):
     event_type: CampaignEventType
     campaign_id: UUID
     merchant_id: UUID
-    shopper_id: UUID
+    shopper_id: UUID | None = None
 
 
 class PlatformEventEnvelope(BaseEventEnvelope):
