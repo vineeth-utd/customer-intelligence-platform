@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from time import timezone
+from datetime import UTC
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,7 +84,7 @@ async def _handle_delivered(session: AsyncSession, envelope: CampaignEventEnvelo
     await upsert_campaign_analytics_daily(
         session,
         campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(timezone.utc).date(),
+        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
         delivered_inc=1
     )
 
@@ -93,7 +93,7 @@ async def _handle_opened(session: AsyncSession, envelope: CampaignEventEnvelope)
     await upsert_campaign_analytics_daily(
         session,
         campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(timezone.utc).date(),
+        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
         opened_inc=1
     )
 
@@ -102,7 +102,7 @@ async def _handle_clicked(session: AsyncSession, envelope: CampaignEventEnvelope
     await upsert_campaign_analytics_daily(
         session,
         campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(timezone.utc).date(),
+        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
         clicked_inc=1
     )
 
@@ -137,7 +137,7 @@ async def _handle_campaign_converted(session: AsyncSession, envelope: CampaignEv
     await upsert_campaign_analytics_daily(
         session,
         campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(timezone.utc).date(),
+        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
         converted_inc=1,
         order_inc=1,
         revenue_inc=float(order.total_amount)
