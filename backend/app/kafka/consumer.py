@@ -8,8 +8,9 @@ from pydantic import ValidationError
 from app.config.settings import settings
 from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
 from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
+from app.data_access.shopper_events import insert_shopper_event
 from app.db.session import AsyncSessionLocal
-from app.schemas.events.envelope import MerchantEventEnvelope, ProductEventEnvelope
+from app.schemas.events.envelope import MerchantEventEnvelope, ProductEventEnvelope, ShopperEventEnvelope
 from app.schemas.events.registry import get_payload_schema
 from app.services.merchant import process_merchant_event
 from app.services.product import process_product_event
@@ -303,3 +304,112 @@ class ProductEventConsumer:
 
 
 product_event_consumer = ProductEventConsumer()
+
+
+class ShopperEventConsumer:
+    """Kafka consumer for the shopper event topic.
+
+    Per message: validate -> persist into shopper_events (own committed transaction).
+    This is an interim state (Unit 3.6C). Offsets are NOT committed after persistence,
+    reserving offset advancement for when business processing is integrated in Unit 3.6D.
+    Malformed messages still commit past to avoid poison message blockages.
+    """
+
+    def __init__(self, *, group_id: str | None = None) -> None:
+        self._group_id = group_id or settings.kafka_shopper_consumer_group_id
+        self._consumer: AIOKafkaConsumer | None = None
+
+    async def start(self) -> None:
+        consumer = AIOKafkaConsumer(
+            settings.kafka_shopper_events_topic,
+            bootstrap_servers=settings.kafka_bootstrap_servers,
+            group_id=self._group_id,
+            enable_auto_commit=False,
+            auto_offset_reset="earliest",
+        )
+        try:
+            await consumer.start()
+        except Exception:
+            await consumer.stop()
+            raise
+        self._consumer = consumer
+
+    async def stop(self) -> None:
+        if self._consumer is not None:
+            await self._consumer.stop()
+            self._consumer = None
+
+    @property
+    def is_started(self) -> bool:
+        return self._consumer is not None
+
+    async def run_forever(self) -> None:
+        if self._consumer is None:
+            raise RuntimeError("ShopperEventConsumer is not started; cannot consume messages")
+        async for message in self._consumer:
+            await self._handle_message(message)
+
+    async def _handle_message(self, message: ConsumerRecord) -> None:
+        envelope = self._validate(message)
+        if envelope is None:
+            # Malformed/unregistered messages can never succeed on
+            # redelivery - commit past them so a poison message doesn't
+            # block the partition indefinitely.
+            await self._commit_message(message)
+            return
+
+        async with AsyncSessionLocal() as session:
+            inserted = await insert_shopper_event(session, envelope)
+
+        if inserted:
+            logger.info("Persisted shopper event %s (%s)", envelope.event_id, envelope.event_type.value)
+        else:
+            logger.info("Skipped duplicate shopper event %s (%s)", envelope.event_id, envelope.event_type.value)
+
+        # Interim behavior: do NOT process, mark processed, or commit offsets for valid events yet.
+        # This mirrors the interim behavior of Product before Unit 3.5D.
+
+    async def _commit_message(self, message: ConsumerRecord) -> None:
+        if self._consumer is None:
+            raise RuntimeError("ShopperEventConsumer is not started; cannot commit offsets")
+        topic_partition = TopicPartition(message.topic, message.partition)
+        await self._consumer.commit({topic_partition: OffsetAndMetadata(message.offset + 1, "")})
+
+    def _validate(self, message: ConsumerRecord) -> ShopperEventEnvelope | None:
+        try:
+            envelope = ShopperEventEnvelope.model_validate_json(message.value)
+        except ValidationError:
+            logger.error(
+                "Rejected malformed shopper event message at %s[%s]@%s",
+                message.topic,
+                message.partition,
+                message.offset,
+                exc_info=True,
+            )
+            return None
+
+        payload_schema = get_payload_schema(envelope.event_type.value, envelope.event_version)
+        if payload_schema is None:
+            logger.error(
+                "Rejected shopper event %s: no registered payload schema for (%s, %d)",
+                envelope.event_id,
+                envelope.event_type.value,
+                envelope.event_version,
+            )
+            return None
+
+        try:
+            payload_schema.model_validate(envelope.payload)
+        except ValidationError:
+            logger.error(
+                "Rejected shopper event %s: payload does not match schema for (%s, %d)",
+                envelope.event_id,
+                envelope.event_type.value,
+                envelope.event_version,
+                exc_info=True,
+            )
+            return None
+
+        return envelope
+
+shopper_event_consumer = ShopperEventConsumer()

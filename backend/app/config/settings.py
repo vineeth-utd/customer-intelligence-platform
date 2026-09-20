@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     kafka_product_events_topic: str = "cip.product.events"
     kafka_merchant_consumer_group_id: str = "cip-merchant-event-consumer"
     kafka_product_consumer_group_id: str = "cip-product-event-consumer"
+    kafka_shopper_consumer_group_id: str = "cip-shopper-event-consumer"
 
     merchant_generator_population_size: int = 50
     merchant_generator_tick_interval_seconds: float = 5.0
