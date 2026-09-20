@@ -47,6 +47,8 @@ class VariantContext:
 @dataclass
 class ProductContext:
     product_id: uuid.UUID
+    product_name: str
+    category: str | None
     variants: list[VariantContext]
 
 @dataclass
@@ -214,10 +216,24 @@ class ShopperBehaviorGenerator:
         return [env]
 
     def _search_product(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
+        products = self._active_products.get(shopper.merchant_id, [])
+        if not products:
+            return []
+        prod_id = self._rng.choice(products)
+        prod_ctx = self._products[prod_id]
+        
+        # Search by product name or category
+        if prod_ctx.category and self._rng.random() < 0.3:
+            search_query = prod_ctx.category
+        else:
+            # Maybe just a partial word from the product name
+            words = prod_ctx.product_name.split()
+            search_query = self._rng.choice(words) if words else prod_ctx.product_name
+
         return [self._build_envelope(
             shopper, 
             ShopperEventType.PRODUCT_SEARCHED, 
-            ProductSearchedPayload(search_query="synthetic search", result_count=self._rng.randint(0, 10))
+            ProductSearchedPayload(search_query=search_query, result_count=self._rng.randint(1, 10))
         )]
 
     def _view_product(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
@@ -266,38 +282,76 @@ class ShopperBehaviorGenerator:
             )]
 
     def _interact_wishlist_save_for_later(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
-        # Simplify to just wishlist for synthetic behavior
-        if shopper.wishlist and self._rng.random() < 0.3:
-            # Remove
+        r = self._rng.random()
+        
+        # 1. Remove from Wishlist
+        if shopper.wishlist and r < 0.2:
             var_id = self._rng.choice(list(shopper.wishlist))
             shopper.wishlist.remove(var_id)
             prod_id = self._variant_to_product.get(var_id)
             if prod_id:
                 return [self._build_envelope(shopper, ShopperEventType.WISHLIST_REMOVED, WishlistRemovedPayload(product_id=prod_id, variant_id=var_id))]
+
+        # 2. Remove from Save For Later
+        elif shopper.save_for_later and r < 0.4:
+            var_id = self._rng.choice(list(shopper.save_for_later))
+            shopper.save_for_later.remove(var_id)
+            prod_id = self._variant_to_product.get(var_id)
+            if prod_id:
+                return [self._build_envelope(shopper, ShopperEventType.SAVE_FOR_LATER_REMOVED, SaveForLaterRemovedPayload(product_id=prod_id, variant_id=var_id))]
+
+        # 3. Add to Wishlist or Save For Later
         else:
-            # Add
             products = self._active_products.get(shopper.merchant_id, [])
             if not products:
                 return []
             prod_id = self._rng.choice(products)
             variants = self._products[prod_id].variants
-            if variants:
-                var_id = self._rng.choice(variants).variant_id
+            if not variants:
+                return []
+            var_id = self._rng.choice(variants).variant_id
+            
+            if r < 0.7:
                 shopper.wishlist.add(var_id)
                 return [self._build_envelope(shopper, ShopperEventType.WISHLIST_ADDED, WishlistAddedPayload(product_id=prod_id, variant_id=var_id))]
+            else:
+                shopper.save_for_later.add(var_id)
+                return [self._build_envelope(shopper, ShopperEventType.SAVE_FOR_LATER_ADDED, SaveForLaterAddedPayload(product_id=prod_id, variant_id=var_id))]
         return []
 
     def _add_to_cart(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
-        products = self._active_products.get(shopper.merchant_id, [])
-        if not products:
-            return []
-        prod_id = self._rng.choice(products)
-        variants = self._products[prod_id].variants
-        if not variants:
+        var_id = None
+        source_list = None
+        r = self._rng.random()
+        
+        # 1. From wishlist
+        if shopper.wishlist and r < 0.2:
+            var_id = self._rng.choice(list(shopper.wishlist))
+            source_list = shopper.wishlist
+            
+        # 2. From save for later
+        elif shopper.save_for_later and r < 0.4:
+            var_id = self._rng.choice(list(shopper.save_for_later))
+            source_list = shopper.save_for_later
+            
+        # 3. New browse
+        if not var_id:
+            products = self._active_products.get(shopper.merchant_id, [])
+            if not products:
+                return []
+            prod_id = self._rng.choice(products)
+            variants = self._products[prod_id].variants
+            if not variants:
+                return []
+            var_ctx = self._rng.choice(variants)
+            var_id = var_ctx.variant_id
+            
+        # Check if variant still exists in catalog
+        var_ctx = self._variants.get(var_id)
+        if not var_ctx:
             return []
             
-        var_ctx = self._rng.choice(variants)
-        var_id = var_ctx.variant_id
+        prod_id = self._variant_to_product[var_id]
         
         # Check inventory
         existing_qty = shopper.cart.get(var_id, CartItemState(prod_id, var_id, 0, var_ctx.price)).quantity
@@ -309,6 +363,10 @@ class ShopperBehaviorGenerator:
             else:
                 shopper.cart[var_id].quantity += qty_to_add
                 
+            # Now that it's successfully added, remove it from the source list if it came from one
+            if source_list is not None and var_id in source_list:
+                source_list.remove(var_id)
+
             shopper.state = ShopperActivityState.IN_CART
             return [self._build_envelope(
                 shopper,

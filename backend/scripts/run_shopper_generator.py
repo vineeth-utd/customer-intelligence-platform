@@ -54,7 +54,12 @@ async def _load_merchant_catalogs() -> list[MerchantCatalogContext]:
                 for v in p.variants
             ]
             if variants:
-                products.append(ProductContext(product_id=p.product_id, variants=variants))
+                products.append(ProductContext(
+                    product_id=p.product_id, 
+                    product_name=p.product_name,
+                    category=p.category,
+                    variants=variants
+                ))
         if products:
             catalogs.append(MerchantCatalogContext(merchant_id=m.merchant_id, products=products))
             
