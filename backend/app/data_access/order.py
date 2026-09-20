@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.order import Order, OrderItem
 
 
@@ -47,3 +48,9 @@ def create_order_items(
             line_total=line_total,
         )
         session.add(item)
+
+async def list_merchant_orders(session: AsyncSession, merchant_id: uuid.UUID) -> list[Order]:
+    """Retrieve all orders for a given merchant."""
+    stmt = select(Order).where(Order.merchant_id == merchant_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())

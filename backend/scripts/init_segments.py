@@ -7,11 +7,8 @@ Usage (from backend/):
 import asyncio
 import logging
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.session import AsyncSessionLocal
-from app.models.merchant import Merchant
+from app.data_access.merchant import list_installed_merchants
 from app.services.segment import initialize_merchant_segments
 
 logger = logging.getLogger(__name__)
@@ -19,14 +16,13 @@ logger = logging.getLogger(__name__)
 
 async def _run() -> None:
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Merchant.merchant_id))
-        merchant_ids = result.scalars().all()
+        merchants = await list_installed_merchants(session)
         
-        for mid in merchant_ids:
-            await initialize_merchant_segments(session, mid)
+        for m in merchants:
+            await initialize_merchant_segments(session, m.merchant_id)
             
         await session.commit()
-        logger.info(f"Initialized segments for {len(merchant_ids)} merchants.")
+        logger.info(f"Initialized segments for {len(merchants)} merchants.")
 
 
 def main() -> None:

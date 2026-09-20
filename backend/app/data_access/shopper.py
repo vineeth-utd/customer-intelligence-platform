@@ -48,3 +48,9 @@ async def enrich_shopper_email(
     )
     await session.execute(update_stmt)
     return True
+
+async def list_merchant_shoppers(session: AsyncSession, merchant_id: uuid.UUID) -> list[uuid.UUID]:
+    """Retrieve all shopper IDs for a given merchant."""
+    stmt = select(Shopper.shopper_id).where(Shopper.merchant_id == merchant_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
