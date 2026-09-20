@@ -5,16 +5,11 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data_access.shopper import (
-    upsert_shopper,
-    enrich_shopper_email,
-    get_merchant,
-    get_order,
-    create_order,
-    create_order_items,
-    get_product_variant_with_product,
-    decrement_inventory,
-)
+from app.data_access.merchant import get_merchant_by_id
+from app.data_access.order import get_order, create_order, create_order_items
+from app.data_access.product import get_product_variant_with_product, decrement_inventory
+from app.data_access.shopper import upsert_shopper, enrich_shopper_email
+
 from app.schemas.events.envelope import ShopperEventEnvelope
 from app.schemas.events.event_types import ShopperEventType
 from app.schemas.events.payloads.shopper import (
@@ -51,7 +46,7 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
     
     await _handle_identity_enrichment(session, envelope, payload.email)
 
-    merchant = await get_merchant(session, envelope.merchant_id)
+    merchant = await get_merchant_by_id(session, envelope.merchant_id)
     if not merchant:
         raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
 

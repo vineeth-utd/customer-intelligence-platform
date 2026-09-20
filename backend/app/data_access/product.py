@@ -146,3 +146,26 @@ def apply_variant_field_changes(variant: ProductVariant, changed_values: dict[st
 
 def archive_variant_row(variant: ProductVariant) -> None:
     variant.status = "archived"
+
+async def get_product_variant_with_product(session: AsyncSession, variant_id: uuid.UUID) -> tuple[ProductVariant, Product] | None:
+    stmt = (
+        select(ProductVariant, Product)
+        .join(Product, ProductVariant.product_id == Product.product_id)
+        .where(ProductVariant.variant_id == variant_id)
+        .with_for_update()  # Lock for inventory update
+    )
+    result = await session.execute(stmt)
+    row = result.first()
+    if not row:
+        return None
+    return row[0], row[1]
+
+
+async def decrement_inventory(session: AsyncSession, variant_id: uuid.UUID, quantity: int) -> bool:
+    stmt = (
+        update(ProductVariant)
+        .where(ProductVariant.variant_id == variant_id, ProductVariant.inventory_quantity >= quantity)
+        .values(inventory_quantity=ProductVariant.inventory_quantity - quantity)
+    )
+    result = await session.execute(stmt)
+    return result.rowcount > 0
