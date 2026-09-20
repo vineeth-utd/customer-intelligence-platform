@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.data_access.campaign_events import get_campaign_event, insert_campaign_event
+from app.data_access.campaign_events import get_campaign_event, insert_campaign_event, mark_campaign_event_processed
 from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
 from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
 from app.data_access.shopper_events import get_shopper_event, insert_shopper_event, mark_shopper_event_processed
@@ -24,6 +24,7 @@ from app.schemas.events.registry import get_payload_schema
 from app.services.merchant import process_merchant_event
 from app.services.product import process_product_event
 from app.services.shopper import process_shopper_event
+from app.services.campaign import process_campaign_event
 
 logger = logging.getLogger(__name__)
 
@@ -264,8 +265,8 @@ class CampaignEventConsumer(BaseEventConsumer[CampaignEventEnvelope]):
             envelope_model=CampaignEventEnvelope,
             insert_event_fn=insert_campaign_event,
             get_event_fn=get_campaign_event,
-            process_event_fn=None,
-            mark_processed_fn=None,
+            process_event_fn=process_campaign_event,
+            mark_processed_fn=mark_campaign_event_processed,
             domain_name="campaign",
         )
 

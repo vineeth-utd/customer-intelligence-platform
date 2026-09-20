@@ -125,9 +125,11 @@ async def test_valid_event_persists_without_offset_advancement_and_remains_unpro
         topic_partition = TopicPartition(message.topic, message.partition)
         committed_before = await consumer._consumer.committed(topic_partition)
 
-        await consumer._handle_message(message)
+        # 1. Processing fails with UnresolvedReferenceError because merchant doesn't exist
+        with pytest.raises(Exception):
+            await consumer._handle_message(message)
 
-        # 1. Event is persisted
+        # 2. Event is persisted
         async with AsyncSessionLocal() as session:
             row = await session.get(CampaignEvent, envelope.event_id)
         assert row is not None
@@ -135,11 +137,11 @@ async def test_valid_event_persists_without_offset_advancement_and_remains_unpro
         assert row.merchant_id == merchant_id
         assert row.campaign_id == campaign_id
         assert row.shopper_id is None
-        # 2. Initial state remains unprocessed
+        # 3. State remains unprocessed because transaction rolled back
         assert row.processed is False
         assert row.processed_at is None
 
-        # 3. Offset is NOT advanced
+        # 4. Offset is NOT advanced
         committed_after = await consumer._consumer.committed(topic_partition)
         assert committed_after == committed_before
         assert committed_after != message.offset + 1
@@ -165,10 +167,12 @@ async def test_duplicate_event_is_persisted_idempotently_without_offset_advancem
         topic_partition = TopicPartition(first_message.topic, first_message.partition)
         committed_before = await consumer._consumer.committed(topic_partition)
 
-        await consumer._handle_message(first_message)
+        with pytest.raises(Exception):
+            await consumer._handle_message(first_message)
 
         second_message = await consumer._consumer.getone()
-        await consumer._handle_message(second_message)
+        with pytest.raises(Exception):
+            await consumer._handle_message(second_message)
 
         async with AsyncSessionLocal() as session:
             rows = (
