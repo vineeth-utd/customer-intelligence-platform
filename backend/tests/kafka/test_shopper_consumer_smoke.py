@@ -59,6 +59,28 @@ async def db_session():
     yield session
     await session.close()
 
+@pytest.fixture
+async def merchant(db_session):
+    from app.models.merchant import Merchant
+    merchant_row = Merchant(
+        merchant_id=uuid.uuid4(),
+        shopify_store_id=f"store-{uuid.uuid4().hex[:8]}",
+        merchant_name="Shopper Consumer Smoke Test Merchant",
+        email="shopper-consumer-smoke@example.com",
+        country="US",
+        timezone="America/New_York",
+        store_currency="USD",
+        app_install_status="installed",
+    )
+    db_session.add(merchant_row)
+    await db_session.commit()
+    yield merchant_row
+    await db_session.execute(delete(ShopperEvent).where(ShopperEvent.merchant_id == merchant_row.merchant_id))
+    from app.models.shopper import Shopper
+    await db_session.execute(delete(Shopper).where(Shopper.merchant_id == merchant_row.merchant_id))
+    await db_session.execute(delete(Merchant).where(Merchant.merchant_id == merchant_row.merchant_id))
+    await db_session.commit()
+
 
 async def _drain_until_event(consumer: ShopperEventConsumer, event_id: uuid.UUID, max_messages: int = 5000):
     for _ in range(max_messages):
@@ -97,10 +119,10 @@ async def test_consumer_starts_and_stops_against_live_kafka():
     assert instance.is_started is False
 
 
-async def test_successful_event_is_persisted_but_not_processed_or_offset_committed(
-    started_producer: EventProducer, consumer: ShopperEventConsumer, db_session
+async def test_successful_event_is_processed_and_offset_committed(
+    started_producer: EventProducer, consumer: ShopperEventConsumer, db_session, merchant
 ):
-    merchant_id = uuid.uuid4()
+    merchant_id = merchant.merchant_id
     shopper_id = uuid.uuid4()
     try:
         envelope = _session_envelope(merchant_id, shopper_id)
@@ -110,28 +132,25 @@ async def test_successful_event_is_persisted_but_not_processed_or_offset_committ
 
         message = await _drain_until_event(consumer, envelope.event_id)
         topic_partition = TopicPartition(message.topic, message.partition)
-        committed_before = await consumer._consumer.committed(topic_partition)
 
         await consumer._handle_message(message)
 
-        # Interim Unit 3.6C rules: Persisted, processed=False, NO offset commit
+        # Unit 3.6D rules: Persisted, processed=True, offset committed
         row = await db_session.get(ShopperEvent, envelope.event_id)
         assert row is not None
-        assert row.processed is False
-        assert row.processed_at is None
+        assert row.processed is True
+        assert row.processed_at is not None
 
         committed_after = await consumer._consumer.committed(topic_partition)
-        assert committed_after == committed_before
-        assert committed_after != message.offset + 1
+        assert committed_after == message.offset + 1
     finally:
-        await db_session.execute(delete(ShopperEvent).where(ShopperEvent.shopper_id == shopper_id))
-        await db_session.commit()
+        pass
 
 
-async def test_duplicate_delivery_is_skipped_and_offset_still_not_committed(
-    started_producer: EventProducer, consumer: ShopperEventConsumer, db_session
+async def test_duplicate_delivery_is_skipped_and_offset_still_committed(
+    started_producer: EventProducer, consumer: ShopperEventConsumer, db_session, merchant
 ):
-    merchant_id = uuid.uuid4()
+    merchant_id = merchant.merchant_id
     shopper_id = uuid.uuid4()
     try:
         envelope = _session_envelope(merchant_id, shopper_id)
@@ -158,12 +177,66 @@ async def test_duplicate_delivery_is_skipped_and_offset_still_not_committed(
             .all()
         )
         assert len(rows) == 1
-        assert rows[0].processed is False
+        assert rows[0].processed is True
 
-        # Still no commit
+        # Commit should advance
         committed_after = await consumer._consumer.committed(topic_partition)
-        assert committed_after == committed_before
-        assert committed_after != second_message.offset + 1
+        assert committed_after == second_message.offset + 1
     finally:
         await db_session.execute(delete(ShopperEvent).where(ShopperEvent.shopper_id == shopper_id))
         await db_session.commit()
+
+async def test_processing_failure_does_not_commit_offset(
+    started_producer: EventProducer, consumer: ShopperEventConsumer, db_session, merchant
+):
+    merchant_id = merchant.merchant_id
+    shopper_id = uuid.uuid4()
+    missing_variant_id = uuid.uuid4()
+    try:
+        # Invalid payload references missing product/variant
+        envelope = ShopperEventEnvelope(
+            event_id=uuid.uuid4(),
+            event_type=ShopperEventType.PURCHASE_COMPLETED,
+            event_version=1,
+            event_timestamp=datetime.now(timezone.utc),
+            merchant_id=merchant_id,
+            shopper_id=shopper_id,
+            session_id=uuid.uuid4(),
+            payload={
+                "order_id": str(uuid.uuid4()),
+                "total_amount": "10.00",
+                "email": None,
+                "items": [
+                    {
+                        "product_id": str(uuid.uuid4()),
+                        "variant_id": str(missing_variant_id),
+                        "quantity": 1,
+                        "unit_price": "10.00"
+                    }
+                ]
+            },
+            source="consumer-smoke-test",
+        )
+        await started_producer.publish(
+            settings.kafka_shopper_events_topic, envelope, key=f"{merchant_id}:{shopper_id}"
+        )
+
+        message = await _drain_until_event(consumer, envelope.event_id)
+        topic_partition = TopicPartition(message.topic, message.partition)
+        committed_before = await consumer._consumer.committed(topic_partition)
+
+        from app.services.shopper import UnresolvedReferenceError
+        with pytest.raises(UnresolvedReferenceError):
+            await consumer._handle_message(message)
+
+        # Event should still be processed=False because transaction rolled back
+        row = await db_session.get(ShopperEvent, envelope.event_id)
+        assert row is not None
+        assert row.processed is False
+
+        # Offset must not be committed
+        committed_after = await consumer._consumer.committed(topic_partition)
+        assert committed_after == committed_before
+        assert committed_after != message.offset + 1
+    finally:
+        pass

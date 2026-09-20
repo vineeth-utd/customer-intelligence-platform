@@ -8,12 +8,13 @@ from pydantic import ValidationError
 from app.config.settings import settings
 from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
 from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
-from app.data_access.shopper_events import insert_shopper_event
+from app.data_access.shopper_events import get_shopper_event, insert_shopper_event, mark_shopper_event_processed
 from app.db.session import AsyncSessionLocal
 from app.schemas.events.envelope import MerchantEventEnvelope, ProductEventEnvelope, ShopperEventEnvelope
 from app.schemas.events.registry import get_payload_schema
 from app.services.merchant import process_merchant_event
 from app.services.product import process_product_event
+from app.services.shopper import process_shopper_event
 
 logger = logging.getLogger(__name__)
 
@@ -366,8 +367,30 @@ class ShopperEventConsumer:
         else:
             logger.info("Skipped duplicate shopper event %s (%s)", envelope.event_id, envelope.event_type.value)
 
-        # Interim behavior: do NOT process, mark processed, or commit offsets for valid events yet.
-        # This mirrors the interim behavior of Product before Unit 3.5D.
+        async with AsyncSessionLocal() as session:
+            existing = await get_shopper_event(session, envelope.event_id)
+            already_processed = existing is not None and existing.processed
+
+        if already_processed:
+            logger.info("Skipped already-processed shopper event %s (%s)", envelope.event_id, envelope.event_type.value)
+        else:
+            try:
+                async with AsyncSessionLocal() as session:
+                    await process_shopper_event(session, envelope)
+                    await mark_shopper_event_processed(session, envelope.event_id, datetime.now(timezone.utc))
+                    await session.commit()
+            except Exception:
+                logger.error(
+                    "Failed to process shopper event %s (%s) for shopper %s; offset not committed",
+                    envelope.event_id,
+                    envelope.event_type.value,
+                    envelope.shopper_id,
+                    exc_info=True,
+                )
+                raise
+            logger.info("Processed shopper event %s (%s)", envelope.event_id, envelope.event_type.value)
+
+        await self._commit_message(message)
 
     async def _commit_message(self, message: ConsumerRecord) -> None:
         if self._consumer is None:
