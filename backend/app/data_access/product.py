@@ -4,8 +4,29 @@ from decimal import Decimal
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.merchant import Merchant
 from app.models.product import Product, ProductVariant
+
+
+async def get_active_merchant_catalogs(session: AsyncSession) -> list[Merchant]:
+    """Load all installed merchants with their active products and variants.
+    
+    Used by the synthetic Shopper Generator to seed the initial in-memory
+    catalog simulation state.
+    """
+    stmt = (
+        select(Merchant)
+        .where(Merchant.app_install_status == "installed")
+        .options(
+            selectinload(Merchant.products.and_(Product.status == "active")).selectinload(
+                Product.variants.and_(ProductVariant.status == "active", ProductVariant.inventory_quantity > 0)
+            )
+        )
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def get_product_by_id(session: AsyncSession, product_id: uuid.UUID) -> Product | None:
