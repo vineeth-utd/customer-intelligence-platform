@@ -1,7 +1,9 @@
+import base64
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Generic, TypeVar
+from typing import Any, Awaitable, Callable, Generic, Literal, TypeVar
 
 from aiokafka import AIOKafkaConsumer
 from aiokafka.structs import ConsumerRecord, OffsetAndMetadata, TopicPartition
@@ -61,6 +63,8 @@ class BaseEventConsumer(Generic[EnvelopeT]):
         process_event_fn: Callable[[AsyncSession, EnvelopeT], Awaitable[None]] | None = None,
         mark_processed_fn: Callable[[AsyncSession, uuid.UUID, datetime], Awaitable[None]] | None = None,
         domain_name: str = "",
+        dlq_topic: str | None = None,
+        business_exceptions: tuple[type[Exception], ...] = (),
     ) -> None:
         self._topic = topic
         self._group_id = group_id
@@ -70,6 +74,8 @@ class BaseEventConsumer(Generic[EnvelopeT]):
         self._process_event_fn = process_event_fn
         self._mark_processed_fn = mark_processed_fn
         self._domain_name = domain_name
+        self._dlq_topic = dlq_topic
+        self._business_exceptions = business_exceptions
         self._consumer: AIOKafkaConsumer | None = None
 
     def get_context_id(self, envelope: EnvelopeT) -> uuid.UUID:
@@ -108,6 +114,13 @@ class BaseEventConsumer(Generic[EnvelopeT]):
     async def _handle_message(self, message: ConsumerRecord) -> None:
         envelope = self._validate(message)
         if envelope is None:
+            if self._dlq_topic:
+                await self._publish_dlq(
+                    message,
+                    failure_stage="validation",
+                    error_type="ValidationError",
+                    error_message="Message failed schema validation",
+                )
             await self._commit_message(message)
             return
 
@@ -134,6 +147,24 @@ class BaseEventConsumer(Generic[EnvelopeT]):
                     await self._process_event_fn(session, envelope)
                     await self._mark_processed_fn(session, envelope.event_id, datetime.now(timezone.utc))
                     await session.commit()
+            except self._business_exceptions as e:
+                if self._dlq_topic:
+                    logger.warning(
+                        "Business processing failed for %s event %s (%s); publishing to DLQ",
+                        self._domain_name,
+                        envelope.event_id,
+                        getattr(envelope.event_type, "value", envelope.event_type),
+                    )
+                    await self._publish_dlq(
+                        message,
+                        failure_stage="processing",
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                        event_id=envelope.event_id,
+                        event_type=getattr(envelope.event_type, "value", envelope.event_type),
+                    )
+                else:
+                    raise
             except Exception:
                 context_id = self.get_context_id(envelope)
                 logger.error(
@@ -145,9 +176,56 @@ class BaseEventConsumer(Generic[EnvelopeT]):
                     exc_info=True,
                 )
                 raise
-            logger.info("Processed %s event %s (%s)", self._domain_name, envelope.event_id, getattr(envelope.event_type, "value", envelope.event_type))
+            else:
+                logger.info("Processed %s event %s (%s)", self._domain_name, envelope.event_id, getattr(envelope.event_type, "value", envelope.event_type))
 
         await self._commit_message(message)
+
+    async def _publish_dlq(
+        self,
+        message: ConsumerRecord,
+        failure_stage: Literal["validation", "processing"],
+        error_type: str,
+        error_message: str,
+        event_id: uuid.UUID | None = None,
+        event_type: str | None = None,
+    ) -> None:
+        if not self._dlq_topic:
+            return
+
+        from app.kafka.producer import event_producer
+        from app.schemas.events.envelope import DeadLetterRecord
+
+        if failure_stage == "validation" and (event_id is None or event_type is None):
+            try:
+                raw = json.loads(message.value)
+                if isinstance(raw, dict):
+                    if event_id is None:
+                        raw_id = raw.get("event_id")
+                        if raw_id:
+                            event_id = uuid.UUID(str(raw_id))
+                    if event_type is None:
+                        event_type = raw.get("event_type")
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                pass
+
+        b64_msg = base64.b64encode(message.value).decode("ascii")
+
+        record = DeadLetterRecord(
+            original_topic=message.topic,
+            original_partition=message.partition,
+            original_offset=message.offset,
+            consumer_group_id=self._group_id,
+            failure_stage=failure_stage,
+            error_type=error_type,
+            error_message=error_message,
+            failed_at=datetime.now(timezone.utc),
+            original_message_base64=b64_msg,
+            original_event_id=event_id,
+            event_type=event_type,
+        )
+
+        await event_producer.publish_dlq(self._dlq_topic, record)
 
     async def _commit_message(self, message: ConsumerRecord) -> None:
         if self._consumer is None:

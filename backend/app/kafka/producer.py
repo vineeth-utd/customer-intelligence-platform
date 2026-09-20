@@ -4,23 +4,20 @@ from aiokafka import AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.errors import TopicAlreadyExistsError, for_code
 
-from pydantic import BaseModel
-
 from app.config.settings import settings
-from app.schemas.events.envelope import BaseEventEnvelope
-from app.schemas.events.dlq import DeadLetterRecord
+from app.schemas.events.envelope import BaseEventEnvelope, DeadLetterRecord
 
 logger = logging.getLogger(__name__)
 
 EVENT_TOPICS = (
     settings.kafka_merchant_events_topic,
+    settings.kafka_merchant_dlq_topic,
     settings.kafka_shopper_events_topic,
+    settings.kafka_shopper_dlq_topic,
     settings.kafka_campaign_events_topic,
+    settings.kafka_campaign_dlq_topic,
     settings.kafka_product_events_topic,
-    settings.kafka_merchant_events_dlq_topic,
-    settings.kafka_shopper_events_dlq_topic,
-    settings.kafka_campaign_events_dlq_topic,
-    settings.kafka_product_events_dlq_topic,
+    settings.kafka_product_dlq_topic,
 )
 
 
@@ -54,18 +51,18 @@ class EventProducer:
     def is_started(self) -> bool:
         return self._producer is not None
 
-    async def _send_json(self, topic: str, model: BaseModel, key: str | None = None) -> None:
+    async def publish(self, topic: str, envelope: BaseEventEnvelope, key: str | None = None) -> None:
         if self._producer is None:
             raise RuntimeError("EventProducer is not started; Kafka publishing is unavailable")
-        value = model.model_dump_json().encode("utf-8")
+        value = envelope.model_dump_json().encode("utf-8")
         key_bytes = key.encode("utf-8") if key is not None else None
         await self._producer.send_and_wait(topic, value=value, key=key_bytes)
 
-    async def publish(self, topic: str, envelope: BaseEventEnvelope, key: str | None = None) -> None:
-        await self._send_json(topic, envelope, key)
-
-    async def publish_record(self, topic: str, record: DeadLetterRecord, key: str | None = None) -> None:
-        await self._send_json(topic, record, key)
+    async def publish_dlq(self, topic: str, record: DeadLetterRecord) -> None:
+        if self._producer is None:
+            raise RuntimeError("EventProducer is not started; Kafka publishing is unavailable")
+        value = record.model_dump_json().encode("utf-8")
+        await self._producer.send_and_wait(topic, value=value)
 
     async def _ensure_topics(self) -> None:
         admin = AIOKafkaAdminClient(bootstrap_servers=settings.kafka_bootstrap_servers)

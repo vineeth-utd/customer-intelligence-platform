@@ -68,3 +68,17 @@ class PlatformEventEnvelope(BaseEventEnvelope):
     """
 
     event_type: PlatformEventType
+
+
+class DeadLetterRecord(BaseModel):
+    original_topic: str
+    original_partition: int
+    original_offset: int
+    consumer_group_id: str
+    failure_stage: str
+    error_type: str
+    error_message: str
+    failed_at: datetime
+    original_event_id: UUID | None = None
+    event_type: str | None = None
+    original_message_base64: str
