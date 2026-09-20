@@ -9,11 +9,17 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
+from app.data_access.campaign_events import get_campaign_event, insert_campaign_event
 from app.data_access.merchant_events import get_merchant_event, insert_merchant_event, mark_merchant_event_processed
 from app.data_access.product_events import get_product_event, insert_product_event, mark_product_event_processed
 from app.data_access.shopper_events import get_shopper_event, insert_shopper_event, mark_shopper_event_processed
 from app.db.session import AsyncSessionLocal
-from app.schemas.events.envelope import MerchantEventEnvelope, ProductEventEnvelope, ShopperEventEnvelope
+from app.schemas.events.envelope import (
+    CampaignEventEnvelope,
+    MerchantEventEnvelope,
+    ProductEventEnvelope,
+    ShopperEventEnvelope,
+)
 from app.schemas.events.registry import get_payload_schema
 from app.services.merchant import process_merchant_event
 from app.services.product import process_product_event
@@ -51,9 +57,9 @@ class BaseEventConsumer(Generic[EnvelopeT]):
         envelope_model: type[EnvelopeT],
         insert_event_fn: Callable[[AsyncSession, EnvelopeT], Awaitable[bool]],
         get_event_fn: Callable[[AsyncSession, uuid.UUID], Awaitable[Any]],
-        process_event_fn: Callable[[AsyncSession, EnvelopeT], Awaitable[None]],
-        mark_processed_fn: Callable[[AsyncSession, uuid.UUID, datetime], Awaitable[None]],
-        domain_name: str,
+        process_event_fn: Callable[[AsyncSession, EnvelopeT], Awaitable[None]] | None = None,
+        mark_processed_fn: Callable[[AsyncSession, uuid.UUID, datetime], Awaitable[None]] | None = None,
+        domain_name: str = "",
     ) -> None:
         self._topic = topic
         self._group_id = group_id
@@ -111,6 +117,9 @@ class BaseEventConsumer(Generic[EnvelopeT]):
             logger.info("Persisted %s event %s (%s)", self._domain_name, envelope.event_id, getattr(envelope.event_type, "value", envelope.event_type))
         else:
             logger.info("Skipped duplicate %s event %s (%s)", self._domain_name, envelope.event_id, getattr(envelope.event_type, "value", envelope.event_type))
+
+        if self._process_event_fn is None or self._mark_processed_fn is None:
+            return
 
         async with AsyncSessionLocal() as session:
             existing = await self._get_event_fn(session, envelope.event_id)
@@ -244,3 +253,24 @@ class ShopperEventConsumer(BaseEventConsumer[ShopperEventEnvelope]):
         return envelope.shopper_id
 
 shopper_event_consumer = ShopperEventConsumer()
+
+
+class CampaignEventConsumer(BaseEventConsumer[CampaignEventEnvelope]):
+    """Kafka consumer for the campaign event topic."""
+    def __init__(self, *, group_id: str | None = None) -> None:
+        super().__init__(
+            topic=settings.kafka_campaign_events_topic,
+            group_id=group_id or settings.kafka_campaign_consumer_group_id,
+            envelope_model=CampaignEventEnvelope,
+            insert_event_fn=insert_campaign_event,
+            get_event_fn=get_campaign_event,
+            process_event_fn=None,
+            mark_processed_fn=None,
+            domain_name="campaign",
+        )
+
+    def get_context_id(self, envelope: CampaignEventEnvelope) -> uuid.UUID:
+        return envelope.campaign_id
+
+campaign_event_consumer = CampaignEventConsumer()
+
