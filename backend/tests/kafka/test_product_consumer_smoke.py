@@ -26,13 +26,15 @@ from app.services.product import UnresolvedReferenceError
 
 @pytest.fixture
 async def started_producer():
-    producer = EventProducer()
+    from app.kafka.producer import event_producer
+    from aiokafka.errors import KafkaConnectionError
+    import pytest
     try:
-        await producer.start()
+        await event_producer.start()
     except KafkaConnectionError:
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
-    yield producer
-    await producer.stop()
+    yield event_producer
+    await event_producer.stop()
 
 
 @pytest.fixture
@@ -199,7 +201,7 @@ async def test_duplicate_delivery_after_processing_is_skipped_and_offset_still_c
         await _cleanup_product(product_id)
 
 
-async def test_processing_failure_does_not_commit_offset(
+async def test_processing_failure_commits_offset_after_dlq(
     started_producer: EventProducer, consumer: ProductEventConsumer, merchant: Merchant
 ):
     # PRODUCT_VARIANT_UPDATED referencing a variant_id that was never created
@@ -225,8 +227,7 @@ async def test_processing_failure_does_not_commit_offset(
         topic_partition = TopicPartition(message.topic, message.partition)
         committed_before = await consumer._consumer.committed(topic_partition)
 
-        with pytest.raises(UnresolvedReferenceError):
-            await consumer._handle_message(message)
+        await consumer._handle_message(message)
 
         async with AsyncSessionLocal() as session:
             row = await session.get(ProductEvent, envelope.event_id)
@@ -238,7 +239,6 @@ async def test_processing_failure_does_not_commit_offset(
         assert variant is None
 
         committed_after = await consumer._consumer.committed(topic_partition)
-        assert committed_after == committed_before
-        assert committed_after != message.offset + 1
+        assert committed_after == message.offset + 1
     finally:
         await _cleanup_product(product_id)

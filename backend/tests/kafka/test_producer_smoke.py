@@ -21,13 +21,15 @@ from app.schemas.events.dlq import DeadLetterRecord
 
 @pytest.fixture
 async def started_producer():
-    producer = EventProducer()
+    from app.kafka.producer import event_producer
+    from aiokafka.errors import KafkaConnectionError
+    import pytest
     try:
-        await producer.start()
+        await event_producer.start()
     except KafkaConnectionError:
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
-    yield producer
-    await producer.stop()
+    yield event_producer
+    await event_producer.stop()
 
 
 async def test_publish_reaches_the_merchant_topic(started_producer: EventProducer):
@@ -69,14 +71,14 @@ async def test_publish_record_reaches_dlq_topic(started_producer: EventProducer)
     )
 
     consumer = AIOKafkaConsumer(
-        settings.kafka_merchant_events_dlq_topic,
+        settings.kafka_merchant_dlq_topic,
         bootstrap_servers=settings.kafka_bootstrap_servers,
         auto_offset_reset="latest",
         enable_auto_commit=False,
     )
     await consumer.start()
     try:
-        await started_producer.publish_record(settings.kafka_merchant_events_dlq_topic, record)
+        await started_producer.publish_record(settings.kafka_merchant_dlq_topic, record)
         message = await consumer.getone()
         assert record.model_dump_json().encode("utf-8") == message.value
     finally:

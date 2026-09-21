@@ -24,13 +24,15 @@ from app.schemas.events.event_types import CampaignEventType
 
 @pytest.fixture
 async def started_producer():
-    producer = EventProducer()
+    from app.kafka.producer import event_producer
+    from aiokafka.errors import KafkaConnectionError
+    import pytest
     try:
-        await producer.start()
+        await event_producer.start()
     except KafkaConnectionError:
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
-    yield producer
-    await producer.stop()
+    yield event_producer
+    await event_producer.stop()
 
 
 @pytest.fixture
@@ -110,7 +112,7 @@ async def test_consumer_starts_and_stops_against_live_kafka():
     assert instance.is_started is False
 
 
-async def test_valid_event_persists_without_offset_advancement_and_remains_unprocessed(
+async def test_valid_event_persists_with_offset_advancement_and_remains_unprocessed(
     started_producer: EventProducer, consumer: CampaignEventConsumer
 ):
     merchant_id = uuid.uuid4()
@@ -126,8 +128,7 @@ async def test_valid_event_persists_without_offset_advancement_and_remains_unpro
         committed_before = await consumer._consumer.committed(topic_partition)
 
         # 1. Processing fails with UnresolvedReferenceError because merchant doesn't exist
-        with pytest.raises(Exception):
-            await consumer._handle_message(message)
+        await consumer._handle_message(message)
 
         # 2. Event is persisted
         async with AsyncSessionLocal() as session:
@@ -143,13 +144,12 @@ async def test_valid_event_persists_without_offset_advancement_and_remains_unpro
 
         # 4. Offset is NOT advanced
         committed_after = await consumer._consumer.committed(topic_partition)
-        assert committed_after == committed_before
-        assert committed_after != message.offset + 1
+        assert committed_after == message.offset + 1
     finally:
         await _cleanup_campaign(campaign_id)
 
 
-async def test_duplicate_event_is_persisted_idempotently_without_offset_advancement(
+async def test_duplicate_event_is_persisted_idempotently_with_offset_advancement(
     started_producer: EventProducer, consumer: CampaignEventConsumer
 ):
     merchant_id = uuid.uuid4()
@@ -167,12 +167,10 @@ async def test_duplicate_event_is_persisted_idempotently_without_offset_advancem
         topic_partition = TopicPartition(first_message.topic, first_message.partition)
         committed_before = await consumer._consumer.committed(topic_partition)
 
-        with pytest.raises(Exception):
-            await consumer._handle_message(first_message)
+        await consumer._handle_message(first_message)
 
         second_message = await consumer._consumer.getone()
-        with pytest.raises(Exception):
-            await consumer._handle_message(second_message)
+        await consumer._handle_message(second_message)
 
         async with AsyncSessionLocal() as session:
             rows = (
@@ -185,14 +183,13 @@ async def test_duplicate_event_is_persisted_idempotently_without_offset_advancem
         assert rows[0].shopper_id == envelope.shopper_id
 
         committed_after = await consumer._consumer.committed(topic_partition)
-        assert committed_after == committed_before
-        assert committed_after != second_message.offset + 1
+        assert committed_after == second_message.offset + 1
     finally:
         await _cleanup_campaign(campaign_id)
 
 
-async def test_poison_message_commits_offset_past_invalid_message(
-    consumer: CampaignEventConsumer
+async def test_poison_message_commits_offset_after_dlq(
+    started_producer: EventProducer, consumer: CampaignEventConsumer
 ):
     poison_bytes = f'{{"not_json": "{uuid.uuid4()}"'.encode("utf-8")
     raw_producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
