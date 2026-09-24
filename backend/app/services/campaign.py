@@ -9,7 +9,6 @@ from app.data_access.campaign import (
     get_campaign,
     is_order_attributed_to_campaign,
     update_campaign_fields,
-    upsert_campaign_analytics_daily,
 )
 from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order
@@ -121,30 +120,15 @@ async def _handle_campaign_updated(session: AsyncSession, envelope: CampaignEven
 
 
 async def _handle_delivered(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    await upsert_campaign_analytics_daily(
-        session,
-        campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
-        delivered_inc=1
-    )
+    pass
 
 
 async def _handle_opened(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    await upsert_campaign_analytics_daily(
-        session,
-        campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
-        opened_inc=1
-    )
+    pass
 
 
 async def _handle_clicked(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    await upsert_campaign_analytics_daily(
-        session,
-        campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
-        clicked_inc=1
-    )
+    pass
 
 
 async def _handle_campaign_converted(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
@@ -173,15 +157,6 @@ async def _handle_campaign_converted(session: AsyncSession, envelope: CampaignEv
     if is_already_attributed:
         # User requirement 2: Treat duplicate conversion attribution as an idempotent successful no-op
         return
-
-    await upsert_campaign_analytics_daily(
-        session,
-        campaign_id=envelope.campaign_id,
-        metric_date=envelope.event_timestamp.astimezone(UTC).date(),
-        converted_inc=1,
-        order_inc=1,
-        revenue_inc=float(order.total_amount)
-    )
 
 
 _HANDLERS: dict[CampaignEventType, Callable[[AsyncSession, CampaignEventEnvelope], Awaitable[None]]] = {

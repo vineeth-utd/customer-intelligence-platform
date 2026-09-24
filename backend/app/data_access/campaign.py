@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign
 from app.models.event import CampaignEvent
-from app.models.metrics import CampaignAnalyticsDaily
 from app.schemas.events.event_types import CampaignEventType
 
 
@@ -51,54 +50,7 @@ def update_campaign_fields(campaign: Campaign, changed_values: dict[str, Any]) -
             setattr(campaign, key, value)
 
 
-async def upsert_campaign_analytics_daily(
-    session: AsyncSession,
-    campaign_id: uuid.UUID,
-    metric_date: date,
-    delivered_inc: int = 0,
-    opened_inc: int = 0,
-    clicked_inc: int = 0,
-    converted_inc: int = 0,
-    order_inc: int = 0,
-    revenue_inc: float = 0.0,
-) -> None:
-    stmt = (
-        pg_insert(CampaignAnalyticsDaily)
-        .values(
-            campaign_id=campaign_id,
-            metric_date=metric_date,
-            delivered_count=delivered_inc,
-            opened_count=opened_inc,
-            clicked_count=clicked_inc,
-            converted_count=converted_inc,
-            attributed_order_count=order_inc,
-            attributed_revenue=revenue_inc,
-            open_rate=0.0,
-            click_through_rate=0.0,
-            conversion_rate=0.0,
-            generated_at=func.now(),
-        )
-        .on_conflict_do_update(
-            index_elements=["campaign_id", "metric_date"],
-            set_={
-                "delivered_count": CampaignAnalyticsDaily.delivered_count + delivered_inc,
-                "opened_count": CampaignAnalyticsDaily.opened_count + opened_inc,
-                "clicked_count": CampaignAnalyticsDaily.clicked_count + clicked_inc,
-                "converted_count": CampaignAnalyticsDaily.converted_count + converted_inc,
-                "attributed_order_count": CampaignAnalyticsDaily.attributed_order_count + order_inc,
-                "attributed_revenue": CampaignAnalyticsDaily.attributed_revenue + revenue_inc,
-                "generated_at": func.now(),
-            },
-        )
-        .returning(CampaignAnalyticsDaily)
-    )
-    result = await session.execute(stmt)
-    updated = result.scalar_one()
 
-    delivered = updated.delivered_count
-    updated.open_rate = float(updated.opened_count) / delivered if delivered > 0 else 0.0
-    updated.click_through_rate = float(updated.clicked_count) / delivered if delivered > 0 else 0.0
-    updated.conversion_rate = float(updated.converted_count) / delivered if delivered > 0 else 0.0
 
 
 async def is_order_attributed_to_campaign(session: AsyncSession, campaign_id: uuid.UUID, order_id: uuid.UUID) -> bool:
