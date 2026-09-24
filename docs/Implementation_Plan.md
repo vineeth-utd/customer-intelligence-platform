@@ -190,34 +190,41 @@ Synthetic generators should model coherent business behaviour rather than produc
 
 ### Goal
 
-Transform incoming events into meaningful operational business state and basic analytics.
+Transform operational business data into the derived analytical data required by the Prototype.
+
+### Context
+
+Operational business-state processing originally anticipated in Milestone 4 was completed as part of the Milestone 3 domain event verticals. Merchant, Product, Shopper, Order, Campaign, Subscription, Feature, and related operational state is already maintained through event-driven business processing.
+
+Milestone 4 therefore focuses on derived business data products, scheduled analytical processing, materialized summaries, and Analytics Service capabilities.
 
 ### Scope
 
-Implement the business services and data access required by the Prototype's event flows.
+Implement the analytical processing required by the Prototype, including:
 
-Initial processing should cover enough business activity to demonstrate meaningful end-to-end behaviour, including:
-
-* Merchant lifecycle state.
-* Shopper state.
-* Product and Product Variant information required by shopper activity.
-* Orders and Order Items.
-* Basic campaign activity where required.
-* Relevant feature activity.
-* Basic merchant and shopper analytical data.
-* Initial daily business metrics.
-* Required materialized view refreshes.
+* Merchant Metrics Daily.
+* Platform Metrics Daily.
+* Feature Metrics Daily.
+* Campaign Analytics Daily, building on the event-driven processing already implemented in Milestone 3.
+* Required aggregate materialized views, including Platform Metrics, Feature Metrics, and Campaign Analytics.
+* Scheduled background processing for generating and refreshing derived analytical data.
+* Analytics Data Access Layer operations required to generate and retrieve analytical data.
 * Analytics Service capabilities required by the Prototype dashboard.
+* Verification that derived metrics can be reproduced from their underlying operational source data.
+
+Full Merchant Profiles, Shopper Profiles, Customer Journeys, Shopper Segment Membership, and Merchant Health remain deferred to the MVP phase.
 
 The implementation should use the real Business Service and Data Access layers rather than Prototype-specific shortcuts.
 
 ### Definition of Done
 
-* Event processing produces correct operational business records.
-* Related entities remain consistent with database constraints.
-* Basic derived metrics can be generated from processed business activity.
-* Analytical results can be reproduced from underlying source data.
-* Business services can retrieve the data required by the Prototype APIs.
+* Scheduled analytical processing generates the required daily metric data from operational source-of-truth records.
+* Daily metric generation is idempotent and can safely recompute the current analytical period.
+* Required materialized analytical views can be refreshed from their underlying daily metric tables.
+* Campaign analytics produced during event processing integrate correctly with the broader analytical layer.
+* Analytical results can be reproduced from underlying operational business data.
+* Analytics Service capabilities can retrieve the data required by the Prototype APIs and dashboard.
+* Analytics processing remains independent of the synchronous Kafka event-processing transaction path.
 
 ---
 
@@ -392,9 +399,9 @@ Frontend Design                COMPLETE
 Implementation
 └── Phase 1 - End-to-End Prototype
     ├── Milestone 1 - Project & Infrastructure Foundation   COMPLETE
-    ├── Milestone 2 - Database Foundation                   NEXT
-    ├── Milestone 3 - Event Generation & Ingestion
-    ├── Milestone 4 - Basic Business Processing & Analytics
+    ├── Milestone 2 - Database Foundation                   COMPLETE
+    ├── Milestone 3 - Event Generation & Ingestion          COMPLETE
+    ├── Milestone 4 - Basic Business Processing & Analytics NEXT
     └── Milestone 5 - API & Dashboard Vertical Slice
 
 Phase 2 - MVP                  PLANNED
