@@ -9,7 +9,8 @@ from sqlalchemy import delete, func, select, text
 
 from app.config.settings import settings
 from app.db.session import AsyncSessionLocal, engine
-from app.models.merchant import PlatformFeature, SubscriptionPlan
+from app.models.merchant import PlatformFeature, SubscriptionPlan, PlanFeature, FeatureEventMapping
+from app.models.metrics import FeatureMetricsDaily
 from app.reference_data.features import FEATURE_CATALOG
 from app.reference_data.plans import PLAN_CATALOG
 from app.services.merchant import initialize_reference_data
@@ -29,8 +30,6 @@ async def db_session():
         await session.close()
         pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
 
-    from app.models.merchant import PlanFeature, FeatureEventMapping
-    from app.models.metrics import FeatureMetricsDaily
     await session.execute(delete(PlanFeature))
     await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))

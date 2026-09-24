@@ -13,7 +13,8 @@ from sqlalchemy import delete, select, text
 from app.config.settings import settings
 from app.data_access.merchant import get_active_subscription, get_merchant_by_id
 from app.db.session import AsyncSessionLocal, engine
-from app.models.merchant import Merchant, MerchantFeature, PlatformFeature, Subscription, SubscriptionPlan
+from app.models.merchant import Merchant, MerchantFeature, PlatformFeature, Subscription, SubscriptionPlan, PlanFeature, FeatureEventMapping
+from app.models.metrics import FeatureMetricsDaily
 from app.reference_data.plans import PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
@@ -41,8 +42,6 @@ async def db_session():
         await session.close()
         pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
 
-    from app.models.merchant import PlanFeature, FeatureEventMapping
-    from app.models.metrics import FeatureMetricsDaily
     await session.execute(delete(PlanFeature))
     await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))
@@ -319,7 +318,6 @@ async def test_unresolved_feature_key_raises(db_session):
     # Delete 'wishlist' feature and its mappings to test DB resolution failure
     feature_id = await db_session.scalar(select(PlatformFeature.feature_id).where(PlatformFeature.feature_key == "wishlist"))
     if feature_id:
-        from app.models.merchant import PlanFeature, FeatureEventMapping
         await db_session.execute(delete(PlanFeature).where(PlanFeature.feature_id == feature_id))
         await db_session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
         await db_session.execute(delete(PlatformFeature).where(PlatformFeature.feature_id == feature_id))

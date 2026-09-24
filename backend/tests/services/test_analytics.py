@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone, timedelta, date
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
@@ -13,9 +13,11 @@ from app.models.metrics import (
     FeatureMetricsDaily,
     CampaignAnalyticsDaily,
 )
-from app.models.event import MerchantEvent, ShopperEvent, CampaignEvent
-from app.models.order import Order
+from app.models.event import CampaignEvent, MerchantEvent, ShopperEvent
 from app.models.merchant import Merchant, SubscriptionPlan
+from app.models.order import Order
+from app.models.shopper import Shopper
+from app.models.campaign import Campaign
 from app.services.analytics import generate_daily_metrics, refresh_aggregate_views
 from app.data_access.merchant import create_merchant
 from app.data_access.shopper import upsert_shopper
@@ -72,8 +74,6 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
         event_timestamp=datetime(2025, 2, 1, 10, 0, 0, tzinfo=timezone.utc)
     )
     # Manually override created_at for the test since upsert_shopper doesn't let us pass it
-    from sqlalchemy import update
-    from app.models.shopper import Shopper
     await db_session.execute(update(Shopper).where(Shopper.shopper_id == shopper_id).values(created_at=datetime(2025, 2, 1, 10, 0, 0, tzinfo=timezone.utc)))
 
     segment_id = uuid.uuid4()
@@ -93,7 +93,6 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     )
     await db_session.flush()
 
-    from app.models.campaign import Campaign
     campaign = Campaign(
         campaign_id=campaign_id,
         merchant_id=merchant_id,
@@ -200,7 +199,6 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     assert ca[0] == 1
     
     # Create some mock data for feature metrics to explicitly test the usage rate calculation
-    from app.models.metrics import FeatureMetricsDaily
     res = await db_session.execute(text("SELECT feature_id FROM platform_features LIMIT 1"))
     feature_id = res.scalar()
     if feature_id is None:

@@ -1,6 +1,7 @@
 from collections.abc import Awaitable, Callable
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,9 +64,6 @@ async def _handle_campaign_updated(session: AsyncSession, envelope: CampaignEven
     if unsupported:
         raise UnsupportedConfigurationFieldError(f"Unsupported campaign fields: {sorted(unsupported)}")
 
-    from datetime import datetime
-    import uuid
-
     # Normalize and validate changed_values
     for field in ["start_at", "end_at"]:
         if field in payload.changed_values:
@@ -120,15 +118,15 @@ async def _handle_campaign_updated(session: AsyncSession, envelope: CampaignEven
 
 
 async def _handle_delivered(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    pass
+    pass  # Intentional no-op; handled asynchronously by the analytics service
 
 
 async def _handle_opened(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    pass
+    pass  # Intentional no-op; handled asynchronously by the analytics service
 
 
 async def _handle_clicked(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
-    pass
+    pass  # Intentional no-op; handled asynchronously by the analytics service
 
 
 async def _handle_campaign_converted(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:

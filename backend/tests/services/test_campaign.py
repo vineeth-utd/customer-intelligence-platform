@@ -20,6 +20,7 @@ from app.services.campaign import (
 )
 from app.data_access.merchant import create_merchant
 from app.data_access.segment import upsert_merchant_segment
+from app.data_access.shopper import upsert_shopper
 from app.data_access.order import create_order
 from app.reference_data.segments import SegmentCatalogEntry
 
@@ -65,7 +66,6 @@ async def setup_data(db_session: AsyncSession):
     await db_session.flush() # ensure segment_id is populated
     segment_id = segment.segment_id
 
-    from app.data_access.shopper import upsert_shopper
     await upsert_shopper(
         db_session,
         shopper_id=shopper_id,

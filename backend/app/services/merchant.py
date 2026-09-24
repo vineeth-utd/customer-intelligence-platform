@@ -1,11 +1,14 @@
 from collections.abc import Awaitable, Callable
 
+from sqlalchemy import select
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.merchant import (
     create_merchant,
     get_active_subscription,
     get_feature_by_key,
+    get_merchant_by_id,
     get_plan_by_key,
     update_merchant_fields,
     update_merchant_install_status,
@@ -18,7 +21,7 @@ from app.data_access.merchant import (
     upsert_plan,
     cancel_subscription,
 )
-from app.models.merchant import PlatformFeature, SubscriptionPlan
+from app.models.merchant import PlanFeature, PlatformFeature, SubscriptionPlan
 from app.reference_data.features import FEATURE_CATALOG, FeatureKey
 from app.reference_data.plans import PLAN_CATALOG, PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
@@ -164,7 +167,6 @@ async def _handle_feature_enabled(session: AsyncSession, envelope: MerchantEvent
     if feature is None:
         raise UnresolvedReferenceError(f"Unknown feature_key: {payload.feature_key}")
     
-    from app.data_access.merchant import get_merchant_by_id
     merchant = await get_merchant_by_id(session, envelope.merchant_id)
     if not merchant or merchant.app_install_status != "installed":
         raise FeatureNotEntitledError(f"Merchant {envelope.merchant_id} is not installed.")
@@ -173,8 +175,6 @@ async def _handle_feature_enabled(session: AsyncSession, envelope: MerchantEvent
     if not subscription:
         raise FeatureNotEntitledError(f"Merchant {envelope.merchant_id} has no active subscription.")
         
-    from sqlalchemy import select
-    from app.models.merchant import PlanFeature
     stmt = select(PlanFeature).where(
         PlanFeature.plan_id == subscription.plan_id,
         PlanFeature.feature_id == feature.feature_id

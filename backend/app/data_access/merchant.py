@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.merchant import Merchant, MerchantFeature, PlatformFeature, Subscription, SubscriptionPlan
+from app.models.merchant import FeatureEventMapping, Merchant, MerchantFeature, PlanFeature, PlatformFeature, Subscription, SubscriptionPlan
 from app.reference_data.features import FeatureCatalogEntry, FeatureKey
 from app.reference_data.plans import PlanCatalogEntry, PlanKey
 
@@ -61,8 +61,6 @@ async def upsert_plan(session: AsyncSession, entry: PlanCatalogEntry) -> None:
     plan_id = result.scalar_one()
 
     # Clear and recreate plan_features to ensure exact match with catalog
-    from sqlalchemy import delete
-    from app.models.merchant import PlanFeature, PlatformFeature
     await session.execute(delete(PlanFeature).where(PlanFeature.plan_id == plan_id))
     
     if entry.features:
@@ -106,8 +104,6 @@ async def upsert_feature(session: AsyncSession, entry: FeatureCatalogEntry) -> N
     feature_id = result.scalar_one()
 
     # Clear and recreate event_mappings to ensure exact match with catalog
-    from sqlalchemy import delete
-    from app.models.merchant import FeatureEventMapping
     await session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
     
     if entry.event_mappings:

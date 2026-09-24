@@ -15,6 +15,7 @@ from app.data_access.analytics import (
     get_merchant_metrics_summary as da_get_merchant_metrics_summary,
     get_merchant_metrics_trend as da_get_merchant_metrics_trend,
     get_campaign_analytics_summary as da_get_campaign_analytics_summary,
+    refresh_aggregate_views as da_refresh_aggregate_views,
 )
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
@@ -40,7 +41,6 @@ async def refresh_aggregate_views(session: AsyncSession) -> None:
     """
     Refresh the materialized views summarizing lifetime/current performance.
     """
-    from app.data_access.analytics import refresh_aggregate_views as da_refresh_aggregate_views
     await da_refresh_aggregate_views(session)
 
 async def get_platform_summary(session: AsyncSession) -> Optional[PlatformSummaryResult]:
