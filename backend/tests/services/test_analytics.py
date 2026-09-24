@@ -16,7 +16,7 @@ from app.models.metrics import (
 from app.models.event import MerchantEvent, ShopperEvent, CampaignEvent
 from app.models.order import Order
 from app.models.merchant import Merchant, SubscriptionPlan
-from app.services.analytics import generate_daily_metrics
+from app.services.analytics import generate_daily_metrics, refresh_aggregate_views
 from app.data_access.merchant import create_merchant
 from app.data_access.shopper import upsert_shopper
 from app.data_access.segment import upsert_merchant_segment
@@ -189,3 +189,43 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     mm2 = (await db_session.execute(stmt)).scalar_one()
     assert float(mm2.revenue) == 150.00
     assert mm2.order_count == 1
+
+    # Now refresh the materialized views
+    await refresh_aggregate_views(db_session)
+    
+    # Assert CampaignAnalytics materialized view
+    res = await db_session.execute(text("SELECT delivered_count FROM campaign_analytics WHERE campaign_id = :campaign_id"), {"campaign_id": campaign_id})
+    ca = res.fetchone()
+    assert ca is not None
+    assert ca[0] == 1
+    
+    # Create some mock data for feature metrics to explicitly test the usage rate calculation
+    from app.models.metrics import FeatureMetricsDaily
+    res = await db_session.execute(text("SELECT feature_id FROM platform_features LIMIT 1"))
+    feature_id = res.scalar()
+    if feature_id is None:
+        feature_id = uuid.uuid4()
+        await db_session.execute(text("INSERT INTO platform_features (feature_id, feature_key, feature_name, description, feature_category) VALUES (:id, 'test_feature', 'Test', 'desc', 'core')"), {"id": feature_id})
+    fmd = FeatureMetricsDaily(
+        feature_id=feature_id,
+        metric_date=metric_date,
+        eligible_merchant_count=100,
+        enabled_merchant_count=50,
+        active_merchant_count=10,
+        feature_event_count=500,
+        adoption_rate=0.50,
+        usage_rate=0.20,
+        generated_at=datetime.now(timezone.utc)
+    )
+    db_session.add(fmd)
+    await db_session.commit()
+    
+    await refresh_aggregate_views(db_session)
+    
+    res = await db_session.execute(text("SELECT adoption_rate, usage_rate, total_feature_events FROM feature_metrics WHERE feature_id = :feature_id"), {"feature_id": feature_id})
+    fm = res.fetchone()
+    assert fm is not None
+    assert float(fm[0]) == 0.50 # 50 enabled / 100 eligible
+    assert float(fm[1]) == 0.20 # 10 active / 50 enabled
+    assert fm[2] == 500
+

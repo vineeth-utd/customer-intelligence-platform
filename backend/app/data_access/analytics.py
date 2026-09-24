@@ -465,3 +465,26 @@ async def generate_campaign_analytics_daily(session: AsyncSession, metric_date: 
             generated_at = EXCLUDED.generated_at;
     """)
     await session.execute(stmt, {"metric_date": metric_date})
+
+async def refresh_aggregate_views(session: AsyncSession) -> None:
+    """
+    Refresh the materialized views summarizing lifetime/current performance.
+    
+    Must be executed outside a transaction block because REFRESH MATERIALIZED VIEW CONCURRENTLY 
+    cannot run inside a transaction. We open a dedicated connection with AUTOCOMMIT.
+    """
+    engine = session.bind
+    if engine is None:
+        raise RuntimeError("Session is not bound to an engine")
+        
+    async with engine.connect() as conn:
+        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+        await conn.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY campaign_analytics")
+        )
+        await conn.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY feature_metrics")
+        )
+        await conn.execute(
+            text("REFRESH MATERIALIZED VIEW platform_metrics")
+        )

@@ -18,3 +18,10 @@ async def generate_daily_metrics(session: AsyncSession, metric_date: date) -> No
     await generate_platform_metrics_daily(session, metric_date)
     await generate_feature_metrics_daily(session, metric_date)
     await generate_campaign_analytics_daily(session, metric_date)
+
+async def refresh_aggregate_views(session: AsyncSession) -> None:
+    """
+    Refresh the materialized views summarizing lifetime/current performance.
+    """
+    from app.data_access.analytics import refresh_aggregate_views as da_refresh_aggregate_views
+    await da_refresh_aggregate_views(session)
