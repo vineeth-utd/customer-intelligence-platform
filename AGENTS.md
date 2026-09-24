@@ -62,3 +62,9 @@ Do not create or leave temporary editing artifacts in the repository, including 
 Edit the intended source or test files directly. If temporary files are required during tooling, create them outside the repository and remove them when finished.
 
 Before completing a task, run `git status --short` and ensure that every new or modified file is an intentional project change. Never delete or restore pre-existing user changes without explicit approval.
+
+### Python Imports
+
+Keep imports at module scope following standard Python conventions.
+
+Use local/function-level imports only when there is a concrete reason, such as avoiding an unavoidable circular dependency or conditionally loading an optional dependency. Do not use local imports as a default coding pattern or for ordinary application dependencies.
