@@ -1,7 +1,19 @@
 from datetime import date
-from sqlalchemy import text
+from typing import List, Optional
+from uuid import UUID
+
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.metrics import MerchantMetricsDaily, PlatformMetricsDaily
+from app.schemas.analytics import (
+    CampaignAnalyticsResult,
+    FeatureMetricsResult,
+    MerchantMetricsSummaryResult,
+    MerchantMetricsTrendResult,
+    PlatformSummaryResult,
+    PlatformTrendResult,
+)
 
 async def generate_merchant_metrics_daily(session: AsyncSession, metric_date: date) -> None:
     stmt = text("""
@@ -488,3 +500,109 @@ async def refresh_aggregate_views(session: AsyncSession) -> None:
         await conn.execute(
             text("REFRESH MATERIALIZED VIEW platform_metrics")
         )
+
+async def get_platform_summary(session: AsyncSession) -> Optional[PlatformSummaryResult]:
+    stmt = text("SELECT total_merchants, active_merchants, total_revenue, total_orders, active_shoppers, active_subscriptions FROM platform_metrics LIMIT 1")
+    res = await session.execute(stmt)
+    row = res.fetchone()
+    if row:
+        return PlatformSummaryResult.model_validate(row)
+    return None
+
+async def get_platform_metrics_trend(session: AsyncSession, start_date: date, end_date: date) -> List[PlatformTrendResult]:
+    stmt = select(PlatformMetricsDaily).where(
+        PlatformMetricsDaily.metric_date >= start_date,
+        PlatformMetricsDaily.metric_date <= end_date
+    ).order_by(PlatformMetricsDaily.metric_date.asc())
+    res = await session.execute(stmt)
+    return [PlatformTrendResult.model_validate(row) for row in res.scalars().all()]
+
+async def get_feature_metrics_summary(session: AsyncSession) -> List[FeatureMetricsResult]:
+    stmt = text("""
+        SELECT 
+            fm.feature_id, 
+            pf.feature_key, 
+            pf.feature_name, 
+            pf.feature_category,
+            fm.eligible_merchant_count, 
+            fm.enabled_merchant_count, 
+            fm.active_merchant_count, 
+            fm.total_feature_events, 
+            fm.adoption_rate, 
+            fm.usage_rate
+        FROM feature_metrics fm
+        JOIN platform_features pf ON pf.feature_id = fm.feature_id
+    """)
+    res = await session.execute(stmt)
+    return [FeatureMetricsResult.model_validate(row) for row in res.fetchall()]
+
+async def get_merchant_metrics_summary(session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date) -> Optional[MerchantMetricsSummaryResult]:
+    stmt = text("""
+        SELECT
+            merchant_id,
+            SUM(revenue) AS revenue,
+            SUM(order_count) AS order_count,
+            SUM(unique_shoppers) AS unique_shoppers,
+            SUM(new_shoppers) AS new_shoppers,
+            SUM(session_count) AS session_count,
+            SUM(converted_session_count) AS converted_session_count,
+            SUM(product_view_count) AS product_view_count,
+            SUM(wishlist_add_count) AS wishlist_add_count,
+            SUM(save_for_later_count) AS save_for_later_count,
+            SUM(add_to_cart_count) AS add_to_cart_count,
+            SUM(checkout_count) AS checkout_count,
+            SUM(purchase_count) AS purchase_count,
+            CASE WHEN SUM(session_count) > 0 
+                 THEN CAST(SUM(converted_session_count) AS NUMERIC) / SUM(session_count) 
+                 ELSE 0 END AS conversion_rate,
+            CASE WHEN SUM(order_count) > 0 
+                 THEN SUM(revenue) / SUM(order_count) 
+                 ELSE 0 END AS average_order_value,
+            SUM(platform_login_count) AS platform_login_count,
+            SUM(campaign_created_count) AS campaign_created_count,
+            SUM(feature_enable_count) AS feature_enable_count,
+            SUM(feature_disable_count) AS feature_disable_count
+        FROM merchant_metrics_daily
+        WHERE merchant_id = :merchant_id
+          AND metric_date >= :start_date 
+          AND metric_date <= :end_date
+        GROUP BY merchant_id
+    """)
+    res = await session.execute(stmt, {"merchant_id": merchant_id, "start_date": start_date, "end_date": end_date})
+    row = res.fetchone()
+    if row:
+        return MerchantMetricsSummaryResult.model_validate(row)
+    return None
+
+async def get_merchant_metrics_trend(session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date) -> List[MerchantMetricsTrendResult]:
+    stmt = select(MerchantMetricsDaily).where(
+        MerchantMetricsDaily.merchant_id == merchant_id,
+        MerchantMetricsDaily.metric_date >= start_date,
+        MerchantMetricsDaily.metric_date <= end_date
+    ).order_by(MerchantMetricsDaily.metric_date.asc())
+    res = await session.execute(stmt)
+    return [MerchantMetricsTrendResult.model_validate(row) for row in res.scalars().all()]
+
+async def get_campaign_analytics_summary(session: AsyncSession, merchant_id: UUID) -> List[CampaignAnalyticsResult]:
+    stmt = text("""
+        SELECT 
+            ca.campaign_id,
+            c.campaign_name,
+            c.campaign_type,
+            c.campaign_medium,
+            c.status,
+            ca.delivered_count,
+            ca.opened_count,
+            ca.clicked_count,
+            ca.converted_count,
+            ca.attributed_order_count,
+            ca.attributed_revenue,
+            ca.open_rate,
+            ca.click_through_rate,
+            ca.conversion_rate
+        FROM campaign_analytics ca
+        JOIN campaigns c ON c.campaign_id = ca.campaign_id
+        WHERE c.merchant_id = :merchant_id
+    """)
+    res = await session.execute(stmt, {"merchant_id": merchant_id})
+    return [CampaignAnalyticsResult.model_validate(row) for row in res.fetchall()]
