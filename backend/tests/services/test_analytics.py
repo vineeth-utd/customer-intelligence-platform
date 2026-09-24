@@ -206,18 +206,24 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     if feature_id is None:
         feature_id = uuid.uuid4()
         await db_session.execute(text("INSERT INTO platform_features (feature_id, feature_key, feature_name, description, feature_category) VALUES (:id, 'test_feature', 'Test', 'desc', 'core')"), {"id": feature_id})
-    fmd = FeatureMetricsDaily(
-        feature_id=feature_id,
-        metric_date=metric_date,
-        eligible_merchant_count=100,
-        enabled_merchant_count=50,
-        active_merchant_count=10,
-        feature_event_count=500,
-        adoption_rate=0.50,
-        usage_rate=0.20,
-        generated_at=datetime.now(timezone.utc)
+    stmt = select(FeatureMetricsDaily).where(
+        FeatureMetricsDaily.feature_id == feature_id,
+        FeatureMetricsDaily.metric_date == metric_date
     )
-    db_session.add(fmd)
+    fmd = (await db_session.execute(stmt)).scalar_one_or_none()
+    
+    if fmd is None:
+        fmd = FeatureMetricsDaily(feature_id=feature_id, metric_date=metric_date)
+        db_session.add(fmd)
+
+    fmd.eligible_merchant_count = 100
+    fmd.enabled_merchant_count = 50
+    fmd.active_merchant_count = 10
+    fmd.feature_event_count = 500
+    fmd.adoption_rate = 0.50
+    fmd.usage_rate = 0.20
+    fmd.generated_at = datetime.now(timezone.utc)
+    
     await db_session.commit()
     
     await refresh_aggregate_views(db_session)

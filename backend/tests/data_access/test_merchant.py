@@ -47,8 +47,10 @@ async def _delete_feature(session, feature_key: FeatureKey) -> None:
     feature_id = await session.scalar(select(PlatformFeature.feature_id).where(PlatformFeature.feature_key == feature_key.value))
     if feature_id:
         from app.models.merchant import FeatureEventMapping, PlanFeature
+        from app.models.metrics import FeatureMetricsDaily
         await session.execute(delete(PlanFeature).where(PlanFeature.feature_id == feature_id))
         await session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
+        await session.execute(delete(FeatureMetricsDaily).where(FeatureMetricsDaily.feature_id == feature_id))
         await session.execute(delete(PlatformFeature).where(PlatformFeature.feature_id == feature_id))
     await session.commit()
 

@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     product_generator_tick_interval_seconds: float = 5.0
     product_generator_seed: int | None = None
 
+    enable_background_scheduler: bool = True
+    analytics_job_cron_minute: str = "15"
+    analytics_job_lookback_days: int = 1
+
     class Config:
         env_file = ".env"
 

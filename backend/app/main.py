@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.config.settings import settings
 from app.kafka.producer import event_producer
+from app.scheduler.main import setup_scheduler, stop_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await event_producer.start()
     except Exception:
         logger.warning("Kafka producer failed to start; continuing without Kafka publishing", exc_info=True)
+        
+    try:
+        setup_scheduler()
+    except Exception:
+        logger.error("Background scheduler failed to start", exc_info=True)
+        
     yield
+    
+    stop_scheduler()
     await event_producer.stop()
 
 

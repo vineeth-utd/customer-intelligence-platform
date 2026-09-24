@@ -30,9 +30,11 @@ async def db_session():
         pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
 
     from app.models.merchant import PlanFeature, FeatureEventMapping
+    from app.models.metrics import FeatureMetricsDaily
     await session.execute(delete(PlanFeature))
     await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))
+    await session.execute(delete(FeatureMetricsDaily))
     await session.execute(delete(PlatformFeature))
     await session.commit()
 
@@ -41,6 +43,7 @@ async def db_session():
     await session.execute(delete(PlanFeature))
     await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))
+    await session.execute(delete(FeatureMetricsDaily))
     await session.execute(delete(PlatformFeature))
     await session.commit()
     await session.close()
