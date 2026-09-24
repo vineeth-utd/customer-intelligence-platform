@@ -18,6 +18,7 @@ from app.reference_data.plans import PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
 from app.services.merchant import (
+    FeatureNotEntitledError,
     UnresolvedReferenceError,
     UnsupportedConfigurationFieldError,
     initialize_reference_data,
@@ -40,6 +41,9 @@ async def db_session():
         await session.close()
         pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
 
+    from app.models.merchant import PlanFeature, FeatureEventMapping
+    await session.execute(delete(PlanFeature))
+    await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))
     await session.execute(delete(PlatformFeature))
     await session.commit()
@@ -47,6 +51,8 @@ async def db_session():
 
     yield session
 
+    await session.execute(delete(PlanFeature))
+    await session.execute(delete(FeatureEventMapping))
     await session.execute(delete(SubscriptionPlan))
     await session.execute(delete(PlatformFeature))
     await session.commit()
@@ -206,6 +212,17 @@ async def test_feature_enable_then_disable_updates_merchant_feature_row(db_sessi
             ),
         )
         await process_merchant_event(
+            db_session, _envelope(merchant_id, MerchantEventType.APP_INSTALLED, {"install_channel": "shopify_app_store"})
+        )
+        await process_merchant_event(
+            db_session,
+            _envelope(
+                merchant_id,
+                MerchantEventType.SUBSCRIPTION_STARTED,
+                {"plan_key": "pro", "billing_cycle": "monthly", "amount_paid": 49},
+            ),
+        )
+        await process_merchant_event(
             db_session, _envelope(merchant_id, MerchantEventType.FEATURE_ENABLED, {"feature_key": "wishlist"})
         )
         result = await db_session.execute(select(MerchantFeature).where(MerchantFeature.merchant_id == merchant_id))
@@ -296,8 +313,15 @@ async def test_unresolved_plan_key_raises(db_session):
 
 
 async def test_unresolved_feature_key_raises(db_session):
-    await db_session.execute(delete(PlatformFeature))
-    await db_session.commit()
+    # Delete 'wishlist' feature and its mappings to test DB resolution failure
+    feature_id = await db_session.scalar(select(PlatformFeature.feature_id).where(PlatformFeature.feature_key == "wishlist"))
+    if feature_id:
+        from app.models.merchant import PlanFeature, FeatureEventMapping
+        await db_session.execute(delete(PlanFeature).where(PlanFeature.feature_id == feature_id))
+        await db_session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
+        await db_session.execute(delete(PlatformFeature).where(PlatformFeature.feature_id == feature_id))
+        await db_session.commit()
+
     merchant_id = uuid.uuid4()
     try:
         with pytest.raises(UnresolvedReferenceError):
@@ -318,6 +342,47 @@ async def test_unsupported_configuration_field_raises(db_session):
                 _envelope(
                     merchant_id, MerchantEventType.MERCHANT_CONFIGURATION_UPDATED, {"changed_values": {"notification_email": "test@example.com"}}
                 ),
+            )
+    finally:
+        await _cleanup_merchant(db_session, merchant_id)
+
+
+async def test_feature_not_entitled_error_raises(db_session):
+    merchant_id = uuid.uuid4()
+    try:
+        # Create merchant and install app
+        await process_merchant_event(
+            db_session,
+            _envelope(
+                merchant_id,
+                MerchantEventType.MERCHANT_CREATED,
+                {
+                    "shopify_store_id": f"store-{merchant_id.hex[:8]}",
+                    "merchant_name": "Acme",
+                    "email": "acme@example.com",
+                    "country": "US",
+                    "timezone": "America/New_York",
+                    "store_currency": "USD",
+                },
+            ),
+        )
+        await process_merchant_event(
+            db_session, _envelope(merchant_id, MerchantEventType.APP_INSTALLED, {"install_channel": "shopify_app_store"})
+        )
+        # Start Free plan, which only has wishlist
+        await process_merchant_event(
+            db_session,
+            _envelope(
+                merchant_id,
+                MerchantEventType.SUBSCRIPTION_STARTED,
+                {"plan_key": "free", "billing_cycle": "monthly", "amount_paid": 0},
+            ),
+        )
+        
+        # Trying to enable "recommendations" (requires Pro/Growth/Enterprise) should fail
+        with pytest.raises(FeatureNotEntitledError):
+            await process_merchant_event(
+                db_session, _envelope(merchant_id, MerchantEventType.FEATURE_ENABLED, {"feature_key": "recommendations"})
             )
     finally:
         await _cleanup_merchant(db_session, merchant_id)

@@ -33,12 +33,23 @@ async def db_session():
 
 
 async def _delete_plan(session, plan_key: PlanKey) -> None:
-    await session.execute(delete(SubscriptionPlan).where(SubscriptionPlan.plan_key == plan_key.value))
+    from sqlalchemy import select
+    plan_id = await session.scalar(select(SubscriptionPlan.plan_id).where(SubscriptionPlan.plan_key == plan_key.value))
+    if plan_id:
+        from app.models.merchant import PlanFeature
+        await session.execute(delete(PlanFeature).where(PlanFeature.plan_id == plan_id))
+        await session.execute(delete(SubscriptionPlan).where(SubscriptionPlan.plan_id == plan_id))
     await session.commit()
 
 
 async def _delete_feature(session, feature_key: FeatureKey) -> None:
-    await session.execute(delete(PlatformFeature).where(PlatformFeature.feature_key == feature_key.value))
+    from sqlalchemy import select
+    feature_id = await session.scalar(select(PlatformFeature.feature_id).where(PlatformFeature.feature_key == feature_key.value))
+    if feature_id:
+        from app.models.merchant import FeatureEventMapping, PlanFeature
+        await session.execute(delete(PlanFeature).where(PlanFeature.feature_id == feature_id))
+        await session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
+        await session.execute(delete(PlatformFeature).where(PlatformFeature.feature_id == feature_id))
     await session.commit()
 
 

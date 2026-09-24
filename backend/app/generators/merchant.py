@@ -173,7 +173,8 @@ class MerchantLifecycleGenerator:
             ]
 
         if action == "feature_enable":
-            available = [key for key in FeatureKey if key not in state.enabled_features]
+            plan_features = PLAN_CATALOG[state.plan_key].features
+            available = [key for key in plan_features if key not in state.enabled_features]
             if not available:
                 return []
             feature_key = self._rng.choice(available)
@@ -241,10 +242,17 @@ class MerchantLifecycleGenerator:
             return []
         previous_plan_key = state.plan_key
         state.plan_key = new_plan_key
+        
+        events = []
+        new_plan_features = PLAN_CATALOG[new_plan_key].features
+        for feature_key in list(state.enabled_features):
+            if feature_key not in new_plan_features:
+                state.enabled_features.discard(feature_key)
+                events.append(self._build_envelope(state, MerchantEventType.FEATURE_DISABLED, FeatureDisabledPayload(feature_key=feature_key)))
+                
         event_type = MerchantEventType.SUBSCRIPTION_UPGRADED if upgrade else MerchantEventType.SUBSCRIPTION_DOWNGRADED
         payload_cls = SubscriptionUpgradedPayload if upgrade else SubscriptionDowngradedPayload
-        return [
-            self._build_envelope(
+        events.append(self._build_envelope(
                 state,
                 event_type,
                 payload_cls(
@@ -253,8 +261,8 @@ class MerchantLifecycleGenerator:
                     billing_cycle=state.billing_cycle,
                     amount_paid=self._amount_for(new_plan_key, state.billing_cycle),
                 ),
-            )
-        ]
+            ))
+        return events
 
     def _amount_for(self, plan_key: PlanKey, billing_cycle: BillingCycle) -> float:
         entry = PLAN_CATALOG[plan_key]

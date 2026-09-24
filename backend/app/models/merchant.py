@@ -101,6 +101,19 @@ class PlatformFeature(Base):
 
     plan_features: Mapped[list["PlanFeature"]] = relationship(back_populates="feature")
     merchant_features: Mapped[list["MerchantFeature"]] = relationship(back_populates="feature")
+    event_mappings: Mapped[list["FeatureEventMapping"]] = relationship(back_populates="feature")
+
+
+class FeatureEventMapping(Base):
+    __tablename__ = "feature_event_mappings"
+
+    feature_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("platform_features.feature_id"), nullable=False
+    )
+    event_domain: Mapped[str] = mapped_column(String, primary_key=True)
+    event_type: Mapped[str] = mapped_column(String, primary_key=True)
+
+    feature: Mapped["PlatformFeature"] = relationship(back_populates="event_mappings")
 
 
 class PlanFeature(Base):

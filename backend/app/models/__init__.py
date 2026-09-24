@@ -8,6 +8,7 @@ from app.models.investigation import (
 )
 from app.models.journey import CustomerJourney, CustomerJourneyEvent, MerchantJourney, MerchantJourneyEvent
 from app.models.merchant import (
+    FeatureEventMapping,
     MerchantFeature,
     Merchant,
     PlanFeature,
@@ -35,6 +36,7 @@ __all__ = [
     "CustomerJourney",
     "CustomerJourneyEvent",
     "FeatureMetricsDaily",
+    "FeatureEventMapping",
     "Investigation",
     "InvestigationEvidence",
     "InvestigationMessage",

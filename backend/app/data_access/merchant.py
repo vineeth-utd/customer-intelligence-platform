@@ -55,8 +55,29 @@ async def upsert_plan(session: AsyncSession, entry: PlanCatalogEntry) -> None:
                 "annual_price": entry.annual_price,
             },
         )
+        .returning(SubscriptionPlan.plan_id)
     )
-    await session.execute(stmt)
+    result = await session.execute(stmt)
+    plan_id = result.scalar_one()
+
+    # Clear and recreate plan_features to ensure exact match with catalog
+    from sqlalchemy import delete
+    from app.models.merchant import PlanFeature, PlatformFeature
+    await session.execute(delete(PlanFeature).where(PlanFeature.plan_id == plan_id))
+    
+    if entry.features:
+        # Resolve feature_ids from keys
+        feature_stmt = select(PlatformFeature.feature_id).where(
+            PlatformFeature.feature_key.in_([f.value for f in entry.features])
+        )
+        feature_result = await session.execute(feature_stmt)
+        feature_ids = feature_result.scalars().all()
+        
+        if feature_ids:
+            plan_features = [
+                {"plan_id": plan_id, "feature_id": f_id} for f_id in feature_ids
+            ]
+            await session.execute(pg_insert(PlanFeature).values(plan_features).on_conflict_do_nothing())
 
 
 async def upsert_feature(session: AsyncSession, entry: FeatureCatalogEntry) -> None:
@@ -79,8 +100,22 @@ async def upsert_feature(session: AsyncSession, entry: FeatureCatalogEntry) -> N
                 "feature_category": entry.feature_category,
             },
         )
+        .returning(PlatformFeature.feature_id)
     )
-    await session.execute(stmt)
+    result = await session.execute(stmt)
+    feature_id = result.scalar_one()
+
+    # Clear and recreate event_mappings to ensure exact match with catalog
+    from sqlalchemy import delete
+    from app.models.merchant import FeatureEventMapping
+    await session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
+    
+    if entry.event_mappings:
+        mappings = [
+            {"feature_id": feature_id, "event_domain": m.event_domain, "event_type": m.event_type}
+            for m in entry.event_mappings
+        ]
+        await session.execute(pg_insert(FeatureEventMapping).values(mappings).on_conflict_do_nothing())
 
 
 async def get_merchant_by_id(session: AsyncSession, merchant_id: uuid.UUID) -> Merchant | None:

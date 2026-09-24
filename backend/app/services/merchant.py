@@ -64,10 +64,10 @@ async def initialize_reference_data(session: AsyncSession) -> None:
     transaction for the whole initialization as one unit; the Data Access
     functions it calls operate on the session without committing.
     """
-    for entry in PLAN_CATALOG.values():
-        await upsert_plan(session, entry)
     for entry in FEATURE_CATALOG.values():
         await upsert_feature(session, entry)
+    for entry in PLAN_CATALOG.values():
+        await upsert_plan(session, entry)
     await session.commit()
 
 
@@ -154,11 +154,37 @@ async def _handle_subscription_cancelled(session: AsyncSession, envelope: Mercha
     cancel_subscription(subscription, cancelled_at=envelope.event_timestamp)
 
 
+class FeatureNotEntitledError(ValueError):
+    """Raised when a merchant attempts to enable a feature not included in their active plan."""
+
+
 async def _handle_feature_enabled(session: AsyncSession, envelope: MerchantEventEnvelope) -> None:
     payload = FeatureEnabledPayload.model_validate(envelope.payload)
     feature = await resolve_feature(session, payload.feature_key)
     if feature is None:
         raise UnresolvedReferenceError(f"Unknown feature_key: {payload.feature_key}")
+    
+    from app.data_access.merchant import get_merchant_by_id
+    merchant = await get_merchant_by_id(session, envelope.merchant_id)
+    if not merchant or merchant.app_install_status != "installed":
+        raise FeatureNotEntitledError(f"Merchant {envelope.merchant_id} is not installed.")
+        
+    subscription = await get_active_subscription(session, envelope.merchant_id)
+    if not subscription:
+        raise FeatureNotEntitledError(f"Merchant {envelope.merchant_id} has no active subscription.")
+        
+    from sqlalchemy import select
+    from app.models.merchant import PlanFeature
+    stmt = select(PlanFeature).where(
+        PlanFeature.plan_id == subscription.plan_id,
+        PlanFeature.feature_id == feature.feature_id
+    )
+    entitled = await session.scalar(stmt)
+    if not entitled:
+        raise FeatureNotEntitledError(
+            f"Merchant {envelope.merchant_id}'s active plan is not entitled to feature {payload.feature_key}."
+        )
+        
     await upsert_merchant_feature(session, merchant_id=envelope.merchant_id, feature_id=feature.feature_id, is_enabled=True)
 
 

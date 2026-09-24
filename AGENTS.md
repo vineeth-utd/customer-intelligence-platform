@@ -54,3 +54,11 @@ If implementation conflicts with a specification:
 4. Wait for approval before changing the established design.
 
 Never silently override a documented architectural decision.
+
+### Repository Hygiene
+
+Do not create or leave temporary editing artifacts in the repository, including `*.orig`, `*.bak`, `patch_*.py`, `fix_*.py`, `temp_*.py`, or similar helper/backup files.
+
+Edit the intended source or test files directly. If temporary files are required during tooling, create them outside the repository and remove them when finished.
+
+Before completing a task, run `git status --short` and ensure that every new or modified file is an intentional project change. Never delete or restore pre-existing user changes without explicit approval.
