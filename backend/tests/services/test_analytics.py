@@ -51,6 +51,10 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     await db_session.execute(text("TRUNCATE TABLE merchant_events CASCADE"))
     await db_session.execute(text("TRUNCATE TABLE shopper_events CASCADE"))
     await db_session.execute(text("TRUNCATE TABLE campaign_events CASCADE"))
+    await db_session.execute(text("TRUNCATE TABLE feature_metrics_daily CASCADE"))
+    await db_session.execute(text("TRUNCATE TABLE merchant_metrics_daily CASCADE"))
+    await db_session.execute(text("TRUNCATE TABLE platform_metrics_daily CASCADE"))
+    await db_session.execute(text("TRUNCATE TABLE campaign_analytics_daily CASCADE"))
     await db_session.commit()
     
     # 1. Setup Merchant

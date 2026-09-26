@@ -271,7 +271,7 @@ async def generate_feature_metrics_daily(session: AsyncSession, metric_date: dat
             SELECT DISTINCT ON (merchant_id)
                 merchant_id,
                 event_type AS sub_status,
-                payload->>'plan_key' AS plan_key
+                COALESCE(payload->>'plan_key', payload->>'new_plan_key') AS plan_key
             FROM merchant_events
             CROSS JOIN date_bounds db
             WHERE event_timestamp < db.end_ts
@@ -331,7 +331,7 @@ async def generate_feature_metrics_daily(session: AsyncSession, metric_date: dat
                 u.merchant_id,
                 u.feature_id,
                 (SELECT event_type FROM merchant_events me WHERE me.merchant_id = u.merchant_id AND me.event_timestamp <= u.event_timestamp AND me.event_type IN ('APP_INSTALLED', 'APP_UNINSTALLED') ORDER BY me.event_timestamp DESC LIMIT 1) as install_status,
-                (SELECT payload->>'plan_key' FROM merchant_events me WHERE me.merchant_id = u.merchant_id AND me.event_timestamp <= u.event_timestamp AND me.event_type IN ('SUBSCRIPTION_STARTED', 'SUBSCRIPTION_UPGRADED', 'SUBSCRIPTION_DOWNGRADED', 'SUBSCRIPTION_CANCELLED') ORDER BY me.event_timestamp DESC LIMIT 1) as plan_key,
+                (SELECT COALESCE(payload->>'plan_key', payload->>'new_plan_key') FROM merchant_events me WHERE me.merchant_id = u.merchant_id AND me.event_timestamp <= u.event_timestamp AND me.event_type IN ('SUBSCRIPTION_STARTED', 'SUBSCRIPTION_UPGRADED', 'SUBSCRIPTION_DOWNGRADED', 'SUBSCRIPTION_CANCELLED') ORDER BY me.event_timestamp DESC LIMIT 1) as plan_key,
                 (SELECT event_type FROM merchant_events me WHERE me.merchant_id = u.merchant_id AND me.event_timestamp <= u.event_timestamp AND me.event_type IN ('SUBSCRIPTION_STARTED', 'SUBSCRIPTION_UPGRADED', 'SUBSCRIPTION_DOWNGRADED', 'SUBSCRIPTION_CANCELLED') ORDER BY me.event_timestamp DESC LIMIT 1) as sub_status,
                 (SELECT event_type FROM merchant_events me JOIN platform_features pf ON pf.feature_key = me.payload->>'feature_key' WHERE me.merchant_id = u.merchant_id AND pf.feature_id = u.feature_id AND me.event_timestamp <= u.event_timestamp AND me.event_type IN ('FEATURE_ENABLED', 'FEATURE_DISABLED') ORDER BY me.event_timestamp DESC LIMIT 1) as feature_status
             FROM feature_usage_events u
