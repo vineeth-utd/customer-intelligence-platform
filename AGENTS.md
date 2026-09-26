@@ -65,9 +65,11 @@ Before completing a task, run `git status --short` and ensure that every new or 
 
 ### Python Imports
 
-Keep imports at module scope following standard Python conventions.
+Keep ordinary imports together at the top of each Python module, after the module docstring and before module-level declarations.
 
-Use local/function-level imports only when there is a concrete reason, such as avoiding an unavoidable circular dependency or conditionally loading an optional dependency. Do not use local imports as a default coding pattern or for ordinary application dependencies.
+Do not place imports inside functions, classes, or midway through a module as a default coding pattern.
+
+Local, conditional, or deferred imports are allowed only when there is a concrete technical reason, such as avoiding an unavoidable circular dependency or loading an optional dependency. When such an import is necessary, preserve or add a brief comment explaining why.
 
 ### API Implementation Rules
 
@@ -86,3 +88,9 @@ When implementing FastAPI endpoints:
 - Keep APIs business/resource-oriented rather than coupled to a specific frontend screen.
 - Do not introduce Prototype-only shortcuts; endpoints should remain reusable in later phases.
 - Add focused API tests covering successful responses, validation, not-found behavior, and relevant empty-result cases.
+
+### Test Verification
+
+Run tests using the repository's canonical commands without temporary `PYTHONPATH`, `sys.path`, or other import-path/environment overrides.
+
+Do not use path hacks to make tests pass. If the canonical test command fails because of package/import configuration, fix the repository/test structure instead.

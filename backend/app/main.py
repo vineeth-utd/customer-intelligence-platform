@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from app.config.settings import settings
 from app.kafka.producer import event_producer
 from app.scheduler.main import setup_scheduler, stop_scheduler
+from app.api import analytics, merchants
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
+app.include_router(analytics.router)
+app.include_router(merchants.router)
 
 @app.get("/health")
 async def health_check():
