@@ -45,6 +45,10 @@ export function MerchantDetails({ merchantId }: { merchantId: string }) {
           {data.active_subscription ? (
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div className="sm:col-span-1">
+                <dt className="text-sm font-medium text-gray-500">Plan</dt>
+                <dd className="mt-1 text-sm text-gray-900 font-medium">{data.active_subscription.plan_name}</dd>
+              </div>
+              <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
                 <dd className="mt-1 text-sm text-gray-900 capitalize">{data.active_subscription.status}</dd>
               </div>

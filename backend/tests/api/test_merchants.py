@@ -56,6 +56,7 @@ def test_read_merchant_detail(mock_get):
         app_install_status="installed",
         active_subscription=SubscriptionResponse(
             plan_id=uuid.uuid4(),
+            plan_name="Premium",
             status="active",
             billing_cycle="monthly",
             amount_paid=99.99,

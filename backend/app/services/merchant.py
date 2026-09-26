@@ -253,6 +253,7 @@ async def get_merchant_detail(session: AsyncSession, merchant_id: uuid.UUID) -> 
     if subscription:
         sub_response = SubscriptionResponse(
             plan_id=subscription.plan_id,
+            plan_name=subscription.plan.plan_name,
             status=subscription.status,
             billing_cycle=subscription.billing_cycle,
             amount_paid=subscription.amount_paid,

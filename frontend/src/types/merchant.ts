@@ -1,5 +1,6 @@
 export interface SubscriptionResponse {
   plan_id: string;
+  plan_name: string;
   status: string;
   billing_cycle: string;
   amount_paid: number;

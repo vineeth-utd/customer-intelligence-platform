@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import func, select, update, delete
+from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -204,6 +205,7 @@ async def get_active_subscription(session: AsyncSession, merchant_id: uuid.UUID)
     stmt = (
         select(Subscription)
         .where(Subscription.merchant_id == merchant_id, Subscription.status == "active")
+        .options(joinedload(Subscription.plan))
         .execution_options(populate_existing=True)
     )
     result = await session.execute(stmt)

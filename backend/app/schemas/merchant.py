@@ -9,6 +9,7 @@ class SubscriptionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     plan_id: UUID
+    plan_name: str
     status: str
     billing_cycle: str
     amount_paid: float
