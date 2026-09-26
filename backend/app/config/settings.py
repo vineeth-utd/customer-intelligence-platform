@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     app_name: str = "Customer Intelligence Platform API"
     environment: str = "development"
+    cors_allowed_origins: str = "http://localhost:5173"
 
     postgres_host: str = "localhost"
     postgres_port: int = 5433
