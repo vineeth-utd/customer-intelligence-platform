@@ -153,7 +153,10 @@ def test_read_merchant_metrics_summary_not_found(mock_get):
     mock_get.return_value = None
     
     response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-01&end_date=2023-10-31")
-    assert response.status_code == 404
+    assert response.status_code == 200
+    data = response.json()
+    assert data["revenue"] == "0"
+    assert data["order_count"] == 0
 
 def test_read_merchant_metrics_summary_invalid_dates():
     response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-31&end_date=2023-10-01")

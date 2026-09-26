@@ -32,7 +32,10 @@ def test_read_platform_summary_not_found(mock_get):
     mock_get.return_value = None
     
     response = client.get("/api/v1/analytics/platform/summary")
-    assert response.status_code == 404
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_merchants"] == 0
+    assert data["total_revenue"] == "0"
 
 @patch("app.api.analytics.get_platform_metrics_trend")
 def test_read_platform_trend_success(mock_get):

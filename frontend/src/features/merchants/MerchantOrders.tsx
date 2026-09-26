@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMerchantOrders } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
@@ -7,6 +7,10 @@ import { Pagination } from '../../components/common/Pagination';
 export function MerchantOrders({ merchantId }: { merchantId: string }) {
   const [offset, setOffset] = useState(0);
   const limit = 10;
+  
+  useEffect(() => {
+    setOffset(0);
+  }, [merchantId]);
   
   const { data, isLoading, isError, refetch } = useMerchantOrders(merchantId, limit, offset);
 

@@ -99,7 +99,27 @@ async def read_merchant_metrics_summary(
         
     result = await get_merchant_metrics_summary(session, merchant_id, start_date, end_date)
     if not result:
-        raise HTTPException(status_code=404, detail="Merchant metrics summary not found")
+        return MerchantMetricsSummaryResult(
+            merchant_id=merchant_id,
+            revenue=0,
+            order_count=0,
+            unique_shoppers=0,
+            new_shoppers=0,
+            session_count=0,
+            converted_session_count=0,
+            product_view_count=0,
+            wishlist_add_count=0,
+            save_for_later_count=0,
+            add_to_cart_count=0,
+            checkout_count=0,
+            purchase_count=0,
+            conversion_rate=0,
+            average_order_value=0,
+            platform_login_count=0,
+            campaign_created_count=0,
+            feature_enable_count=0,
+            feature_disable_count=0
+        )
     return result
 
 

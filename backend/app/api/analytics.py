@@ -29,7 +29,14 @@ async def read_platform_summary(
     """
     result = await get_platform_summary(session)
     if not result:
-        raise HTTPException(status_code=404, detail="Platform summary not found")
+        return PlatformSummaryResult(
+            total_merchants=0,
+            active_merchants=0,
+            total_revenue=0,
+            total_orders=0,
+            active_shoppers=0,
+            active_subscriptions=0
+        )
     return result
 
 
