@@ -68,3 +68,21 @@ Before completing a task, run `git status --short` and ensure that every new or 
 Keep imports at module scope following standard Python conventions.
 
 Use local/function-level imports only when there is a concrete reason, such as avoiding an unavoidable circular dependency or conditionally loading an optional dependency. Do not use local imports as a default coding pattern or for ordinary application dependencies.
+
+### API Implementation Rules
+
+When implementing FastAPI endpoints:
+
+- Routers remain thin and delegate business behavior to the Business Service Layer.
+- Routers must not contain SQL, direct DAL access, or business aggregation logic.
+- Reuse existing Business Service and DAL capabilities before adding new ones.
+- Use typed Pydantic request/response schemas; do not expose SQLAlchemy models directly.
+- Follow the API contracts, naming, versioning, pagination, and error conventions defined in the authoritative API design.
+- Validate query/path parameters at the API boundary where appropriate.
+- Date ranges must reject `start_date > end_date`.
+- Missing requested resources return the project's standard not-found response.
+- Empty valid result sets are successful responses, not not-found errors.
+- Paginated endpoints must use deterministic ordering and the project's standard pagination shape.
+- Keep APIs business/resource-oriented rather than coupled to a specific frontend screen.
+- Do not introduce Prototype-only shortcuts; endpoints should remain reusable in later phases.
+- Add focused API tests covering successful responses, validation, not-found behavior, and relevant empty-result cases.
