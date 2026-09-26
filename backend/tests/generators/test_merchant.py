@@ -101,3 +101,26 @@ def test_configuration_update_is_reflected_in_merchant_state():
             assert getattr(state, field_name) == new_value
 
     assert {"timezone", "country", "store_currency"}.issubset(observed_fields)
+
+
+def test_restarted_generator_with_start_index_creates_non_conflicting_identities():
+    first = MerchantLifecycleGenerator(population_size=50, seed=1, start_index=0).generate_population()
+    second = MerchantLifecycleGenerator(population_size=50, seed=2, start_index=50).generate_population()
+    
+    first_created = [e for e in first if e.event_type == MerchantEventType.MERCHANT_CREATED]
+    second_created = [e for e in second if e.event_type == MerchantEventType.MERCHANT_CREATED]
+    
+    first_names = {e.payload["merchant_name"] for e in first_created}
+    second_names = {e.payload["merchant_name"] for e in second_created}
+    first_store_ids = {e.payload["shopify_store_id"] for e in first_created}
+    second_store_ids = {e.payload["shopify_store_id"] for e in second_created}
+    first_emails = {e.payload["email"] for e in first_created}
+    second_emails = {e.payload["email"] for e in second_created}
+    
+    assert first_names.isdisjoint(second_names)
+    assert first_store_ids.isdisjoint(second_store_ids)
+    assert first_emails.isdisjoint(second_emails)
+    
+    assert "Merchant 00000" in first_names
+    assert "Merchant 00050" in second_names
+

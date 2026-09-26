@@ -14,11 +14,17 @@ import asyncio
 import logging
 
 from app.config.settings import settings
+from app.db.session import AsyncSessionLocal
+from app.data_access.merchant import count_merchants
 from app.generators.merchant import MerchantLifecycleGenerator
 from app.kafka.producer import event_producer
 from app.schemas.events.envelope import MerchantEventEnvelope
 
 logger = logging.getLogger(__name__)
+
+async def _get_existing_merchant_count() -> int:
+    async with AsyncSessionLocal() as session:
+        return await count_merchants(session)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -35,13 +41,14 @@ async def _publish_all(envelopes: list[MerchantEventEnvelope]) -> None:
 
 
 async def _run(population_size: int, interval_seconds: float, seed: int | None) -> None:
-    generator = MerchantLifecycleGenerator(population_size=population_size, seed=seed)
+    existing_count = await _get_existing_merchant_count()
+    generator = MerchantLifecycleGenerator(population_size=population_size, seed=seed, start_index=existing_count)
 
     await event_producer.start()
     try:
         initial_envelopes = generator.generate_population()
         await _publish_all(initial_envelopes)
-        logger.info("Published initial population of %d merchants (%d events)", population_size, len(initial_envelopes))
+        logger.info("Published initial population of %d merchants (start index %d, %d events)", population_size, existing_count, len(initial_envelopes))
 
         while not generator.all_terminal():
             await asyncio.sleep(interval_seconds)

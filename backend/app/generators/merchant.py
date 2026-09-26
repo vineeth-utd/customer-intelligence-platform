@@ -70,14 +70,16 @@ class MerchantLifecycleGenerator:
     produces the same sequence of event types.
     """
 
-    def __init__(self, population_size: int, seed: int | None = None) -> None:
+    def __init__(self, population_size: int, seed: int | None = None, start_index: int = 0) -> None:
         self._rng = random.Random(seed)
         self._merchants: list[MerchantState] = []
         self._population_size = population_size
+        self._start_index = start_index
 
     def generate_population(self) -> list[MerchantEventEnvelope]:
         envelopes: list[MerchantEventEnvelope] = []
-        for index in range(self._population_size):
+        for offset in range(self._population_size):
+            index = self._start_index + offset
             merchant_id = uuid.uuid4()
             shopify_store_id = f"store-{index:05d}-{merchant_id.hex[:8]}"
             merchant_name = f"Merchant {index:05d}"

@@ -143,6 +143,12 @@ async def list_merchants_paginated(session: AsyncSession, limit: int, offset: in
     return items, total or 0
 
 
+async def count_merchants(session: AsyncSession) -> int:
+    """Return the total number of merchants."""
+    stmt = select(func.count(Merchant.merchant_id))
+    return await session.scalar(stmt) or 0
+
+
 
 async def create_merchant(
     session: AsyncSession,
