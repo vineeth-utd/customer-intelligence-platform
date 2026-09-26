@@ -63,13 +63,17 @@ Edit the intended source or test files directly. If temporary files are required
 
 Before completing a task, run `git status --short` and ensure that every new or modified file is an intentional project change. Never delete or restore pre-existing user changes without explicit approval.
 
-### Python Imports
+### Python Import Placement
 
-Keep ordinary imports together at the top of each Python module, after the module docstring and before module-level declarations.
+Before adding an import to an existing Python file, inspect the module's existing import section.
 
-Do not place imports inside functions, classes, or midway through a module as a default coding pattern.
+All ordinary imports must be placed in the module-level import block at the top of the file, after the module docstring and before all declarations.
 
-Local, conditional, or deferred imports are allowed only when there is a concrete technical reason, such as avoiding an unavoidable circular dependency or loading an optional dependency. When such an import is necessary, preserve or add a brief comment explaining why.
+Do not place a new import immediately above the function/class that uses it or elsewhere in the middle of a module.
+
+Deferred/local imports are allowed only when technically required, such as for an unavoidable circular dependency or optional dependency. Add a brief comment explaining the reason when one is necessary.
+
+Before completing a Python task, verify that newly added imports are located in the existing top-level import section.
 
 ### API Implementation Rules
 
@@ -94,3 +98,25 @@ When implementing FastAPI endpoints:
 Run tests using the repository's canonical commands without temporary `PYTHONPATH`, `sys.path`, or other import-path/environment overrides.
 
 Do not use path hacks to make tests pass. If the canonical test command fails because of package/import configuration, fix the repository/test structure instead.
+
+### Frontend Implementation Rules
+
+When implementing frontend functionality:
+
+- Follow the frontend architecture, directory structure, component responsibilities, and state-management decisions defined in the authoritative frontend design.
+- Reuse existing components, hooks, API clients, types, and utilities before creating new ones.
+- Keep server state in TanStack Query; do not duplicate API-derived state into local/global client state without a concrete need.
+- Keep API access out of presentation components. Use the established API client/query-hook layers.
+- Use TypeScript types for API contracts and component interfaces; avoid `any` unless genuinely unavoidable.
+- Components should have focused responsibilities. Do not place data fetching, transformation, and large presentation logic into a single component when the established architecture separates them.
+- Implement explicit loading, error, empty, and success states for server-backed UI.
+- Do not hardcode backend data that is available through the API.
+- Do not introduce new UI/state/data-fetching libraries unless required by the existing design.
+- Preserve responsive behavior and existing styling/design conventions.
+- Add or update focused tests where required by the project's frontend testing strategy.
+
+### Existing File Modifications
+
+Before modifying an existing file, inspect enough of the file to understand its structure, imports, conventions, and nearby abstractions.
+
+Integrate changes into the existing structure rather than appending locally convenient code, imports, helpers, or duplicate abstractions near the modification point.
