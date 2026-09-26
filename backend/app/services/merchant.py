@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Awaitable, Callable
 
 from sqlalchemy import select
@@ -10,6 +11,7 @@ from app.data_access.merchant import (
     get_feature_by_key,
     get_merchant_by_id,
     get_plan_by_key,
+    list_merchants_paginated,
     update_merchant_fields,
     update_merchant_install_status,
     update_merchant_last_active_at,
@@ -21,9 +23,10 @@ from app.data_access.merchant import (
     upsert_plan,
     cancel_subscription,
 )
-from app.models.merchant import PlanFeature, PlatformFeature, SubscriptionPlan
+from app.models.merchant import Merchant, PlanFeature, PlatformFeature, SubscriptionPlan
 from app.reference_data.features import FEATURE_CATALOG, FeatureKey
 from app.reference_data.plans import PLAN_CATALOG, PlanKey
+from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse, SubscriptionResponse
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
 from app.schemas.events.payloads.merchant import (
@@ -235,3 +238,38 @@ async def process_merchant_event(session: AsyncSession, envelope: MerchantEventE
     """
     handler = _HANDLERS[envelope.event_type]
     await handler(session, envelope)
+
+async def list_merchants(session: AsyncSession, limit: int, offset: int) -> tuple[list[Merchant], int]:
+    return await list_merchants_paginated(session, limit, offset)
+
+async def get_merchant_detail(session: AsyncSession, merchant_id: uuid.UUID) -> MerchantDetailResponse | None:
+    merchant = await get_merchant_by_id(session, merchant_id)
+    if not merchant:
+        return None
+        
+    subscription = await get_active_subscription(session, merchant_id)
+    
+    sub_response = None
+    if subscription:
+        sub_response = SubscriptionResponse(
+            plan_id=subscription.plan_id,
+            status=subscription.status,
+            billing_cycle=subscription.billing_cycle,
+            amount_paid=subscription.amount_paid,
+            started_at=subscription.started_at,
+            renewal_at=subscription.renewal_at,
+            cancelled_at=subscription.cancelled_at
+        )
+        
+    return MerchantDetailResponse(
+        merchant_id=merchant.merchant_id,
+        merchant_name=merchant.merchant_name,
+        shopify_store_id=merchant.shopify_store_id,
+        email=merchant.email,
+        country=merchant.country,
+        timezone=merchant.timezone,
+        store_currency=merchant.store_currency,
+        app_install_status=merchant.app_install_status,
+        last_active_at=merchant.last_active_at,
+        active_subscription=sub_response
+    )

@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order, create_order, create_order_items
 from app.data_access.product import get_product_variant_with_product, decrement_inventory
-from app.data_access.shopper import upsert_shopper, enrich_shopper_email
+from app.data_access.shopper import list_merchant_shoppers_paginated, upsert_shopper, enrich_shopper_email
+
+from app.models.shopper import Shopper
 
 from app.schemas.events.envelope import ShopperEventEnvelope
 from app.schemas.events.event_types import ShopperEventType
@@ -122,3 +124,7 @@ async def process_shopper_event(session: AsyncSession, envelope: ShopperEventEnv
         await _handle_purchase_completed(session, envelope)
 
     # All other behavioral events simply rely on the upsert_shopper call above.
+
+
+async def list_shoppers(session: AsyncSession, merchant_id: uuid.UUID, limit: int, offset: int) -> tuple[list[Shopper], int]:
+    return await list_merchant_shoppers_paginated(session, merchant_id, limit, offset)

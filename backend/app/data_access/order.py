@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 from app.models.order import Order, OrderItem
 
 
@@ -54,3 +54,13 @@ async def list_merchant_orders(session: AsyncSession, merchant_id: uuid.UUID) ->
     stmt = select(Order).where(Order.merchant_id == merchant_id)
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+async def list_merchant_orders_paginated(session: AsyncSession, merchant_id: uuid.UUID, limit: int, offset: int) -> tuple[list[Order], int]:
+    """Retrieve orders for a merchant with pagination."""
+    count_stmt = select(func.count(Order.order_id)).where(Order.merchant_id == merchant_id)
+    total = await session.scalar(count_stmt)
+    
+    stmt = select(Order).where(Order.merchant_id == merchant_id).order_by(Order.placed_at.desc(), Order.order_id).limit(limit).offset(offset)
+    result = await session.execute(stmt)
+    items = list(result.scalars().all())
+    return items, total or 0

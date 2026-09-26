@@ -1,3 +1,4 @@
+import datetime
 from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
@@ -12,10 +13,110 @@ from app.schemas.analytics import (
     MerchantMetricsSummaryResult,
     MerchantMetricsTrendResult,
 )
+from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse, SubscriptionResponse
+from app.schemas.shopper import ShopperResponse
+from app.schemas.order import OrderResponse
 
 client = TestClient(app)
 
 MERCHANT_ID = uuid.uuid4()
+
+@patch("app.api.merchants.list_merchants")
+def test_read_merchants(mock_list):
+    mock_list.return_value = (
+        [
+            MerchantSummaryResponse(
+                merchant_id=MERCHANT_ID,
+                merchant_name="Test Store",
+                shopify_store_id="test-store.myshopify.com",
+                email="admin@test.com",
+                store_currency="USD",
+                app_install_status="installed",
+                last_active_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+            )
+        ],
+        1
+    )
+    response = client.get("/api/v1/merchants")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["merchant_name"] == "Test Store"
+
+@patch("app.api.merchants.get_merchant_detail")
+def test_read_merchant_detail(mock_get):
+    mock_get.return_value = MerchantDetailResponse(
+        merchant_id=MERCHANT_ID,
+        merchant_name="Test Store",
+        shopify_store_id="test-store.myshopify.com",
+        email="admin@test.com",
+        country="US",
+        timezone="America/New_York",
+        store_currency="USD",
+        app_install_status="installed",
+        active_subscription=SubscriptionResponse(
+            plan_id=uuid.uuid4(),
+            status="active",
+            billing_cycle="monthly",
+            amount_paid=99.99,
+            started_at=datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        )
+    )
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["merchant_name"] == "Test Store"
+    assert data["active_subscription"]["status"] == "active"
+
+@patch("app.api.merchants.get_merchant_detail")
+def test_read_merchant_detail_not_found(mock_get):
+    mock_get.return_value = None
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}")
+    assert response.status_code == 404
+
+@patch("app.api.merchants.list_shoppers")
+def test_read_merchant_shoppers(mock_list):
+    shopper_id = uuid.uuid4()
+    mock_list.return_value = (
+        [
+            ShopperResponse(
+                shopper_id=shopper_id,
+                merchant_id=MERCHANT_ID,
+                email="shopper@test.com"
+            )
+        ],
+        1
+    )
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/shoppers")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["email"] == "shopper@test.com"
+
+@patch("app.api.merchants.list_orders")
+def test_read_merchant_orders(mock_list):
+    order_id = uuid.uuid4()
+    mock_list.return_value = (
+        [
+            OrderResponse(
+                order_id=order_id,
+                merchant_id=MERCHANT_ID,
+                shopper_id=uuid.uuid4(),
+                order_status="completed",
+                currency="USD",
+                total_amount=100.0,
+                placed_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+            )
+        ],
+        1
+    )
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/orders")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["order_status"] == "completed"
+
+
 
 @patch("app.api.merchants.get_merchant_metrics_summary")
 def test_read_merchant_metrics_summary_success(mock_get):

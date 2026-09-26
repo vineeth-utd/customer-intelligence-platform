@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import func, select, update, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -129,6 +129,18 @@ async def list_installed_merchants(session: AsyncSession) -> list[Merchant]:
     stmt = select(Merchant).where(Merchant.app_install_status == "installed").order_by(Merchant.merchant_id)
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def list_merchants_paginated(session: AsyncSession, limit: int, offset: int) -> tuple[list[Merchant], int]:
+    """Retrieve merchants with pagination."""
+    count_stmt = select(func.count(Merchant.merchant_id))
+    total = await session.scalar(count_stmt)
+    
+    stmt = select(Merchant).order_by(Merchant.merchant_id).limit(limit).offset(offset)
+    result = await session.execute(stmt)
+    items = list(result.scalars().all())
+    return items, total or 0
+
 
 
 async def create_merchant(
