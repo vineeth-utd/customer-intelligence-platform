@@ -55,6 +55,7 @@ class ProductContext:
 class MerchantCatalogContext:
     merchant_id: uuid.UUID
     products: list[ProductContext]
+    enabled_features: set[str] = field(default_factory=set)
 
 @dataclass
 class CartItemState:
@@ -94,6 +95,7 @@ class ShopperBehaviorGenerator:
         
         # Lookups to quickly check validity / price during simulation
         self._merchants: set[uuid.UUID] = set()
+        self._merchant_features: dict[uuid.UUID, set[str]] = {}      # merchant_id -> enabled feature keys
         self._active_products: dict[uuid.UUID, list[uuid.UUID]] = {} # merchant_id -> product_ids
         self._products: dict[uuid.UUID, ProductContext] = {}         # product_id -> context
         self._variants: dict[uuid.UUID, VariantContext] = {}         # variant_id -> context
@@ -107,6 +109,7 @@ class ShopperBehaviorGenerator:
         gracefully prune it to reflect reality.
         """
         self._merchants.clear()
+        self._merchant_features.clear()
         self._active_products.clear()
         self._products.clear()
         self._variants.clear()
@@ -114,6 +117,7 @@ class ShopperBehaviorGenerator:
 
         for catalog in catalogs:
             self._merchants.add(catalog.merchant_id)
+            self._merchant_features[catalog.merchant_id] = catalog.enabled_features
             self._active_products[catalog.merchant_id] = []
             for prod in catalog.products:
                 if not prod.variants:
@@ -251,6 +255,9 @@ class ShopperBehaviorGenerator:
         )]
 
     def _interact_recommendation(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
+        if "recommendations" not in self._merchant_features.get(shopper.merchant_id, set()):
+            return []
+            
         # Either view a new recommendation, or click a previously viewed one in this session
         products = self._active_products.get(shopper.merchant_id, [])
         if not products:
@@ -282,10 +289,17 @@ class ShopperBehaviorGenerator:
             )]
 
     def _interact_wishlist_save_for_later(self, shopper: ShopperState) -> list[ShopperEventEnvelope]:
+        features = self._merchant_features.get(shopper.merchant_id, set())
+        has_wishlist = "wishlist" in features
+        has_save_for_later = "save_for_later" in features
+        
+        if not has_wishlist and not has_save_for_later:
+            return []
+            
         r = self._rng.random()
         
         # 1. Remove from Wishlist
-        if shopper.wishlist and r < 0.2:
+        if has_wishlist and shopper.wishlist and r < 0.2:
             var_id = self._rng.choice(list(shopper.wishlist))
             shopper.wishlist.remove(var_id)
             prod_id = self._variant_to_product.get(var_id)
@@ -293,7 +307,7 @@ class ShopperBehaviorGenerator:
                 return [self._build_envelope(shopper, ShopperEventType.WISHLIST_REMOVED, WishlistRemovedPayload(product_id=prod_id, variant_id=var_id))]
 
         # 2. Remove from Save For Later
-        elif shopper.save_for_later and r < 0.4:
+        elif has_save_for_later and shopper.save_for_later and r < 0.4:
             var_id = self._rng.choice(list(shopper.save_for_later))
             shopper.save_for_later.remove(var_id)
             prod_id = self._variant_to_product.get(var_id)
@@ -311,7 +325,14 @@ class ShopperBehaviorGenerator:
                 return []
             var_id = self._rng.choice(variants).variant_id
             
-            if r < 0.7:
+            # If they have both, distribute based on original probability threshold (0.7).
+            # If they only have one, force it to use that one.
+            if has_wishlist and has_save_for_later:
+                use_wishlist = r < 0.7
+            else:
+                use_wishlist = has_wishlist
+                
+            if use_wishlist:
                 shopper.wishlist.add(var_id)
                 return [self._build_envelope(shopper, ShopperEventType.WISHLIST_ADDED, WishlistAddedPayload(product_id=prod_id, variant_id=var_id))]
             else:

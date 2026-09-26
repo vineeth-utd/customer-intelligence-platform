@@ -123,7 +123,8 @@ def test_shopper_generator_save_for_later_and_wishlist_interactions():
                 category="Test Category",
                 variants=[VariantContext(variant_id=variant_id, price=Decimal("15.99"), inventory_quantity=10)]
             )
-        ]
+        ],
+        enabled_features={"wishlist", "save_for_later"}
     )
     generator = ShopperBehaviorGenerator(shoppers_per_merchant=1, seed=42)
     generator.update_catalog([ctx])
@@ -221,7 +222,8 @@ def test_shopper_generator_recommendations_causality():
     variant_id = uuid.uuid4()
     ctx = MerchantCatalogContext(
         merchant_id=merchant_id,
-        products=[ProductContext(product_id=product_id, product_name="P", category="C", variants=[VariantContext(variant_id=variant_id, price=Decimal("10"), inventory_quantity=10)])]
+        products=[ProductContext(product_id=product_id, product_name="P", category="C", variants=[VariantContext(variant_id=variant_id, price=Decimal("10"), inventory_quantity=10)])],
+        enabled_features={"recommendations"}
     )
     generator = ShopperBehaviorGenerator(shoppers_per_merchant=1, seed=42)
     generator.update_catalog([ctx])
@@ -421,4 +423,41 @@ def test_shopper_generator_catalog_reconciliation_preserves_state_and_prunes_car
     assert variant_id1 in shopper.cart
     assert variant_id2 not in shopper.cart
     assert variant_id3 not in shopper.cart
+
+
+def test_shopper_generator_feature_awareness():
+    merchant_id = uuid.uuid4()
+    product_id = uuid.uuid4()
+    variant_id = uuid.uuid4()
+    
+    ctx = MerchantCatalogContext(
+        merchant_id=merchant_id,
+        products=[ProductContext(product_id=product_id, product_name="P1", category="C1", variants=[VariantContext(variant_id=variant_id, price=Decimal("10"), inventory_quantity=10)])],
+        enabled_features={"wishlist"} # wishlist enabled, save_for_later/recommendations disabled
+    )
+    
+    generator = ShopperBehaviorGenerator(shoppers_per_merchant=1, seed=42)
+    generator.update_catalog([ctx])
+    
+    shopper = ShopperState(shopper_id=uuid.uuid4(), merchant_id=merchant_id, current_session_id=uuid.uuid4(), state=ShopperActivityState.BROWSING)
+    generator._shoppers.append(shopper)
+    
+    # 1. Enabled feature generates events
+    generator._rng.random = lambda: 0.1 # Force Add to Wishlist via _interact_wishlist_save_for_later
+    envs = generator._interact_wishlist_save_for_later(shopper)
+    assert len(envs) == 1
+    assert envs[0].event_type == ShopperEventType.WISHLIST_ADDED
+    assert variant_id in shopper.wishlist
+    
+    # 2. Disabled feature cannot generate events
+    # _interact_recommendation should return empty because "recommendations" isn't in enabled_features
+    generator._rng.random = lambda: 0.1
+    envs2 = generator._interact_recommendation(shopper)
+    assert len(envs2) == 0
+    
+    # 3. Ordinary behavior remains available
+    generator._rng.random = lambda: 0.1
+    envs3 = generator._view_product(shopper)
+    assert len(envs3) == 1
+    assert envs3[0].event_type == ShopperEventType.PRODUCT_VIEWED
 

@@ -60,8 +60,23 @@ async def _load_merchant_catalogs() -> list[MerchantCatalogContext]:
                     category=p.category,
                     variants=variants
                 ))
+        enabled_features: set[str] = set()
+        
+        # Collect entitled features from the active subscription(s)
+        for sub in m.subscriptions:
+            for pf in sub.plan.plan_features:
+                enabled_features.add(pf.feature.feature_key)
+                
+        # Intersect with explicitly enabled merchant features
+        merchant_enabled = {mf.feature.feature_key for mf in m.merchant_features}
+        usable_features = enabled_features.intersection(merchant_enabled)
+        
         if products:
-            catalogs.append(MerchantCatalogContext(merchant_id=m.merchant_id, products=products))
+            catalogs.append(MerchantCatalogContext(
+                merchant_id=m.merchant_id, 
+                products=products,
+                enabled_features=usable_features
+            ))
             
     return catalogs
 

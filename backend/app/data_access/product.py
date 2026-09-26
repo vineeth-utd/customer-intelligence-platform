@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.merchant import Merchant
+from app.models.merchant import Merchant, Subscription, SubscriptionPlan, PlanFeature, MerchantFeature
 from app.models.product import Product, ProductVariant
 
 
@@ -22,7 +22,13 @@ async def get_active_merchant_catalogs(session: AsyncSession) -> list[Merchant]:
         .options(
             selectinload(Merchant.products.and_(Product.status == "active")).selectinload(
                 Product.variants.and_(ProductVariant.status == "active", ProductVariant.inventory_quantity > 0)
-            )
+            ),
+            selectinload(Merchant.subscriptions.and_(Subscription.status == "active"))
+                .selectinload(Subscription.plan)
+                .selectinload(SubscriptionPlan.plan_features)
+                .selectinload(PlanFeature.feature),
+            selectinload(Merchant.merchant_features.and_(MerchantFeature.is_enabled == True))
+                .selectinload(MerchantFeature.feature)
         )
     )
     result = await session.execute(stmt)
