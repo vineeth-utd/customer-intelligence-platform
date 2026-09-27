@@ -260,6 +260,7 @@ Examples include Wishlist, Save For Later, Back in Stock, Recommendations, Nudge
 
 * One Platform Feature can belong to many Subscription Plans.
 * One Platform Feature can be enabled by many Merchants.
+* One Platform Feature maps to many Event Types (Feature Event Mappings).
 
 **Constraints**
 
@@ -300,6 +301,28 @@ Composite Primary Key (`merchant_id`, `feature_id`)
 **Relationships**
 
 * Many-to-Many between Merchant and Platform Feature.
+
+---
+
+### Feature Event Mapping
+
+**Purpose**
+
+Maps analytical usage event types to their corresponding Platform Features.
+
+This mapping allows analytics generation to dynamically attribute domain events (e.g., `WISHLIST_ADDED`) to the correct business feature (e.g., `wishlist`). The `event_domain` is included because event types might not be globally unique across all system domains (such as `shopper` vs. `campaign`), so the domain and type together uniquely identify the event contract.
+
+**Primary Key**
+
+Composite Primary Key (`event_domain`, `event_type`)
+
+**Important Columns**
+
+`feature_id, event_domain, event_type`
+
+**Relationships**
+
+* Many-to-One between Feature Event Mapping and Platform Feature.
 
 ---
 
