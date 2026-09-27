@@ -74,6 +74,6 @@ The architecture and technology decisions are already finalized.
 * Keep persistence logic in the Data Access Layer.
 * Reuse Business Services across APIs, Kafka consumers, scheduled jobs, and AI tools.
 * Keep deterministic business processing independent of AI.
-* Phase 1 code must continue directly into the MVP rather than being disposable Prototype code.
+* Implementation from completed phases should continue into subsequent phases rather than being replaced by phase-specific or disposable code.
 
 If specifications appear to conflict, identify the conflict before implementing rather than silently choosing or redesigning.

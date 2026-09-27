@@ -144,6 +144,19 @@ These events help the platform understand merchant lifecycle, platform adoption,
 
 ---
 
+### Product Events
+
+Product events capture merchant-side product catalog lifecycle changes, independent of shopper behaviour.
+
+Examples include:
+
+* Product creation, updates, and archival
+* Product variant creation, updates, and archival
+
+These events are distinct from Shopper Events' product views and product searches below, which capture shopper browsing behaviour rather than catalog state changes.
+
+---
+
 ### Shopper Events
 
 Shopper events capture customer behaviour throughout the shopping journey.

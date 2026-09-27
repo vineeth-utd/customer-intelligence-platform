@@ -347,7 +347,7 @@ The AI components coordinate investigations while relying on the Business Servic
 
 ## 4.7 Event Processing
 
-The Event Processing components consume merchant and shopper events from Kafka and transform them into operational business data.
+The Event Processing components consume merchant, shopper, and product events from Kafka and transform them into operational business data.
 
 Responsibilities include:
 
@@ -634,7 +634,7 @@ Rather than implementing business logic directly, background processing componen
 
 ## 7.1 Event Processing
 
-Event processing is responsible for handling merchant and shopper events received from the event streaming platform.
+Event processing is responsible for handling merchant, shopper, and product events received from the event streaming platform.
 
 Its responsibilities include:
 

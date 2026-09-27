@@ -92,6 +92,15 @@ services:
       - "8000:8000"
     environment:
       ENVIRONMENT: development
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: cip_user
+      POSTGRES_PASSWORD: cip_password
+      POSTGRES_DB: cip_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
