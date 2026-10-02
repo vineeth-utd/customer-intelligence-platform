@@ -180,3 +180,5 @@ async def process_campaign_event(session: AsyncSession, envelope: CampaignEventE
     
     await record_domain_activity(session, "campaign", envelope.campaign_id, "campaign", envelope.event_timestamp)
     await record_domain_activity(session, "merchant", envelope.merchant_id, "campaign", envelope.event_timestamp)
+    if envelope.shopper_id:
+        await record_domain_activity(session, "shopper", envelope.shopper_id, "campaign", envelope.event_timestamp)

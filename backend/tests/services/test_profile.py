@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import Merchant
-from app.models.profile import MerchantProfile
-from app.models.order import Order
+from app.models.profile import MerchantProfile, ShopperProfile
+from app.models.order import Order, OrderItem
 from app.models.shopper import Shopper
-from app.models.product import Product
+from app.models.product import Product, ProductVariant
 from app.models.campaign import Campaign
 from app.models.metrics import MerchantMetricsDaily
-from app.services.profile import generate_merchant_profile_callback
+from app.services.profile import generate_merchant_profile_callback, generate_shopper_profile_callback
 
 
 @pytest.fixture
@@ -146,3 +146,85 @@ async def test_generate_merchant_profile_callback_with_data(session: AsyncSessio
     assert profile.total_revenue == 100.0
     assert profile.average_order_value == 100.0
     assert profile.conversion_rate == 0.2  # 2/10
+
+
+@pytest.mark.asyncio
+async def test_generate_shopper_profile_callback_empty(session: AsyncSession, merchant: Merchant):
+    shopper = Shopper(merchant_id=merchant.merchant_id, email="empty_shopper@test.com")
+    session.add(shopper)
+    await session.commit()
+    await session.refresh(shopper)
+
+    await generate_shopper_profile_callback(session, shopper.shopper_id)
+    await session.commit()
+
+    stmt = select(ShopperProfile).where(ShopperProfile.shopper_id == shopper.shopper_id)
+    res = await session.execute(stmt)
+    profile = res.scalar_one_or_none()
+
+    assert profile is not None
+    assert profile.total_orders == 0
+    assert profile.total_spend == 0.0
+    assert profile.average_order_value == 0.0
+    assert profile.wishlist_item_count == 0
+    assert profile.save_for_later_item_count == 0
+    assert profile.campaign_engagement_count == 0
+    assert profile.customer_lifetime_value is None
+    assert profile.purchase_frequency is None
+    assert profile.cart_abandonment_count is None
+    assert profile.preferred_category is None
+    assert profile.preferred_size is None
+
+
+@pytest.mark.asyncio
+async def test_generate_shopper_profile_callback_with_data(session: AsyncSession, merchant: Merchant):
+    shopper = Shopper(merchant_id=merchant.merchant_id, email="data_shopper@test.com")
+    product = Product(merchant_id=merchant.merchant_id, product_name="P1", category="Shoes", status="active")
+    session.add_all([shopper, product])
+    await session.commit()
+    await session.refresh(shopper)
+    await session.refresh(product)
+
+    variant = ProductVariant(
+        product_id=product.product_id, sku="SKU1", variant_name="V1", price=50.0, size="10", inventory_quantity=10, status="active"
+    )
+    session.add(variant)
+    await session.commit()
+    await session.refresh(variant)
+
+    order = Order(
+        merchant_id=merchant.merchant_id,
+        shopper_id=shopper.shopper_id,
+        order_status="completed",
+        currency="USD",
+        total_amount=50.0,
+        placed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc)
+    )
+    session.add(order)
+    await session.commit()
+    await session.refresh(order)
+
+    order_item = OrderItem(
+        order_id=order.order_id,
+        variant_id=variant.variant_id,
+        quantity=1,
+        unit_price=50.0,
+        line_total=50.0
+    )
+    session.add(order_item)
+    await session.commit()
+
+    await generate_shopper_profile_callback(session, shopper.shopper_id)
+    await session.commit()
+
+    stmt = select(ShopperProfile).where(ShopperProfile.shopper_id == shopper.shopper_id)
+    res = await session.execute(stmt)
+    profile = res.scalar_one_or_none()
+
+    assert profile is not None
+    assert profile.total_orders == 1
+    assert profile.total_spend == 50.0
+    assert profile.average_order_value == 50.0
+    assert profile.preferred_category == "Shoes"
+    assert profile.preferred_size == "10"

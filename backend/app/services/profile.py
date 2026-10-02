@@ -3,7 +3,12 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data_access.profile import get_merchant_profile_source_data, upsert_merchant_profile
+from app.data_access.profile import (
+    get_merchant_profile_source_data, 
+    upsert_merchant_profile,
+    get_shopper_profile_source_data,
+    upsert_shopper_profile
+)
 
 
 async def generate_merchant_profile_callback(session: AsyncSession, merchant_id: uuid.UUID) -> None:
@@ -34,3 +39,28 @@ async def generate_merchant_profile_callback(session: AsyncSession, merchant_id:
     # 3. Upsert Profile
     generated_at = datetime.now(timezone.utc)
     await upsert_merchant_profile(session, merchant_id, data, generated_at)
+
+
+async def generate_shopper_profile_callback(session: AsyncSession, shopper_id: uuid.UUID) -> None:
+    """
+    Incremental processor callback for regenerating a Shopper Profile.
+    Calculates derived metrics and upserts the profile.
+    """
+    data = await get_shopper_profile_source_data(session, shopper_id)
+    
+    total_orders = data["total_orders"]
+    total_spend = data["total_spend"]
+    
+    if total_orders > 0:
+        data["average_order_value"] = total_spend / total_orders
+    else:
+        data["average_order_value"] = 0.0
+
+    # Deferred metrics
+    data["customer_lifetime_value"] = None
+    data["purchase_frequency"] = None
+    data["cart_abandonment_count"] = None
+    data["lifecycle_stage"] = None
+    
+    generated_at = datetime.now(timezone.utc)
+    await upsert_shopper_profile(session, shopper_id, data, generated_at)

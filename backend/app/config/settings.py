@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     analytics_job_cron_minute: str = "15"
     analytics_job_lookback_days: int = 1
     merchant_profile_job_interval_minutes: int = 15
+    shopper_profile_job_interval_minutes: int = 15
 
     class Config:
         env_file = ".env"
