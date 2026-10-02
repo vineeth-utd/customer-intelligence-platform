@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import func, select, update, delete
+from sqlalchemy import func, select, update, delete, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -198,6 +198,22 @@ async def update_merchant_install_status(
 async def update_merchant_last_active_at(session: AsyncSession, merchant_id: uuid.UUID, last_active_at: datetime) -> None:
     stmt = update(Merchant).where(Merchant.merchant_id == merchant_id).values(last_active_at=last_active_at)
     await session.execute(stmt)
+
+
+async def update_merchant_business_activity(session: AsyncSession, merchant_id: uuid.UUID, activity_at: datetime) -> None:
+    stmt = (
+        update(Merchant)
+        .where(
+            Merchant.merchant_id == merchant_id,
+            or_(
+                Merchant.last_business_activity_at.is_(None),
+                Merchant.last_business_activity_at < activity_at,
+            )
+        )
+        .values(last_business_activity_at=activity_at)
+    )
+    await session.execute(stmt)
+
 
 
 async def update_merchant_fields(session: AsyncSession, merchant_id: uuid.UUID, fields: dict[str, object]) -> None:

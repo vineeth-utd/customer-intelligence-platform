@@ -24,6 +24,7 @@ from app.models.metrics import (
     PlatformMetricsDaily,
 )
 from app.models.order import Order, OrderItem
+from app.models.processing_state import EntityProcessingState
 from app.models.product import Product, ProductVariant
 from app.models.profile import MerchantProfile, ShopperProfile
 from app.models.segmentation import ShopperSegmentMember
@@ -35,6 +36,7 @@ __all__ = [
     "CampaignEvent",
     "CustomerJourney",
     "CustomerJourneyEvent",
+    "EntityProcessingState",
     "FeatureMetricsDaily",
     "FeatureEventMapping",
     "Investigation",

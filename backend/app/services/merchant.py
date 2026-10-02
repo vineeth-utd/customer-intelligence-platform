@@ -15,6 +15,7 @@ from app.data_access.merchant import (
     update_merchant_fields,
     update_merchant_install_status,
     update_merchant_last_active_at,
+    update_merchant_business_activity,
     update_subscription_plan,
     update_subscription_renewal,
     upsert_active_subscription,
@@ -238,6 +239,7 @@ async def process_merchant_event(session: AsyncSession, envelope: MerchantEventE
     """
     handler = _HANDLERS[envelope.event_type]
     await handler(session, envelope)
+    await update_merchant_business_activity(session, envelope.merchant_id, envelope.event_timestamp)
 
 async def list_merchants(session: AsyncSession, limit: int, offset: int) -> tuple[list[Merchant], int]:
     return await list_merchants_paginated(session, limit, offset)

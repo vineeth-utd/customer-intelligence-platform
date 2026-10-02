@@ -26,6 +26,7 @@ class Campaign(Base):
     status: Mapped[str] = mapped_column(String, nullable=False)
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_business_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

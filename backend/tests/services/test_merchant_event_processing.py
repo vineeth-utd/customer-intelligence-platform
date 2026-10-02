@@ -298,6 +298,42 @@ async def test_merchant_created_is_idempotent(db_session):
         await _cleanup_merchant(db_session, merchant_id)
 
 
+async def test_merchant_activity_timestamp_is_monotonic(db_session):
+    from datetime import timedelta
+    merchant_id = uuid.uuid4()
+    base_time = datetime.now(timezone.utc)
+    try:
+        # 1. Process an event
+        created_envelope = _envelope(
+            merchant_id,
+            MerchantEventType.MERCHANT_CREATED,
+            {
+                "shopify_store_id": f"store-{merchant_id.hex[:8]}",
+                "merchant_name": "Acme",
+                "email": "acme@example.com",
+                "country": "US",
+                "timezone": "America/New_York",
+                "store_currency": "USD",
+            },
+        )
+        created_envelope.event_timestamp = base_time
+        await process_merchant_event(db_session, created_envelope)
+        
+        # 2. Process an older event
+        older_envelope = _envelope(
+            merchant_id, MerchantEventType.APP_INSTALLED, {"install_channel": "shopify_app_store"}
+        )
+        older_envelope.event_timestamp = base_time - timedelta(days=1)
+        await process_merchant_event(db_session, older_envelope)
+        
+        await db_session.commit()
+        
+        merchant = await get_merchant_by_id(db_session, merchant_id)
+        assert merchant.last_business_activity_at == base_time
+    finally:
+        await _cleanup_merchant(db_session, merchant_id)
+
+
 async def test_unresolved_plan_key_raises(db_session):
     merchant_id = uuid.uuid4()
     try:
