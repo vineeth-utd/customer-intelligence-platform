@@ -56,7 +56,7 @@ async def record_processing_success(
 TARGET_DEPENDENCIES: dict[str, list[str]] = {
     # These are currently established minimal mappings for initial generation testing.
     # Complete dependencies should be finalized alongside each actual derived-product implementation.
-    "merchant_profile": ["merchant", "shopper", "campaign"],
+    "merchant_profile": ["merchant", "shopper", "product", "order", "campaign", "analytics"],
     "shopper_profile": ["shopper", "order"],
     "campaign_analytics": ["campaign", "shopper"],
 }

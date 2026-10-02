@@ -172,6 +172,16 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     assert mm.new_shoppers == 1
     assert mm.purchase_count == 1
     
+    # Verify Domain Activity for analytics
+    from app.models.processing_state import EntityDomainActivity
+    stmt_activity = select(EntityDomainActivity).where(
+        EntityDomainActivity.entity_id == merchant_id,
+        EntityDomainActivity.domain == "analytics"
+    )
+    activity = (await db_session.execute(stmt_activity)).scalar_one_or_none()
+    assert activity is not None
+    assert activity.entity_type == "merchant"
+    
     # Verify PlatformMetricsDaily
     stmt = select(PlatformMetricsDaily).where(PlatformMetricsDaily.metric_date == metric_date)
     pm = (await db_session.execute(stmt)).scalar_one_or_none()

@@ -85,13 +85,17 @@ def test_scheduler_registration(mock_start, mock_settings, monkeypatch):
     setup_scheduler()
     
     jobs = scheduler.get_jobs()
-    assert len(jobs) == 1
-    job = jobs[0]
+    assert len(jobs) == 2
     
-    assert job.id == "analytics_job"
-    assert job.max_instances == 1
-    assert job.coalesce is True
-    assert isinstance(job.trigger, CronTrigger)
+    analytics_job = scheduler.get_job("analytics_job")
+    assert analytics_job is not None
+    assert analytics_job.max_instances == 1
+    assert analytics_job.coalesce is True
+    assert isinstance(analytics_job.trigger, CronTrigger)
+    
+    profile_job = scheduler.get_job("merchant_profile_job")
+    assert profile_job is not None
+    assert profile_job.max_instances == 1
     
     mock_start.assert_called_once()
     

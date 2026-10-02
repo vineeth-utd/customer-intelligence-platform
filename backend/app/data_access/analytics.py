@@ -4,6 +4,9 @@ from uuid import UUID
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+
+from app.data_access.processing_state import record_domain_activity
 
 from app.models.metrics import MerchantMetricsDaily, PlatformMetricsDaily
 from app.schemas.analytics import (
@@ -149,9 +152,15 @@ async def generate_merchant_metrics_daily(session: AsyncSession, metric_date: da
             campaign_created_count = EXCLUDED.campaign_created_count,
             feature_enable_count = EXCLUDED.feature_enable_count,
             feature_disable_count = EXCLUDED.feature_disable_count,
-            generated_at = EXCLUDED.generated_at;
+            generated_at = EXCLUDED.generated_at
+        RETURNING merchant_id;
     """)
-    await session.execute(stmt, {"metric_date": metric_date})
+    result = await session.execute(stmt, {"metric_date": metric_date})
+    merchant_ids = result.scalars().all()
+    
+    now = datetime.now(timezone.utc)
+    for m_id in merchant_ids:
+        await record_domain_activity(session, "merchant", m_id, "analytics", now)
 
 
 async def generate_platform_metrics_daily(session: AsyncSession, metric_date: date) -> None:
