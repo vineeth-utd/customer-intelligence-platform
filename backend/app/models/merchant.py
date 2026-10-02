@@ -23,7 +23,6 @@ class Merchant(Base):
     app_install_status: Mapped[str] = mapped_column(String, nullable=False, index=True)
     last_install_status_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
-    last_business_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

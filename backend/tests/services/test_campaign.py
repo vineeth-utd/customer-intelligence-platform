@@ -226,40 +226,4 @@ async def test_campaign_updated_invalid_values(db_session: AsyncSession, setup_d
     assert campaign.end_at is None
 
 
-async def test_campaign_activity_timestamp_is_monotonic(db_session: AsyncSession, setup_data):
-    merchant_id = setup_data["merchant_id"]
-    campaign_id = uuid.uuid4()
-    base_time = datetime.now(timezone.utc)
-    
-    # 1. Process an event
-    env1 = build_envelope(
-        CampaignEventType.CAMPAIGN_CREATED, 
-        campaign_id, 
-        merchant_id, 
-        {
-            "campaign_name": "Test", 
-            "campaign_type": "promotional",
-            "campaign_medium": "email",
-            "segment_id": str(setup_data["segment_id"]),
-            "status": "draft"
-        }
-    )
-    env1.event_timestamp = base_time
-    await process_campaign_event(db_session, env1)
-    
-    # 2. Process an older event
-    from datetime import timedelta
-    env2 = build_envelope(
-        CampaignEventType.CAMPAIGN_UPDATED, 
-        campaign_id, 
-        merchant_id, 
-        {
-            "changed_values": {"status": "active"}
-        }
-    )
-    env2.event_timestamp = base_time - timedelta(days=1)
-    await process_campaign_event(db_session, env2)
-    
-    stmt = select(Campaign).where(Campaign.campaign_id == campaign_id)
-    campaign = (await db_session.execute(stmt)).scalar_one()
-    assert campaign.last_business_activity_at == base_time
+

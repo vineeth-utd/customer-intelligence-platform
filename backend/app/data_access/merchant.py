@@ -200,19 +200,7 @@ async def update_merchant_last_active_at(session: AsyncSession, merchant_id: uui
     await session.execute(stmt)
 
 
-async def update_merchant_business_activity(session: AsyncSession, merchant_id: uuid.UUID, activity_at: datetime) -> None:
-    stmt = (
-        update(Merchant)
-        .where(
-            Merchant.merchant_id == merchant_id,
-            or_(
-                Merchant.last_business_activity_at.is_(None),
-                Merchant.last_business_activity_at < activity_at,
-            )
-        )
-        .values(last_business_activity_at=activity_at)
-    )
-    await session.execute(stmt)
+
 
 
 

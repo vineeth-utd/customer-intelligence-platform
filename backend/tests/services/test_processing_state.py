@@ -115,3 +115,153 @@ async def test_record_processing_failure(session):
     assert state.last_generation_status == "FAILED"
     assert state.last_error == "Network error"
     assert state.last_generated_at == generated_at
+
+
+@pytest.mark.asyncio
+async def test_record_domain_activity_monotonic(session):
+    from app.data_access.processing_state import record_domain_activity
+    from app.models.processing_state import EntityDomainActivity
+    
+    entity_id = uuid.uuid4()
+    base_time = datetime.now(timezone.utc)
+    
+    # 1. First activity
+    await record_domain_activity(
+        session,
+        entity_type="merchant",
+        entity_id=entity_id,
+        domain="shopper",
+        activity_timestamp=base_time,
+    )
+    
+    stmt = select(EntityDomainActivity).where(
+        EntityDomainActivity.entity_id == entity_id,
+        EntityDomainActivity.domain == "shopper"
+    ).execution_options(populate_existing=True)
+    activity = (await session.execute(stmt)).scalar_one()
+    assert activity.last_activity_at == base_time
+    
+    # 2. Older activity should not overwrite
+    older_time = base_time - timedelta(minutes=5)
+    await record_domain_activity(
+        session,
+        entity_type="merchant",
+        entity_id=entity_id,
+        domain="shopper",
+        activity_timestamp=older_time,
+    )
+    
+    activity = (await session.execute(stmt)).scalar_one()
+    assert activity.last_activity_at == base_time
+    
+    # 3. Newer activity should overwrite
+    newer_time = base_time + timedelta(minutes=5)
+    await record_domain_activity(
+        session,
+        entity_type="merchant",
+        entity_id=entity_id,
+        domain="shopper",
+        activity_timestamp=newer_time,
+    )
+    
+    activity = (await session.execute(stmt)).scalar_one()
+    assert activity.last_activity_at == newer_time
+
+
+@pytest.mark.asyncio
+async def test_get_eligible_entities_for_target(session):
+    from app.data_access.processing_state import record_domain_activity
+    from app.services.processing_state import get_eligible_entities_for_target
+    
+    merchant_id = uuid.uuid4()
+    base_time = datetime.now(timezone.utc)
+    
+    # Insert a merchant so the base population query finds it
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from app.models.merchant import Merchant
+    await session.execute(
+        pg_insert(Merchant).values(
+            merchant_id=merchant_id,
+            shopify_store_id=f"store-{merchant_id}",
+            merchant_name="Test Merchant",
+            email="test@merchant.com",
+            country="US",
+            timezone="UTC",
+            store_currency="USD",
+            app_install_status="installed",
+        )
+    )
+    
+    # Target: merchant_profile (depends on merchant, shopper, campaign)
+    
+    # Case 0: Entity exists but has NO processing state and NO activity -> Eligible
+    eligible = await get_eligible_entities_for_target(
+        session,
+        entity_type="merchant",
+        target_type="merchant_profile",
+    )
+    assert merchant_id in eligible
+    
+    # Case 1: Entity has activity but NO processing state -> Eligible
+    await record_domain_activity(
+        session,
+        entity_type="merchant",
+        entity_id=merchant_id,
+        domain="shopper",
+        activity_timestamp=base_time,
+    )
+    
+    eligible = await get_eligible_entities_for_target(
+        session,
+        entity_type="merchant",
+        target_type="merchant_profile",
+    )
+    assert merchant_id in eligible
+    
+    # Case 2: Entity has successful processing state NEWER than activity -> Not Eligible
+    await record_processing_success(
+        session,
+        entity_type="merchant",
+        entity_id=merchant_id,
+        target_type="merchant_profile",
+        generated_at=base_time + timedelta(minutes=5)
+    )
+    
+    eligible = await get_eligible_entities_for_target(
+        session,
+        entity_type="merchant",
+        target_type="merchant_profile",
+    )
+    assert merchant_id not in eligible
+    
+    # Case 3: Entity has new activity in a DIFFERENT domain it depends on -> Eligible
+    await record_domain_activity(
+        session,
+        entity_type="merchant",
+        entity_id=merchant_id,
+        domain="campaign",
+        activity_timestamp=base_time + timedelta(minutes=10),
+    )
+    
+    eligible = await get_eligible_entities_for_target(
+        session,
+        entity_type="merchant",
+        target_type="merchant_profile",
+    )
+    assert merchant_id in eligible
+    
+    # Case 4: Entity has failed processing state -> Eligible
+    await record_processing_failure(
+        session,
+        entity_type="merchant",
+        entity_id=merchant_id,
+        target_type="merchant_profile",
+        error_message="failed"
+    )
+    
+    eligible = await get_eligible_entities_for_target(
+        session,
+        entity_type="merchant",
+        target_type="merchant_profile",
+    )
+    assert merchant_id in eligible

@@ -167,30 +167,4 @@ async def test_purchase_wrong_product_ownership(db_session, setup_data):
     with pytest.raises(UnresolvedReferenceError, match="belongs to merchant"):
         await process_shopper_event(db_session, env_purchase)
 
-async def test_shopper_activity_timestamp_is_monotonic(db_session, setup_data):
-    from datetime import timedelta
-    merchant_id, _, _ = setup_data
-    shopper_id = uuid.uuid4()
-    base_time = datetime.now(timezone.utc)
-    
-    # 1. Process an event
-    env1 = _envelope(
-        ShopperEventType.SESSION_STARTED, merchant_id, shopper_id, {"referrer": None, "email": None}
-    )
-    env1.event_timestamp = base_time
-    await process_shopper_event(db_session, env1)
-    
-    # 2. Process an older event
-    env2 = _envelope(
-        ShopperEventType.CHECKOUT_STARTED, merchant_id, shopper_id, {
-            "email": "old@example.com",
-            "cart_value": "100.00",
-            "items": []
-        }
-    )
-    env2.event_timestamp = base_time - timedelta(days=1)
-    await process_shopper_event(db_session, env2)
-    
-    shopper = await db_session.get(Shopper, shopper_id)
-    assert shopper.last_business_activity_at == base_time
-    assert shopper.last_seen_at == base_time
+

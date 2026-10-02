@@ -10,8 +10,8 @@ from app.data_access.campaign import (
     get_campaign,
     is_order_attributed_to_campaign,
     update_campaign_fields,
-    update_campaign_business_activity,
 )
+from app.data_access.processing_state import record_domain_activity
 from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order
 from app.data_access.segment import get_merchant_segments
@@ -177,4 +177,6 @@ _HANDLERS: dict[CampaignEventType, Callable[[AsyncSession, CampaignEventEnvelope
 async def process_campaign_event(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
     handler = _HANDLERS[envelope.event_type]
     await handler(session, envelope)
-    await update_campaign_business_activity(session, envelope.campaign_id, envelope.event_timestamp)
+    
+    await record_domain_activity(session, "campaign", envelope.campaign_id, "campaign", envelope.event_timestamp)
+    await record_domain_activity(session, "merchant", envelope.merchant_id, "campaign", envelope.event_timestamp)

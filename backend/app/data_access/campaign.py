@@ -64,16 +64,4 @@ async def is_order_attributed_to_campaign(session: AsyncSession, campaign_id: uu
     return result.scalar_one_or_none() is not None
 
 
-async def update_campaign_business_activity(session: AsyncSession, campaign_id: uuid.UUID, activity_at: datetime) -> None:
-    stmt = (
-        update(Campaign)
-        .where(
-            Campaign.campaign_id == campaign_id,
-            or_(
-                Campaign.last_business_activity_at.is_(None),
-                Campaign.last_business_activity_at < activity_at,
-            )
-        )
-        .values(last_business_activity_at=activity_at)
-    )
-    await session.execute(stmt)
+
