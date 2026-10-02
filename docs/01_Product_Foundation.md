@@ -2,7 +2,7 @@
 
 ## Vision
 
-Modern B2B SaaS companies collect enormous amounts of data from merchants, shopper interactions, campaigns, product usage, and business operations. Although this data exists, extracting meaningful insights still requires analysts and engineers to manually query databases, compare dashboards, inspect customer journeys, and collaborate across multiple teams.
+Modern B2B SaaS companies collect enormous amounts of data from merchants, shopper interactions, campaigns, product usage, and business operations. Although this data exists, extracting meaningful insights still requires analysts and engineers to manually query databases, compare dashboards, inspect shopper journeys, and collaborate across multiple teams.
 
 The goal of this project is to build an AI-powered Customer Intelligence Platform that enables internal business teams and merchants to understand customer behavior, investigate business metrics, and make data-driven decisions using both structured data and semantic knowledge.
 
@@ -160,7 +160,7 @@ Example shopper events include:
 * Feature usage
 * Session activity
 
-These events capture shopper behavior throughout the customer journey and form the primary source for behavioral analytics, customer segmentation, campaign analysis, and AI-driven business insights.
+These events capture shopper behavior throughout the shopper journey and form the primary source for behavioral analytics, customer segmentation, campaign analysis, and AI-driven business insights.
 
 
 ---

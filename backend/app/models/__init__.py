@@ -6,7 +6,7 @@ from app.models.investigation import (
     InvestigationMessage,
     InvestigationToolExecution,
 )
-from app.models.journey import CustomerJourney, CustomerJourneyEvent, MerchantJourney, MerchantJourneyEvent
+from app.models.journey import ShopperJourney, ShopperJourneyEvent, MerchantJourney, MerchantJourneyEvent
 from app.models.merchant import (
     FeatureEventMapping,
     MerchantFeature,
@@ -34,8 +34,8 @@ __all__ = [
     "Campaign",
     "CampaignAnalyticsDaily",
     "CampaignEvent",
-    "CustomerJourney",
-    "CustomerJourneyEvent",
+    "ShopperJourney",
+    "ShopperJourneyEvent",
     "EntityProcessingState",
     "FeatureMetricsDaily",
     "FeatureEventMapping",

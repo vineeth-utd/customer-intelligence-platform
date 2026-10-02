@@ -260,7 +260,7 @@ Examples include:
 * Merchant Profile Retrieval
 * Shopper Profile Retrieval
 * Order Retrieval
-* Customer Journey Retrieval
+* Shopper Journey Retrieval
 * Campaign Analytics Retrieval
 * Business Metrics Retrieval
 * Business Documentation Search

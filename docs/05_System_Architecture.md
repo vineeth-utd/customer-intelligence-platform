@@ -203,7 +203,7 @@ The Business Intelligence Layer converts processed business data into meaningful
 * Generate shopper analytics
 * Generate campaign analytics
 * Generate business metrics
-* Generate customer journey analytics
+* Generate shopper journey analytics
 * Support dashboard visualizations
 
 #### Key Components
@@ -216,7 +216,7 @@ Provides insights into merchant lifecycle, subscriptions, feature adoption, reve
 
 **Shopper Analytics**
 
-Provides insights into shopper behaviour, customer journeys, conversion funnels, engagement, and purchasing patterns.
+Provides insights into shopper behaviour, shopper journeys, conversion funnels, engagement, and purchasing patterns.
 
 ---
 
@@ -385,7 +385,7 @@ The high-level flow is shown below.
 
 4. Business services process the events based on their event type and update the operational business data.
 
-5. Updated operational data is used to regenerate business data products such as merchant profiles, shopper profiles, customer journeys, and business metrics.
+5. Updated operational data is used to regenerate business data products such as merchant profiles, shopper profiles, shopper journeys, and business metrics.
 
 6. The refreshed business data becomes available through dashboards and AI-assisted investigations.
 

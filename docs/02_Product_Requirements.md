@@ -233,7 +233,7 @@ The platform shall:
 * Validate and process incoming data.
 * Maintain merchant profiles.
 * Maintain shopper profiles.
-* Maintain customer journeys.
+* Maintain shopper journeys.
 * Build merchant and shopper segments.
 * Generate business metrics and analytics.
 * Provide role-based dashboards.

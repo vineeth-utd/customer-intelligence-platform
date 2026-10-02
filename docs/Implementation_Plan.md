@@ -212,7 +212,7 @@ Implement the analytical processing required by the Prototype, including:
 * Analytics Service capabilities required by the Prototype dashboard.
 * Verification that derived metrics can be reproduced from their underlying operational source data.
 
-Full Merchant Profiles, Shopper Profiles, Customer Journeys, Shopper Segment Membership, and Merchant Health remain deferred to the MVP phase.
+Full Merchant Profiles, Shopper Profiles, Shopper Journeys, Shopper Segment Membership, and Merchant Health remain deferred to the MVP phase.
 
 The implementation should use the real Business Service and Data Access layers rather than Prototype-specific shortcuts.
 
@@ -331,7 +331,7 @@ Expand the completed End-to-End Prototype into the first usable Customer Intelli
 
 Phase 2 builds on the operational data platform, analytics foundation, APIs, and internal dashboard established during Phase 1. The MVP introduces richer customer intelligence data products, deeper business analytics and drill-down experiences, retrieval-oriented AI knowledge, controlled business tools, and evidence-grounded AI-assisted investigations.
 
-The MVP should allow an internal user to move from observing business performance to understanding the underlying merchants, shoppers, campaigns, and customer journeys, and then investigate business questions using controlled AI capabilities grounded in authoritative platform data.
+The MVP should allow an internal user to move from observing business performance to understanding the underlying merchants, shoppers, campaigns, and shopper journeys, and then investigate business questions using controlled AI capabilities grounded in authoritative platform data.
 
 The target MVP flow is:
 
@@ -462,7 +462,7 @@ Production authentication providers and the complete merchant-facing dashboard a
 
 ### Merchant Journeys
 
-Merchant Journeys remain part of the MVP derived-data layer and are implemented alongside Customer Journeys.
+Merchant Journeys remain part of the MVP derived-data layer and are implemented alongside Shopper Journeys.
 
 They provide deterministic merchant lifecycle context that supports merchant health, internal merchant intelligence, Customer Success workflows, and later AI knowledge generation and investigations.
 
@@ -713,7 +713,7 @@ The MVP frontend remains primarily an internal-team experience. A complete merch
 * Internal users can monitor platform-wide business performance.
 * Internal users can drill from platform-level information into individual merchants.
 * Merchant detail views expose relevant Profiles, Health, Journeys, Features, Campaigns, and business analytics.
-* Users can drill into relevant Shoppers, Customer Journeys, Segments, and Campaigns.
+* Users can drill into relevant Shoppers, Shopper Journeys, Segments, and Campaigns.
 * REST APIs expose the business capabilities required by these experiences through typed contracts.
 * Internal and merchant authorization boundaries are represented and enforced.
 * Merchant-scoped principals cannot access another merchant's business information.
@@ -1004,7 +1004,7 @@ Validate representative MVP workflows such as:
 * Investigating a conversion decline.
 * Investigating declining Merchant Health.
 * Investigating feature adoption or usage changes.
-* Investigating shopper behaviour or Customer Journeys.
+* Investigating shopper behaviour or Shopper Journeys.
 * Investigating campaign performance and attribution.
 * Retrieving known merchant, shopper, campaign, or order information through exact AI-assisted lookup.
 

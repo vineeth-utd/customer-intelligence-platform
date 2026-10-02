@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
-class CustomerJourney(Base):
-    __tablename__ = "customer_journeys"
+class ShopperJourney(Base):
+    __tablename__ = "shopper_journeys"
 
     journey_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -31,17 +31,17 @@ class CustomerJourney(Base):
     merchant: Mapped["Merchant"] = relationship()
     shopper: Mapped["Shopper"] = relationship()
     order: Mapped["Order | None"] = relationship()
-    events: Mapped[list["CustomerJourneyEvent"]] = relationship(back_populates="journey")
+    events: Mapped[list["ShopperJourneyEvent"]] = relationship(back_populates="journey")
 
 
-class CustomerJourneyEvent(Base):
-    __tablename__ = "customer_journey_events"
+class ShopperJourneyEvent(Base):
+    __tablename__ = "shopper_journey_events"
 
     journey_event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     journey_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customer_journeys.journey_id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("shopper_journeys.journey_id"), nullable=False
     )
     source_event_category: Mapped[str] = mapped_column(String, nullable=False)
     source_event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -49,7 +49,7 @@ class CustomerJourneyEvent(Base):
     event_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    journey: Mapped["CustomerJourney"] = relationship(back_populates="events")
+    journey: Mapped["ShopperJourney"] = relationship(back_populates="events")
 
 
 class MerchantJourney(Base):

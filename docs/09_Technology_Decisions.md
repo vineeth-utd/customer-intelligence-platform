@@ -190,7 +190,7 @@ Rather than generating random records, the event generators simulate realistic b
 * Purchases
 * Campaign engagement
 
-This approach produces realistic business data that supports meaningful analytics, dashboards, customer journeys, and AI-assisted investigations.
+This approach produces realistic business data that supports meaningful analytics, dashboards, shopper journeys, and AI-assisted investigations.
 
 ---
 
@@ -264,7 +264,7 @@ This approach ensures predictable behaviour, simplifies debugging, and maintains
 
 ## Incremental Derived Data Generation
 
-Profiles, customer journeys, business metrics, and other derived business data products are generated incrementally rather than after every incoming event.
+Profiles, shopper journeys, business metrics, and other derived business data products are generated incrementally rather than after every incoming event.
 
 The platform maintains processing state for each business entity type, allowing downstream processing jobs to determine whether new events have arrived since the previous processing cycle.
 
@@ -547,7 +547,7 @@ Current business understanding is refreshed periodically, while historical busin
 
 The Frontend provides the user interface through which internal teams and merchants interact with the Customer Intelligence Platform.
 
-It is responsible for presenting business dashboards, analytics, customer journeys, AI-assisted investigations, and business insights while providing a responsive and intuitive user experience.
+It is responsible for presenting business dashboards, analytics, shopper journeys, AI-assisted investigations, and business insights while providing a responsive and intuitive user experience.
 
 The selected technologies should support modern web development, rich data visualization, strong type safety, and efficient interaction with the platform's backend services.
 
@@ -595,7 +595,7 @@ The framework also supports responsive design and simplifies long-term UI mainte
 
 Apache ECharts is selected as the primary charting library.
 
-The Customer Intelligence Platform relies heavily on business dashboards and analytical visualizations including trend analysis, revenue metrics, conversion funnels, customer journeys, feature adoption, campaign performance, and business growth.
+The Customer Intelligence Platform relies heavily on business dashboards and analytical visualizations including trend analysis, revenue metrics, conversion funnels, shopper journeys, feature adoption, campaign performance, and business growth.
 
 Apache ECharts provides a comprehensive set of interactive visualization capabilities while remaining open source and highly extensible for future analytical requirements.
 

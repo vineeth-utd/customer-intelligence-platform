@@ -13,7 +13,7 @@ Specifically, the architecture should:
 * Represent the core business entities of the platform, including merchants, shoppers, campaigns, products, and business events.
 * Organize business data into well-defined layers with clear ownership and responsibilities.
 * Maintain the primary data stores as the authoritative source of truth.
-* Support efficient generation of merchant profiles, shopper profiles, customer journeys, business metrics, and analytics datasets.
+* Support efficient generation of merchant profiles, shopper profiles, shopper journeys, business metrics, and analytics datasets.
 * Enable downstream business intelligence and dashboard reporting.
 * Provide reliable data products that support AI-assisted investigations.
 * Preserve data lineage so that derived insights can always be traced back to their originating business records.
@@ -32,7 +32,7 @@ or
 
 > **What have we learned from what happened?**
 
-Raw events, processed records, merchant profiles, shopper profiles, customer journeys, and business metrics describe **what happened** within the platform.
+Raw events, processed records, merchant profiles, shopper profiles, shopper journeys, and business metrics describe **what happened** within the platform.
 
 Analytics datasets, behavioural summaries, investigation summaries, and semantic knowledge represent **what the platform has learned** from those events.
 
@@ -68,7 +68,7 @@ A Shopper represents a customer interacting with a merchant's online store.
 
 Shoppers generate behavioural signals as they browse products, interact with platform features, engage with campaigns, and complete purchases.
 
-These interactions drive customer journey analysis, shopper segmentation, behavioural analytics, and conversion insights.
+These interactions drive shopper journey analysis, shopper segmentation, behavioural analytics, and conversion insights.
 
 ---
 
@@ -88,7 +88,7 @@ Orders capture the commercial transaction resulting from a shopper's purchasing 
 
 An Order is created from shopper purchase events and continues to evolve as its lifecycle progresses through states such as payment, fulfilment, delivery, cancellation, or return.
 
-Order information supports merchant analytics, shopper analytics, business metrics, customer journeys, and AI-assisted investigations.
+Order information supports merchant analytics, shopper analytics, business metrics, shopper journeys, and AI-assisted investigations.
 
 ---
 
@@ -118,7 +118,7 @@ Unlike the other entities, which describe business objects, business events desc
 
 Every meaningful activity within the platform is captured as a business event and linked to one or more business entities, such as merchants, shoppers, products, campaigns, or platform features.
 
-Business events provide the historical foundation from which profiles, customer journeys, business metrics, analytics, and AI-generated insights are derived.
+Business events provide the historical foundation from which profiles, shopper journeys, business metrics, analytics, and AI-generated insights are derived.
 
 ---
 
@@ -265,7 +265,7 @@ For example, a merchant profile may indicate that a merchant is currently subscr
 
 Similarly, a shopper profile may identify a shopper as a high-value customer, while the underlying shopper events explain why through their browsing history, purchases, campaign interactions, and overall engagement.
 
-Keeping business events as a separate entity preserves the complete history of the platform while allowing current business views, profiles, customer journeys, business metrics, and AI knowledge to be derived from a single, consistent source of historical truth.
+Keeping business events as a separate entity preserves the complete history of the platform while allowing current business views, profiles, shopper journeys, business metrics, and AI knowledge to be derived from a single, consistent source of historical truth.
 
 ---
 
@@ -358,7 +358,7 @@ Examples include:
 
 * Merchant Profiles
 * Shopper Profiles
-* Customer Journeys
+* Shopper Journeys
 * Shopper Segments
 * Business Metrics
 * Campaign Metrics
@@ -433,7 +433,7 @@ The primary business data products maintained by the platform include:
 
 * Merchant Profiles
 * Shopper Profiles
-* Customer Journeys
+* Shopper Journeys
 * Shopper Segments
 * Merchant Health
 * Campaign Analytics
@@ -524,15 +524,15 @@ Instead, it is a derived business data product generated from the underlying ope
 
 ---
 
-## 4.3 Customer Journey
+## 4.3 Shopper Journey
 
-A Customer Journey represents the sequence of interactions a shopper performs while engaging with a merchant's store.
+A Shopper Journey represents the sequence of interactions a shopper performs while engaging with a merchant's store.
 
-Rather than analysing individual events independently, the Customer Journey organizes related shopper activities into a chronological view that explains how a shopper progresses through different stages of the purchasing lifecycle.
+Rather than analysing individual events independently, the Shopper Journey organizes related shopper activities into a chronological view that explains how a shopper progresses through different stages of the purchasing lifecycle.
 
 By connecting behavioural events across multiple sessions and interactions, the platform can identify how shoppers discover products, engage with platform features, respond to campaigns, and ultimately complete or abandon purchases.
 
-A Customer Journey may include interactions such as:
+A Shopper Journey may include interactions such as:
 
 * Product discovery and browsing
 * Product searches
@@ -545,7 +545,7 @@ A Customer Journey may include interactions such as:
 * Repeat purchases
 * Post-purchase engagement
 
-Customer Journeys provide important context that individual events cannot capture. They help explain how shopper behaviour evolves over time and where opportunities or points of friction exist within the shopping experience.
+Shopper Journeys provide important context that individual events cannot capture. They help explain how shopper behaviour evolves over time and where opportunities or points of friction exist within the shopping experience.
 
 These journeys support multiple business capabilities, including:
 
@@ -556,9 +556,9 @@ These journeys support multiple business capabilities, including:
 * Merchant dashboards
 * AI-assisted investigations
 
-Customer Journeys are continuously updated as new shopper events are processed, ensuring that they accurately represent the shopper's latest interactions while preserving the complete sequence of behavioural activity.
+Shopper Journeys are continuously updated as new shopper events are processed, ensuring that they accurately represent the shopper's latest interactions while preserving the complete sequence of behavioural activity.
 
-Although Customer Journeys provide a consolidated representation of shopper behaviour, they are not the platform's source of truth.
+Although Shopper Journeys provide a consolidated representation of shopper behaviour, they are not the platform's source of truth.
 
 Instead, they are a derived business data product generated by correlating chronological shopper events and can always be reconstructed from the underlying event history.
 
@@ -595,7 +595,7 @@ Although Segment Definitions are maintained operationally, the shoppers belongin
 
 Shopper Segment Membership stores the shoppers that currently belong to each Shopper Segment Definition.
 
-Unlike Segment Definitions, memberships are generated by analysing shopper profiles, customer journeys, purchasing behaviour, and other behavioural signals.
+Unlike Segment Definitions, memberships are generated by analysing shopper profiles, shopper journeys, purchasing behaviour, and other behavioural signals.
 
 Since shopper behaviour changes continuously, memberships are periodically regenerated to reflect the latest business activity.
 
@@ -656,7 +656,7 @@ Campaign Analytics provides a comprehensive view of how marketing campaigns perf
 
 Rather than evaluating individual campaign interactions in isolation, Campaign Analytics consolidates campaign performance into meaningful business insights that help merchants and internal teams understand which campaigns drive shopper engagement, conversions, and revenue.
 
-Campaign Analytics is continuously updated as shoppers interact with campaigns and complete subsequent actions throughout their customer journeys.
+Campaign Analytics is continuously updated as shoppers interact with campaigns and complete subsequent actions throughout their shopper journeys.
 
 A Campaign Analytics data product may include information such as:
 
@@ -686,7 +686,7 @@ Campaign Analytics represents a continuously evolving analytical view of campaig
 
 Although it provides valuable business insights, it is not the platform's source of truth.
 
-Instead, it is a derived business data product generated from campaign events, shopper behaviour, customer journeys, and operational business data, and can always be regenerated as additional business activity becomes available.
+Instead, it is a derived business data product generated from campaign events, shopper behaviour, shopper journeys, and operational business data, and can always be regenerated as additional business activity becomes available.
 
 ---
 
@@ -813,8 +813,8 @@ For example:
 
 * Merchant Profiles are generated from merchant events and operational merchant data.
 * Shopper Profiles are generated from shopper events and operational shopper data.
-* Customer Journeys are reconstructed from chronological shopper events.
-* Shopper Segments are generated using shopper profiles, customer journeys, and behavioural data.
+* Shopper Journeys are reconstructed from chronological shopper events.
+* Shopper Segments are generated using shopper profiles, shopper journeys, and behavioural data.
 * Merchant Health combines multiple business signals derived from merchant activity, shopper behaviour, and business metrics.
 * Campaign Analytics aggregate campaign events and shopper interactions.
 * Business Metrics consolidate information across multiple business domains.

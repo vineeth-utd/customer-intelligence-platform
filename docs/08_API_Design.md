@@ -117,12 +117,12 @@ Key capabilities include:
 
 Shopper APIs provide access to shopper-related information and behavioural insights.
 
-These APIs support customer journey analysis, shopper investigations, segmentation, and merchant dashboards.
+These APIs support shopper journey analysis, shopper investigations, segmentation, and merchant dashboards.
 
 Key capabilities include:
 
 * Retrieve shopper profile
-* Retrieve customer journey
+* Retrieve shopper journey
 * Retrieve purchase history
 * Retrieve shopper segments
 * Retrieve shopper activity

@@ -681,7 +681,7 @@ Example event types include:
 
 * One Campaign can have many Campaign Events.
 * One Shopper can generate many Campaign Events.
-* Campaign Events can later be correlated with Shopper Events and Orders to support campaign attribution and customer journey analysis.
+* Campaign Events can later be correlated with Shopper Events and Orders to support campaign attribution and shopper journey analysis.
 
 **Indexes**
 
@@ -829,7 +829,7 @@ Journey construction remains deterministic. Events are grouped using entity iden
 
 AI-generated journey summaries are created separately by the AI Knowledge Pipeline and are not stored as derived business truth.
 
-#### Customer Journey
+#### Shopper Journey
 
 **Purpose**
 
@@ -845,17 +845,17 @@ Represents a sequence of related shopper interactions within a merchant's store.
 
 **Relationships**
 
-* One Shopper can have many Customer Journeys.
-* One Customer Journey can contain many Customer Journey Events.
-* A converted Customer Journey may reference an Order.
+* One Shopper can have many Shopper Journeys.
+* One Shopper Journey can contain many Shopper Journey Events.
+* A converted Shopper Journey may reference an Order.
 
 ---
 
-#### Customer Journey Event
+#### Shopper Journey Event
 
 **Purpose**
 
-Associates individual business events with a Customer Journey while preserving their chronological order and source lineage.
+Associates individual business events with a Shopper Journey while preserving their chronological order and source lineage.
 
 **Primary Key**
 
@@ -867,7 +867,7 @@ Associates individual business events with a Customer Journey while preserving t
 
 **Relationships**
 
-* One Customer Journey contains many Customer Journey Events.
+* One Shopper Journey contains many Shopper Journey Events.
 * Each Journey Event references the originating business event.
 
 ---
@@ -1291,7 +1291,7 @@ Tool Executions describe what information was retrieved, while Investigation Evi
 
 `evidence_summary` stores the relevant business observation used during the investigation.
 
-`source_type` identifies the type of underlying business information, such as merchant metrics, campaign analytics, merchant profiles, customer journeys, or AI knowledge.
+`source_type` identifies the type of underlying business information, such as merchant metrics, campaign analytics, merchant profiles, shopper journeys, or AI knowledge.
 
 `source_reference` is stored as JSONB and contains the identifiers required to locate or reproduce the underlying source data without duplicating the complete business dataset.
 
@@ -1433,7 +1433,7 @@ Relationships are required unless the underlying business relationship is genuin
 Examples of optional relationships include:
 
 * An Investigation may not reference a Merchant when investigating platform-wide behaviour.
-* A Customer Journey may not reference an Order when the journey does not result in a purchase.
+* A Shopper Journey may not reference an Order when the journey does not result in a purchase.
 * Investigation Evidence may exist without a Tool Execution when the evidence originates from another supported investigation source.
 
 Nullable foreign keys are therefore introduced only where the business model explicitly permits the relationship to be absent.

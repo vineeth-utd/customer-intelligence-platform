@@ -9,7 +9,7 @@ The frontend is responsible for presenting business information clearly and enab
 Specifically, the frontend should:
 
 * Provide intuitive dashboard experiences for internal teams and merchants.
-* Present business metrics, trends, customer journeys, and analytics through clear visualizations.
+* Present business metrics, trends, shopper journeys, and analytics through clear visualizations.
 * Enable users to navigate between merchant, shopper, campaign, and analytical views.
 * Provide a natural interface for creating and continuing AI-assisted investigations.
 * Present AI findings together with supporting business evidence.
@@ -130,7 +130,7 @@ The frontend does not introduce a separate global state management library. Serv
 
 # 3. Dashboard & Visualization Design
 
-The frontend provides dashboard experiences that allow users to monitor business performance, explore analytical data, and drill down into specific merchants, shoppers, campaigns, and customer journeys.
+The frontend provides dashboard experiences that allow users to monitor business performance, explore analytical data, and drill down into specific merchants, shoppers, campaigns, and shopper journeys.
 
 Dashboards consume business data and metrics provided by backend APIs. Business calculations remain within the backend, while the frontend focuses on presenting and interacting with the resulting information.
 
@@ -153,7 +153,7 @@ The internal experience supports:
 * Campaign performance.
 * Merchant health monitoring.
 * Merchant-level drill-down.
-* Shopper, campaign, and customer journey drill-down.
+* Shopper, campaign, and shopper journey drill-down.
 
 This enables users to move naturally from platform-level trends into the specific merchants or business activity contributing to those trends.
 
