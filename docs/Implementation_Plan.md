@@ -508,6 +508,12 @@ Phase 2 therefore introduces incremental processing based on business-entity pro
 * Existing Phase 1 scheduled analytics continue to operate correctly.
 * The incremental-processing foundation can be reused by Profiles, Journeys, Segments, Merchant Health, and AI Knowledge generation.
 
+### Status
+
+**COMPLETED**: Phase 2 Milestone 1 is complete.
+
+* **Architecture Outcome**: A decoupled architecture using `EntityDomainActivity` (Source Activity Ledger) and `EntityProcessingState` (Target Processing State) tracks changes securely. An isolated batching orchestrator (`process_incremental_target`) safely evaluates these states. This provides the stable, transaction-safe foundation needed by later milestones to generate Profiles, Journeys, Segments, and AI Knowledge incrementally, preventing race conditions, infinite failure loops, and cross-entity corruption.
+
 ---
 
 ## Milestone 2 - Profiles & Business Journeys

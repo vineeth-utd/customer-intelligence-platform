@@ -268,21 +268,16 @@ Profiles, customer journeys, business metrics, and other derived business data p
 
 The platform maintains processing state for each business entity type, allowing downstream processing jobs to determine whether new events have arrived since the previous processing cycle.
 
-Examples include:
+The platform tracks business activity and processing state independently to support cross-domain dependencies and incremental regeneration.
 
-* Merchant
-* Shopper
-* Campaign
+This is implemented through a two-part architecture:
 
-Each processing state maintains information such as:
+* **Source Activity Ledger (`EntityDomainActivity`)**: Tracks the high-water mark of relevant business activity (e.g. shopper orders, campaign interactions) mapped back to the logical entities (Merchant, Shopper, Campaign) whose derived products may need recalculation.
+* **Target Processing State (`EntityProcessingState`)**: Tracks the last successful generation timestamp and status for each specific derived product target (e.g. `merchant_profile`, `shopper_journey`).
 
-* Last Event At
-* Last Profile Generated At
-* Last Knowledge Generated At
+At scheduled intervals, reusable orchestrator jobs determine eligibility by comparing a target's `last_generated_at` timestamp against the relevant source domain activity timestamps. If the activity timestamp is newer, or if generation previously failed, the entity is placed in the queue for incremental processing.
 
-At scheduled intervals, processing jobs compare these timestamps to determine whether new business activity requires profile or knowledge regeneration.
-
-This incremental approach avoids unnecessary recomputation while ensuring that derived business data remains up to date.
+This decoupled architecture avoids unnecessary recomputation, safely isolates and retries generation failures without blocking other entities, and ensures that derived business data products correctly reflect late-arriving or cross-domain events.
 
 ---
 
