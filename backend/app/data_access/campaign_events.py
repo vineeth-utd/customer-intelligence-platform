@@ -24,6 +24,7 @@ async def insert_campaign_event(session: AsyncSession, envelope: CampaignEventEn
             merchant_id=envelope.merchant_id,
             campaign_id=envelope.campaign_id,
             shopper_id=envelope.shopper_id,
+            session_id=envelope.session_id,
             event_type=getattr(envelope.event_type, "value", envelope.event_type),
             event_version=envelope.event_version,
             event_timestamp=envelope.event_timestamp,

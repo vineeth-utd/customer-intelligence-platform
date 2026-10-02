@@ -69,6 +69,7 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
         total_amount=float(payload.total_amount),
         placed_at=envelope.event_timestamp,
         completed_at=envelope.event_timestamp,
+        session_id=envelope.session_id,
     )
 
     items_data = []

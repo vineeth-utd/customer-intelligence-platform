@@ -62,6 +62,7 @@ class CampaignEvent(Base):
     campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     merchant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     shopper_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    session_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     event_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
     event_version: Mapped[int] = mapped_column(Integer, nullable=False)
     event_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

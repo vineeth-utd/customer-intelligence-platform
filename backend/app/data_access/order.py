@@ -19,6 +19,7 @@ async def create_order(
     total_amount: float,
     placed_at: datetime,
     completed_at: datetime | None = None,
+    session_id: uuid.UUID | None = None,
 ) -> Order:
     order = Order(
         order_id=order_id,
@@ -29,6 +30,7 @@ async def create_order(
         total_amount=total_amount,
         placed_at=placed_at,
         completed_at=completed_at,
+        session_id=session_id,
     )
     session.add(order)
     return order
