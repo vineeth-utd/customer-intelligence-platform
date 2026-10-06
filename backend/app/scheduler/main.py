@@ -5,6 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.config.settings import settings
 from app.scheduler.analytics_job import run_analytics_job
 from app.scheduler.profile_job import run_merchant_profile_job, run_shopper_profile_job
+from app.scheduler.journey_job import run_shopper_journey_job
 from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
@@ -56,9 +57,20 @@ def setup_scheduler():
         coalesce=True
     )
     
+    scheduler.add_job(
+        run_shopper_journey_job,
+        trigger=IntervalTrigger(minutes=settings.shopper_journey_job_interval_minutes),
+        id="shopper_journey_job",
+        name="Incrementally generate Shopper Journeys",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True
+    )
+    
     logger.info(f"Registered analytics job to run at minute {settings.analytics_job_cron_minute} of every hour.")
     logger.info(f"Registered merchant profile job to run every {settings.merchant_profile_job_interval_minutes} minutes.")
     logger.info(f"Registered shopper profile job to run every {settings.shopper_profile_job_interval_minutes} minutes.")
+    logger.info(f"Registered shopper journey job to run every {settings.shopper_journey_job_interval_minutes} minutes.")
     
     scheduler.start()
     logger.info("Background scheduler started.")

@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     analytics_job_lookback_days: int = 1
     merchant_profile_job_interval_minutes: int = 15
     shopper_profile_job_interval_minutes: int = 15
+    shopper_journey_job_interval_minutes: int = 15
+    journey_max_window_days: int = 7
 
     class Config:
         env_file = ".env"

@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,6 +36,9 @@ class ShopperJourney(Base):
 
 class ShopperJourneyEvent(Base):
     __tablename__ = "shopper_journey_events"
+    __table_args__ = (
+        UniqueConstraint("source_event_category", "source_event_id", name="uq_shopper_journey_source_event"),
+    )
 
     journey_event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")

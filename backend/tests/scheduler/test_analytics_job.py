@@ -85,7 +85,7 @@ def test_scheduler_registration(mock_start, mock_settings, monkeypatch):
     setup_scheduler()
     
     jobs = scheduler.get_jobs()
-    assert len(jobs) == 3
+    assert len(jobs) == 4
     
     analytics_job = scheduler.get_job("analytics_job")
     assert analytics_job is not None
@@ -100,6 +100,10 @@ def test_scheduler_registration(mock_start, mock_settings, monkeypatch):
     shopper_profile_job = scheduler.get_job("shopper_profile_job")
     assert shopper_profile_job is not None
     assert shopper_profile_job.max_instances == 1
+    
+    journey_job = scheduler.get_job("shopper_journey_job")
+    assert journey_job is not None
+    assert journey_job.max_instances == 1
     
     mock_start.assert_called_once()
     
