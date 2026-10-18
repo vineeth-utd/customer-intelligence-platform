@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data_access.processing_state import record_domain_activity
 from app.data_access.profile import (
     get_merchant_profile as dal_get_merchant_profile,
     get_merchant_profile_source_data,
@@ -67,6 +68,7 @@ async def generate_shopper_profile_callback(session: AsyncSession, shopper_id: u
     
     generated_at = datetime.now(timezone.utc)
     await upsert_shopper_profile(session, shopper_id, data, generated_at)
+    await record_domain_activity(session, "shopper", shopper_id, "profile", generated_at)
 
 
 async def get_merchant_profile(session: AsyncSession, merchant_id: uuid.UUID) -> MerchantProfile | None:

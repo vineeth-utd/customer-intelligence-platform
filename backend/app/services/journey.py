@@ -11,6 +11,7 @@ from app.data_access.journey import (
     get_shopper_journey_by_id,
     get_shopper_journeys_by_shopper,
 )
+from app.data_access.processing_state import record_domain_activity
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
 from app.schemas.events.event_types import CampaignEventType, ShopperEventType
 from app.services.merchant_journey import (
@@ -74,6 +75,7 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
     if not raw_events:
         # No eligible events, but we must ensure we delete existing journeys
         await delete_shopper_journeys(session, shopper_id)
+        await record_domain_activity(session, "shopper", shopper_id, "journey", datetime.now(timezone.utc))
         return
 
     # 2. Delete existing journeys for this shopper
@@ -178,6 +180,8 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
         session.add_all(journeys_to_insert)
     if events_to_insert:
         session.add_all(events_to_insert)
+
+    await record_domain_activity(session, "shopper", shopper_id, "journey", generated_at)
 
 
 async def get_shopper_journeys_for_shopper(

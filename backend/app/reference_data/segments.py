@@ -9,11 +9,11 @@ class SegmentCatalogEntry(BaseModel):
 SEGMENT_CATALOG: list[SegmentCatalogEntry] = [
     SegmentCatalogEntry(
         segment_name="All Active Shoppers",
-        segment_definition={"type": "behavioral", "condition": "has_recent_session"}
+        segment_definition={"type": "behavioral", "condition": "has_recent_session", "days": 30}
     ),
     SegmentCatalogEntry(
         segment_name="High Value Customers",
-        segment_definition={"type": "transactional", "metric": "lifetime_value", "operator": ">=", "value": 500}
+        segment_definition={"type": "transactional", "metric": "total_spend", "operator": ">=", "value": 500}
     ),
     SegmentCatalogEntry(
         segment_name="Cart Abandoners",
