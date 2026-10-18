@@ -4,11 +4,14 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.profile import (
-    get_merchant_profile_source_data, 
-    upsert_merchant_profile,
+    get_merchant_profile as dal_get_merchant_profile,
+    get_merchant_profile_source_data,
+    get_shopper_profile as dal_get_shopper_profile,
     get_shopper_profile_source_data,
-    upsert_shopper_profile
+    upsert_merchant_profile,
+    upsert_shopper_profile,
 )
+from app.models.profile import MerchantProfile, ShopperProfile
 
 
 async def generate_merchant_profile_callback(session: AsyncSession, merchant_id: uuid.UUID) -> None:
@@ -64,3 +67,14 @@ async def generate_shopper_profile_callback(session: AsyncSession, shopper_id: u
     
     generated_at = datetime.now(timezone.utc)
     await upsert_shopper_profile(session, shopper_id, data, generated_at)
+
+
+async def get_merchant_profile(session: AsyncSession, merchant_id: uuid.UUID) -> MerchantProfile | None:
+    """Retrieve the generated profile for a merchant."""
+    return await dal_get_merchant_profile(session, merchant_id)
+
+
+async def get_shopper_profile(session: AsyncSession, shopper_id: uuid.UUID) -> ShopperProfile | None:
+    """Retrieve the generated profile for a shopper."""
+    return await dal_get_shopper_profile(session, shopper_id)
+

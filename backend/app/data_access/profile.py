@@ -258,3 +258,18 @@ async def upsert_shopper_profile(
     )
     
     await session.execute(stmt)
+
+
+async def get_merchant_profile(session: AsyncSession, merchant_id: uuid.UUID) -> MerchantProfile | None:
+    """Retrieve the generated profile for a merchant."""
+    stmt = select(MerchantProfile).where(MerchantProfile.merchant_id == merchant_id)
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+
+
+async def get_shopper_profile(session: AsyncSession, shopper_id: uuid.UUID) -> ShopperProfile | None:
+    """Retrieve the generated profile for a shopper."""
+    stmt = select(ShopperProfile).where(ShopperProfile.shopper_id == shopper_id)
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+

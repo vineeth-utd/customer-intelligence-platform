@@ -124,6 +124,8 @@ async def process_shopper_event(session: AsyncSession, envelope: ShopperEventEnv
         
     elif envelope.event_type == ShopperEventType.PURCHASE_COMPLETED:
         await _handle_purchase_completed(session, envelope)
+        await record_domain_activity(session, "shopper", envelope.shopper_id, "order", envelope.event_timestamp)
+        await record_domain_activity(session, "merchant", envelope.merchant_id, "order", envelope.event_timestamp)
 
     # All other behavioral events simply rely on the upsert_shopper call above.
     

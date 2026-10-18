@@ -458,13 +458,20 @@ Stores customer orders placed with merchants.
 
 **Important Columns**
 
-`order_id, merchant_id, shopper_id, order_status, currency, total_amount, placed_at, completed_at, created_at, updated_at`
+`order_id, merchant_id, shopper_id, session_id (nullable), order_status, currency, total_amount, placed_at, completed_at, created_at, updated_at`
 
 **Relationships**
 
 * One Order belongs to one Merchant.
 * One Order belongs to one Shopper.
 * One Order contains many Order Items.
+
+**Indexes**
+
+* Primary Key (`order_id`)
+* Index (`merchant_id`, `placed_at`)
+* Index (`shopper_id`, `placed_at`)
+* Index (`session_id`)
 
 ---
 
@@ -675,7 +682,7 @@ Example event types include:
 
 **Important Columns**
 
-`event_id, campaign_id, merchant_id, shopper_id (nullable), event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
+`event_id, campaign_id, merchant_id, shopper_id (nullable), session_id (nullable), event_type, event_version, event_timestamp, payload, source, processed, processed_at, created_at`
 
 **Relationships**
 
@@ -688,6 +695,7 @@ Example event types include:
 * Primary Key (`event_id`)
 * Index (`campaign_id`, `event_timestamp`)
 * Index (`shopper_id`, `event_timestamp`)
+* Index (`session_id`)
 * Index (`event_type`)
 * Index (`processed`)
 
@@ -817,7 +825,7 @@ Provides a consolidated representation of a shopper's purchasing behaviour, enga
 
 * One Shopper has one Shopper Profile.
 
-`total_spend` represents historical spending, while `customer_lifetime_value` represents an estimated customer value calculated from shopper purchasing behaviour.
+`total_spend` represents historical spending, while `customer_lifetime_value` represents an estimated customer value calculated from shopper purchasing behaviour. Behavioral and preference fields (`customer_lifetime_value`, `purchase_frequency`, `cart_abandonment_count`, `preferred_category`, `preferred_size`, `last_purchase_at`, `last_activity_at`, `lifecycle_stage`) are nullable until qualifying events or purchase history occur.
 
 ---
 
@@ -905,12 +913,12 @@ Associates merchant lifecycle events with a Merchant Journey while preserving th
 
 **Important Columns**
 
-`merchant_journey_event_id, merchant_journey_id, source_event_id, event_type, event_timestamp, sequence_number`
+`merchant_journey_event_id, merchant_journey_id, source_event_category, source_event_id, event_type, event_timestamp, sequence_number`
 
 **Relationships**
 
 * One Merchant Journey contains many Merchant Journey Events.
-* Each Merchant Journey Event references the originating Merchant Event.
+* Each Merchant Journey Event references the originating business event (polymorphic lineage across merchant, campaign, and platform event categories with composite `(source_event_category, source_event_id)` uniqueness).
 
 ---
 

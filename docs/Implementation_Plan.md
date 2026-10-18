@@ -580,6 +580,12 @@ Generate the core derived business representations that consolidate merchant and
 * Regeneration is idempotent and does not create duplicate derived records.
 * Business Service and Data Access Layer capabilities expose the derived products for downstream use.
 
+### Status
+
+**COMPLETED**: Phase 2 Milestone 2 is complete.
+
+* **Architecture Outcome**: Merchant Profiles, Shopper Profiles, Shopper Journeys, and Merchant Journeys are fully implemented as deterministic, incrementally maintained derived data products. Operational changes across product, merchant, shopper, campaign, order, and daily analytics domains reliably record entity domain activity and trigger target regeneration via reusable incremental jobs. Shopper Journeys model multi-session converting and non-converting journeys with order linkage and 7-day windowing, while Merchant Journeys track merchant platform lifecycle progression from installation through uninstallation. All four products maintain end-to-end event lineage, idempotent single-transaction regeneration semantics, non-blocking failure recovery, and clean downstream DAL and Business Service retrieval capabilities for subsequent segmentation, analytics, and AI consumption.
+
 ---
 
 ## Milestone 3 - Segmentation, Merchant Health & Complete MVP Analytics

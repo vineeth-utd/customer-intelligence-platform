@@ -15,6 +15,7 @@ from app.data_access.product import (
     get_product_variant_by_id,
     update_product_fields,
 )
+from app.data_access.processing_state import record_domain_activity
 from app.models.product import ProductVariant
 from app.schemas.events.envelope import ProductEventEnvelope
 from app.schemas.events.event_types import ProductEventType
@@ -151,3 +152,4 @@ async def process_product_event(session: AsyncSession, envelope: ProductEventEnv
     """
     handler = _HANDLERS[envelope.event_type]
     await handler(session, envelope)
+    await record_domain_activity(session, "merchant", envelope.merchant_id, "product", envelope.event_timestamp)

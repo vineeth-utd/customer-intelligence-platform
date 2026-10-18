@@ -3,9 +3,12 @@ from typing import Any
 
 from sqlalchemy import delete, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.data_access.merchant_journey import (
     delete_merchant_journeys,
+    get_merchant_journey_by_id,
+    get_merchant_journeys_by_merchant,
     get_qualifying_events_for_merchant,
 )
 from app.models.event import CampaignEvent, ShopperEvent
@@ -91,3 +94,30 @@ async def delete_shopper_journeys(session: AsyncSession, shopper_id: uuid.UUID) 
         await session.execute(
             delete(ShopperJourney).where(ShopperJourney.shopper_id == shopper_id)
         )
+
+
+async def get_shopper_journeys_by_shopper(
+    session: AsyncSession, shopper_id: uuid.UUID, include_events: bool = False
+) -> list[ShopperJourney]:
+    """Retrieve all journeys for a shopper in chronological order, optionally with events."""
+    stmt = (
+        select(ShopperJourney)
+        .where(ShopperJourney.shopper_id == shopper_id)
+        .order_by(ShopperJourney.started_at.asc())
+    )
+    if include_events:
+        stmt = stmt.options(selectinload(ShopperJourney.events))
+    res = await session.execute(stmt)
+    return list(res.scalars().all())
+
+
+async def get_shopper_journey_by_id(
+    session: AsyncSession, journey_id: uuid.UUID, include_events: bool = False
+) -> ShopperJourney | None:
+    """Retrieve a single shopper journey by ID, optionally with events."""
+    stmt = select(ShopperJourney).where(ShopperJourney.journey_id == journey_id)
+    if include_events:
+        stmt = stmt.options(selectinload(ShopperJourney.events))
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+

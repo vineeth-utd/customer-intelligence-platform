@@ -57,7 +57,7 @@ TARGET_DEPENDENCIES: dict[str, list[str]] = {
     # These are currently established minimal mappings for initial generation testing.
     # Complete dependencies should be finalized alongside each actual derived-product implementation.
     "merchant_profile": ["merchant", "shopper", "product", "order", "campaign", "analytics"],
-    "shopper_profile": ["shopper", "order"],
+    "shopper_profile": ["shopper", "order", "campaign"],
     "campaign_analytics": ["campaign", "shopper"],
     "shopper_journey": ["shopper", "campaign"],
     "merchant_journey": ["merchant", "campaign"],

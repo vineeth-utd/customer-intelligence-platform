@@ -5,10 +5,19 @@ from urllib.parse import parse_qs, urlparse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.data_access.journey import delete_shopper_journeys, get_qualifying_events_for_shopper
+from app.data_access.journey import (
+    delete_shopper_journeys,
+    get_qualifying_events_for_shopper,
+    get_shopper_journey_by_id,
+    get_shopper_journeys_by_shopper,
+)
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
 from app.schemas.events.event_types import CampaignEventType, ShopperEventType
-from app.services.merchant_journey import generate_merchant_journeys_for_merchant
+from app.services.merchant_journey import (
+    generate_merchant_journeys_for_merchant,
+    get_merchant_journey,
+    get_merchant_journeys_for_merchant,
+)
 
 
 def _extract_domain(url: str) -> str | None:
@@ -169,3 +178,18 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
         session.add_all(journeys_to_insert)
     if events_to_insert:
         session.add_all(events_to_insert)
+
+
+async def get_shopper_journeys_for_shopper(
+    session: AsyncSession, shopper_id: uuid.UUID, include_events: bool = False
+) -> list[ShopperJourney]:
+    """Retrieve all shopper journeys for a shopper, optionally including events."""
+    return await get_shopper_journeys_by_shopper(session, shopper_id, include_events=include_events)
+
+
+async def get_shopper_journey(
+    session: AsyncSession, journey_id: uuid.UUID, include_events: bool = False
+) -> ShopperJourney | None:
+    """Retrieve a single shopper journey by ID, optionally including events."""
+    return await get_shopper_journey_by_id(session, journey_id, include_events=include_events)
+

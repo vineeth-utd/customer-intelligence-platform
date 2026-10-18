@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.merchant_journey import (
     delete_merchant_journeys,
+    get_merchant_journey_by_id,
+    get_merchant_journeys_by_merchant,
     get_qualifying_events_for_merchant,
 )
 from app.models.journey import MerchantJourney, MerchantJourneyEvent
@@ -135,3 +137,18 @@ async def generate_merchant_journeys_for_merchant(
         session.add_all(journeys_to_insert)
     if events_to_insert:
         session.add_all(events_to_insert)
+
+
+async def get_merchant_journeys_for_merchant(
+    session: AsyncSession, merchant_id: uuid.UUID, include_events: bool = False
+) -> list[MerchantJourney]:
+    """Retrieve all merchant journeys for a merchant, optionally including events."""
+    return await get_merchant_journeys_by_merchant(session, merchant_id, include_events=include_events)
+
+
+async def get_merchant_journey(
+    session: AsyncSession, merchant_journey_id: uuid.UUID, include_events: bool = False
+) -> MerchantJourney | None:
+    """Retrieve a single merchant journey by ID, optionally including events."""
+    return await get_merchant_journey_by_id(session, merchant_journey_id, include_events=include_events)
+
