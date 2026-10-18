@@ -4,6 +4,10 @@ from typing import Any
 from sqlalchemy import delete, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data_access.merchant_journey import (
+    delete_merchant_journeys,
+    get_qualifying_events_for_merchant,
+)
 from app.models.event import CampaignEvent, ShopperEvent
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
 from app.schemas.events.event_types import CampaignEventType, ShopperEventType

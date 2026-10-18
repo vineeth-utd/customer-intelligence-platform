@@ -8,6 +8,7 @@ from app.config.settings import settings
 from app.data_access.journey import delete_shopper_journeys, get_qualifying_events_for_shopper
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
 from app.schemas.events.event_types import CampaignEventType, ShopperEventType
+from app.services.merchant_journey import generate_merchant_journeys_for_merchant
 
 
 def _extract_domain(url: str) -> str | None:

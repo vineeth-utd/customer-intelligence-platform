@@ -75,6 +75,9 @@ class MerchantJourney(Base):
 
 class MerchantJourneyEvent(Base):
     __tablename__ = "merchant_journey_events"
+    __table_args__ = (
+        UniqueConstraint("source_event_category", "source_event_id", name="uq_merchant_journey_source_event"),
+    )
 
     merchant_journey_event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -82,12 +85,10 @@ class MerchantJourneyEvent(Base):
     merchant_journey_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("merchant_journeys.merchant_journey_id"), nullable=False
     )
-    source_event_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("merchant_events.event_id"), nullable=False
-    )
+    source_event_category: Mapped[str] = mapped_column(String, nullable=False)
+    source_event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     event_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
     merchant_journey: Mapped["MerchantJourney"] = relationship(back_populates="events")
-    source_event: Mapped["MerchantEvent"] = relationship()
