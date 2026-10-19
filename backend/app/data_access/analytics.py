@@ -1,21 +1,28 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
 
 from app.data_access.processing_state import record_domain_activity
-
 from app.models.metrics import MerchantMetricsDaily, PlatformMetricsDaily
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
+    ConversionFunnelResult,
+    ConversionFunnelStage,
+    CustomerRevenueBreakdown,
     FeatureMetricsResult,
+    JourneyEntrySourcePerformance,
     MerchantMetricsSummaryResult,
     MerchantMetricsTrendResult,
     PlatformSummaryResult,
     PlatformTrendResult,
+    PriorPeriodComparison,
+    RevenueAnalyticsResult,
+    ShopperBehaviorAnalyticsResult,
+    ShopperJourneyAnalyticsResult,
 )
 
 async def generate_merchant_metrics_daily(session: AsyncSession, metric_date: date) -> None:
@@ -615,3 +622,436 @@ async def get_campaign_analytics_summary(session: AsyncSession, merchant_id: UUI
     """)
     res = await session.execute(stmt, {"merchant_id": merchant_id})
     return [CampaignAnalyticsResult.model_validate(row) for row in res.fetchall()]
+
+
+async def get_conversion_funnel(
+    session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date
+) -> ConversionFunnelResult:
+    """
+    Computes store-level conversion funnel and secondary engagement metrics
+    from merchant_metrics_daily.
+    """
+    stmt = text("""
+        SELECT
+            COALESCE(SUM(session_count), 0) AS total_sessions,
+            COALESCE(SUM(product_view_count), 0) AS total_product_views,
+            COALESCE(SUM(add_to_cart_count), 0) AS total_carts,
+            COALESCE(SUM(checkout_count), 0) AS total_checkouts,
+            COALESCE(SUM(purchase_count), 0) AS total_purchases,
+            COALESCE(SUM(wishlist_add_count), 0) AS total_wishlist,
+            COALESCE(SUM(save_for_later_count), 0) AS total_save_for_later
+        FROM merchant_metrics_daily
+        WHERE merchant_id = :merchant_id
+          AND metric_date >= :start_date
+          AND metric_date <= :end_date
+    """)
+    res = await session.execute(stmt, {"merchant_id": merchant_id, "start_date": start_date, "end_date": end_date})
+    row = res.fetchone()
+
+    total_sessions = int(row[0]) if row else 0
+    total_views = int(row[1]) if row else 0
+    total_carts = int(row[2]) if row else 0
+    total_checkouts = int(row[3]) if row else 0
+    total_purchases = int(row[4]) if row else 0
+    total_wishlist = int(row[5]) if row else 0
+    total_save_for_later = int(row[6]) if row else 0
+
+    raw_stages = [
+        ("Sessions", total_sessions),
+        ("Product Views", total_views),
+        ("Add to Cart", total_carts),
+        ("Checkout Started", total_checkouts),
+        ("Purchases", total_purchases),
+    ]
+
+    stages: list[ConversionFunnelStage] = []
+    prev_count: int | None = None
+
+    for idx, (name, count) in enumerate(raw_stages):
+        if idx == 0:
+            step_rate = Decimal("1.0") if count > 0 else Decimal("0.0")
+            drop_count = 0
+            drop_rate = Decimal("0.0")
+        else:
+            if prev_count is not None and prev_count > 0:
+                step_rate = round(Decimal(count) / Decimal(prev_count), 4)
+                drop_count = max(0, prev_count - count)
+                drop_rate = round(Decimal(drop_count) / Decimal(prev_count), 4)
+            else:
+                step_rate = Decimal("0.0")
+                drop_count = 0
+                drop_rate = Decimal("0.0")
+
+        overall_rate = round(Decimal(count) / Decimal(total_sessions), 4) if total_sessions > 0 else Decimal("0.0")
+
+        stages.append(
+            ConversionFunnelStage(
+                stage_name=name,
+                count=count,
+                step_conversion_rate=step_rate,
+                drop_off_count=drop_count,
+                drop_off_rate=drop_rate,
+                overall_conversion_rate=overall_rate,
+            )
+        )
+        prev_count = count
+
+    overall_conversion = round(Decimal(total_purchases) / Decimal(total_sessions), 4) if total_sessions > 0 else Decimal("0.0")
+    cart_abandonment = round(Decimal(max(0, total_carts - total_purchases)) / Decimal(total_carts), 4) if total_carts > 0 else Decimal("0.0")
+    checkout_abandonment = round(Decimal(max(0, total_checkouts - total_purchases)) / Decimal(total_checkouts), 4) if total_checkouts > 0 else Decimal("0.0")
+
+    return ConversionFunnelResult(
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        stages=stages,
+        overall_conversion_rate=overall_conversion,
+        cart_abandonment_rate=cart_abandonment,
+        checkout_abandonment_rate=checkout_abandonment,
+        secondary_engagement={
+            "wishlist_add_count": total_wishlist,
+            "save_for_later_count": total_save_for_later,
+        },
+    )
+
+
+async def get_shopper_journey_analytics(
+    session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date
+) -> ShopperJourneyAnalyticsResult:
+    """
+    Computes multi-touch Shopper Journey outcome and funnel analytics.
+    Excludes currently OPEN journeys from the conversion rate denominator.
+    Evaluates drop-off stages using completed NON_CONVERTING journeys.
+    """
+    start_ts = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end_ts = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+
+    # 1. Aggregate journey outcome counts & duration
+    stmt_outcomes = text("""
+        SELECT
+            COUNT(*) AS total_journeys,
+            COUNT(CASE WHEN journey_status = 'CONVERTED' THEN 1 END) AS converted_journeys,
+            COUNT(CASE WHEN journey_status = 'NON_CONVERTING' THEN 1 END) AS non_converting_journeys,
+            COUNT(CASE WHEN journey_status = 'OPEN' THEN 1 END) AS open_journeys,
+            AVG(CASE WHEN journey_status = 'CONVERTED' AND ended_at IS NOT NULL 
+                     THEN EXTRACT(EPOCH FROM (ended_at - started_at)) END) AS avg_conversion_duration
+        FROM shopper_journeys
+        WHERE merchant_id = :merchant_id
+          AND started_at >= :start_ts
+          AND started_at < :end_ts
+    """)
+    res_outcomes = await session.execute(stmt_outcomes, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_outcomes = res_outcomes.fetchone()
+
+    total_journeys = int(row_outcomes[0]) if row_outcomes and row_outcomes[0] else 0
+    converted_journeys = int(row_outcomes[1]) if row_outcomes and row_outcomes[1] else 0
+    non_converting_journeys = int(row_outcomes[2]) if row_outcomes and row_outcomes[2] else 0
+    open_journeys = int(row_outcomes[3]) if row_outcomes and row_outcomes[3] else 0
+    avg_duration = float(row_outcomes[4]) if row_outcomes and row_outcomes[4] is not None else None
+
+    # Exclude OPEN journeys from conversion denominator
+    resolved = converted_journeys + non_converting_journeys
+    journey_conversion_rate = round(Decimal(converted_journeys) / Decimal(resolved), 4) if resolved > 0 else Decimal("0.0")
+
+    # 2. Drop-off stages for completed NON_CONVERTING journeys
+    stmt_dropoffs = text("""
+        WITH non_converting_last_events AS (
+            SELECT DISTINCT ON (sje.journey_id)
+                sje.journey_id,
+                sje.event_type
+            FROM shopper_journey_events sje
+            JOIN shopper_journeys sj ON sj.journey_id = sje.journey_id
+            WHERE sj.merchant_id = :merchant_id
+              AND sj.started_at >= :start_ts
+              AND sj.started_at < :end_ts
+              AND sj.journey_status = 'NON_CONVERTING'
+            ORDER BY sje.journey_id, sje.sequence_number DESC
+        )
+        SELECT event_type, COUNT(*) AS count
+        FROM non_converting_last_events
+        GROUP BY event_type
+        ORDER BY count DESC
+    """)
+    res_dropoffs = await session.execute(stmt_dropoffs, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    drop_off_stages = {str(r[0]): int(r[1]) for r in res_dropoffs.fetchall()}
+
+    # 3. Performance by entry source
+    stmt_sources = text("""
+        SELECT
+            COALESCE(entry_source, 'direct') AS entry_source,
+            COUNT(*) AS total_journeys,
+            COUNT(CASE WHEN journey_status = 'CONVERTED' THEN 1 END) AS converted_journeys,
+            COUNT(CASE WHEN journey_status = 'NON_CONVERTING' THEN 1 END) AS non_converting_journeys,
+            COUNT(CASE WHEN journey_status = 'OPEN' THEN 1 END) AS open_journeys
+        FROM shopper_journeys
+        WHERE merchant_id = :merchant_id
+          AND started_at >= :start_ts
+          AND started_at < :end_ts
+        GROUP BY COALESCE(entry_source, 'direct')
+        ORDER BY total_journeys DESC
+    """)
+    res_sources = await session.execute(stmt_sources, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    by_entry_source: list[JourneyEntrySourcePerformance] = []
+    for r in res_sources.fetchall():
+        s_total = int(r[1])
+        s_conv = int(r[2])
+        s_non_conv = int(r[3])
+        s_open = int(r[4])
+        s_resolved = s_conv + s_non_conv
+        s_rate = round(Decimal(s_conv) / Decimal(s_resolved), 4) if s_resolved > 0 else Decimal("0.0")
+        by_entry_source.append(
+            JourneyEntrySourcePerformance(
+                entry_source=str(r[0]),
+                total_journeys=s_total,
+                converted_journeys=s_conv,
+                non_converting_journeys=s_non_conv,
+                open_journeys=s_open,
+                conversion_rate=s_rate,
+            )
+        )
+
+    return ShopperJourneyAnalyticsResult(
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        total_journeys=total_journeys,
+        converted_journeys=converted_journeys,
+        non_converting_journeys=non_converting_journeys,
+        open_journeys=open_journeys,
+        journey_conversion_rate=journey_conversion_rate,
+        average_conversion_duration_seconds=avg_duration,
+        drop_off_stages=drop_off_stages,
+        by_entry_source=by_entry_source,
+    )
+
+
+async def get_shopper_behavior_analytics(
+    session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date
+) -> ShopperBehaviorAnalyticsResult:
+    """
+    Computes store-level shopper behavioral analytics:
+    - New vs returning shoppers determined by authoritative first_seen_at.
+    - Repeat purchase rate based on lifetime completed orders.
+    """
+    start_ts = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end_ts = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+
+    # 1. Total active shoppers and returning shoppers from shopper_events & shoppers
+    stmt_activity = text("""
+        SELECT
+            COUNT(DISTINCT se.shopper_id) AS total_active,
+            COUNT(DISTINCT CASE WHEN s.first_seen_at < :start_ts THEN se.shopper_id END) AS returning_active
+        FROM shopper_events se
+        JOIN shoppers s ON s.shopper_id = se.shopper_id
+        WHERE se.merchant_id = :merchant_id
+          AND se.event_timestamp >= :start_ts
+          AND se.event_timestamp < :end_ts
+    """)
+    res_act = await session.execute(stmt_activity, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_act = res_act.fetchone()
+    total_active = int(row_act[0]) if row_act and row_act[0] else 0
+    returning_shoppers = int(row_act[1]) if row_act and row_act[1] else 0
+
+    # 2. New shoppers authoritative from first_seen_at
+    stmt_new = text("""
+        SELECT COUNT(DISTINCT shopper_id)
+        FROM shoppers
+        WHERE merchant_id = :merchant_id
+          AND first_seen_at >= :start_ts
+          AND first_seen_at < :end_ts
+    """)
+    res_new = await session.execute(stmt_new, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    new_shoppers = int(res_new.scalar() or 0)
+
+    # 3. Purchasing shoppers & repeat purchasers (completed orders only)
+    stmt_purchasers = text("""
+        WITH window_buyers AS (
+            SELECT DISTINCT o.shopper_id
+            FROM orders o
+            WHERE o.merchant_id = :merchant_id
+              AND o.order_status = 'completed'
+              AND o.placed_at >= :start_ts
+              AND o.placed_at < :end_ts
+        ),
+        lifetime_counts AS (
+            SELECT o.shopper_id, COUNT(*) AS lifetime_orders
+            FROM orders o
+            JOIN window_buyers wb ON wb.shopper_id = o.shopper_id
+            WHERE o.merchant_id = :merchant_id
+              AND o.order_status = 'completed'
+            GROUP BY o.shopper_id
+        )
+        SELECT
+            (SELECT COUNT(*) FROM window_buyers) AS total_purchasing,
+            COUNT(CASE WHEN lifetime_orders >= 2 THEN 1 END) AS repeat_purchasing
+        FROM lifetime_counts
+    """)
+    res_purch = await session.execute(stmt_purchasers, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_purch = res_purch.fetchone()
+    total_purchasing = int(row_purch[0]) if row_purch and row_purch[0] else 0
+    repeat_purchasing = int(row_purch[1]) if row_purch and row_purch[1] else 0
+
+    repeat_rate = round(Decimal(repeat_purchasing) / Decimal(total_purchasing), 4) if total_purchasing > 0 else Decimal("0.0")
+
+    # 4. Average order value & secondary engagement
+    stmt_order_metrics = text("""
+        SELECT
+            COALESCE(SUM(total_amount), 0) AS total_revenue,
+            COUNT(order_id) AS total_orders
+        FROM orders
+        WHERE merchant_id = :merchant_id
+          AND order_status = 'completed'
+          AND placed_at >= :start_ts
+          AND placed_at < :end_ts
+    """)
+    res_orders = await session.execute(stmt_order_metrics, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_orders = res_orders.fetchone()
+    tot_rev = Decimal(str(row_orders[0])) if row_orders and row_orders[0] else Decimal("0.0")
+    tot_orders = int(row_orders[1]) if row_orders and row_orders[1] else 0
+    aov = round(tot_rev / Decimal(tot_orders), 2) if tot_orders > 0 else Decimal("0.0")
+
+    stmt_secondary = text("""
+        SELECT
+            COALESCE(SUM(wishlist_add_count), 0),
+            COALESCE(SUM(save_for_later_count), 0)
+        FROM merchant_metrics_daily
+        WHERE merchant_id = :merchant_id
+          AND metric_date >= :start_date
+          AND metric_date <= :end_date
+    """)
+    res_sec = await session.execute(stmt_secondary, {"merchant_id": merchant_id, "start_date": start_date, "end_date": end_date})
+    row_sec = res_sec.fetchone()
+    wishlist_adds = int(row_sec[0]) if row_sec and row_sec[0] else 0
+    save_adds = int(row_sec[1]) if row_sec and row_sec[1] else 0
+
+    return ShopperBehaviorAnalyticsResult(
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        total_active_shoppers=total_active,
+        new_shoppers=new_shoppers,
+        returning_shoppers=returning_shoppers,
+        total_purchasing_shoppers=total_purchasing,
+        repeat_purchasing_shoppers=repeat_purchasing,
+        repeat_purchase_rate=repeat_rate,
+        average_order_value=aov,
+        secondary_engagement={
+            "wishlist_add_count": wishlist_adds,
+            "save_for_later_count": save_adds,
+        },
+    )
+
+
+async def get_revenue_analytics(
+    session: AsyncSession, merchant_id: UUID, start_date: date, end_date: date
+) -> RevenueAnalyticsResult:
+    """
+    Computes revenue and order analytics:
+    - Period-over-period comparison against immediate preceding equal-length period.
+    - Growth percentages return null when prior period baseline is zero.
+    - New vs repeat customer revenue based on completed order sequence.
+    """
+    window_days = (end_date - start_date).days + 1
+    prior_end_date = start_date - timedelta(days=1)
+    prior_start_date = prior_end_date - timedelta(days=window_days - 1)
+
+    start_ts = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end_ts = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+    prior_start_ts = datetime.combine(prior_start_date, time.min, tzinfo=timezone.utc)
+    prior_end_ts = datetime.combine(prior_end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+
+    # 1. Current window completed orders
+    stmt_curr = text("""
+        SELECT
+            COALESCE(SUM(total_amount), 0) AS total_revenue,
+            COUNT(order_id) AS total_orders
+        FROM orders
+        WHERE merchant_id = :merchant_id
+          AND order_status = 'completed'
+          AND placed_at >= :start_ts
+          AND placed_at < :end_ts
+    """)
+    res_curr = await session.execute(stmt_curr, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_curr = res_curr.fetchone()
+    total_rev = Decimal(str(row_curr[0])) if row_curr and row_curr[0] else Decimal("0.0")
+    total_orders = int(row_curr[1]) if row_curr and row_curr[1] else 0
+    aov = round(total_rev / Decimal(total_orders), 2) if total_orders > 0 else Decimal("0.0")
+
+    # 2. Prior window completed orders
+    stmt_prior = text("""
+        SELECT
+            COALESCE(SUM(total_amount), 0) AS prior_revenue,
+            COUNT(order_id) AS prior_orders
+        FROM orders
+        WHERE merchant_id = :merchant_id
+          AND order_status = 'completed'
+          AND placed_at >= :prior_start_ts
+          AND placed_at < :prior_end_ts
+    """)
+    res_prior = await session.execute(stmt_prior, {"merchant_id": merchant_id, "prior_start_ts": prior_start_ts, "prior_end_ts": prior_end_ts})
+    row_prior = res_prior.fetchone()
+    prior_rev = Decimal(str(row_prior[0])) if row_prior and row_prior[0] else Decimal("0.0")
+    prior_orders = int(row_prior[1]) if row_prior and row_prior[1] else 0
+    prior_aov = round(prior_rev / Decimal(prior_orders), 2) if prior_orders > 0 else Decimal("0.0")
+
+    # Calculate growth percentage: None if prior denominator is 0
+    rev_growth = round(((total_rev - prior_rev) / prior_rev) * 100, 2) if prior_rev > 0 else None
+    order_growth = round(((Decimal(total_orders) - Decimal(prior_orders)) / Decimal(prior_orders)) * 100, 2) if prior_orders > 0 else None
+    aov_growth = round(((aov - prior_aov) / prior_aov) * 100, 2) if prior_aov > 0 else None
+
+    # 3. New vs Repeat customer revenue in current window
+    stmt_breakdown = text("""
+        WITH ranked_orders AS (
+            SELECT
+                o.order_id,
+                o.total_amount,
+                o.placed_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY o.shopper_id
+                    ORDER BY o.placed_at ASC, o.order_id ASC
+                ) as order_seq
+            FROM orders o
+            WHERE o.merchant_id = :merchant_id
+              AND o.order_status = 'completed'
+        )
+        SELECT
+            COALESCE(SUM(CASE WHEN order_seq = 1 THEN total_amount ELSE 0 END), 0) AS new_customer_revenue,
+            COUNT(CASE WHEN order_seq = 1 THEN 1 END) AS new_customer_order_count,
+            COALESCE(SUM(CASE WHEN order_seq > 1 THEN total_amount ELSE 0 END), 0) AS repeat_customer_revenue,
+            COUNT(CASE WHEN order_seq > 1 THEN 1 END) AS repeat_customer_order_count
+        FROM ranked_orders
+        WHERE placed_at >= :start_ts
+          AND placed_at < :end_ts
+    """)
+    res_b = await session.execute(stmt_breakdown, {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts})
+    row_b = res_b.fetchone()
+    new_rev = Decimal(str(row_b[0])) if row_b and row_b[0] else Decimal("0.0")
+    new_count = int(row_b[1]) if row_b and row_b[1] else 0
+    rep_rev = Decimal(str(row_b[2])) if row_b and row_b[2] else Decimal("0.0")
+    rep_count = int(row_b[3]) if row_b and row_b[3] else 0
+
+    return RevenueAnalyticsResult(
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        total_revenue=total_rev,
+        total_orders=total_orders,
+        average_order_value=aov,
+        prior_period_comparison=PriorPeriodComparison(
+            prior_start_date=prior_start_date,
+            prior_end_date=prior_end_date,
+            prior_revenue=prior_rev,
+            prior_orders=prior_orders,
+            prior_average_order_value=prior_aov,
+            revenue_growth_pct=rev_growth,
+            order_growth_pct=order_growth,
+            aov_growth_pct=aov_growth,
+        ),
+        customer_revenue_breakdown=CustomerRevenueBreakdown(
+            new_customer_revenue=new_rev,
+            new_customer_order_count=new_count,
+            repeat_customer_revenue=rep_rev,
+            repeat_customer_order_count=rep_count,
+        ),
+    )
+
