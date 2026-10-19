@@ -9,9 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data_access.processing_state import record_domain_activity
 from app.models.metrics import MerchantMetricsDaily, PlatformMetricsDaily
 from app.schemas.analytics import (
+    AttributionModelMetric,
     CampaignAnalyticsResult,
+    CampaignAttributionResult,
+    CampaignAudienceAnalysisResult,
+    CampaignDailyTrendPoint,
+    CampaignJourneyCorrelationResult,
+    CampaignPerformanceDetailResult,
     ConversionFunnelResult,
     ConversionFunnelStage,
+    CurrentSegmentAudienceMetric,
     CustomerRevenueBreakdown,
     FeatureMetricsResult,
     JourneyEntrySourcePerformance,
@@ -1054,4 +1061,577 @@ async def get_revenue_analytics(
             repeat_customer_order_count=rep_count,
         ),
     )
+
+
+async def get_campaign_performance(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignPerformanceDetailResult]:
+    """Retrieve detailed campaign delivery, engagement trends, and period comparison."""
+    stmt_camp = text("""
+        SELECT campaign_id, merchant_id, campaign_name, campaign_type, campaign_medium, status
+        FROM campaigns
+        WHERE campaign_id = :campaign_id
+    """)
+    res_camp = await session.execute(stmt_camp, {"campaign_id": campaign_id})
+    camp = res_camp.fetchone()
+    if not camp:
+        return None
+
+    stmt_trends = text("""
+        SELECT
+            metric_date,
+            delivered_count,
+            opened_count,
+            clicked_count,
+            converted_count,
+            attributed_order_count,
+            attributed_revenue,
+            open_rate,
+            click_through_rate,
+            conversion_rate
+        FROM campaign_analytics_daily
+        WHERE campaign_id = :campaign_id
+          AND metric_date >= :start_date
+          AND metric_date <= :end_date
+        ORDER BY metric_date ASC
+    """)
+    res_trends = await session.execute(
+        stmt_trends,
+        {"campaign_id": campaign_id, "start_date": start_date, "end_date": end_date},
+    )
+    trend_rows = res_trends.fetchall()
+    trends = [CampaignDailyTrendPoint.model_validate(r) for r in trend_rows]
+
+    tot_delivered = sum(t.delivered_count for t in trends)
+    tot_opened = sum(t.opened_count for t in trends)
+    tot_clicked = sum(t.clicked_count for t in trends)
+
+    open_rate = (
+        Decimal(str(tot_opened)) / Decimal(str(tot_delivered))
+        if tot_delivered > 0
+        else Decimal("0.0")
+    )
+    ctr = (
+        Decimal(str(tot_clicked)) / Decimal(str(tot_delivered))
+        if tot_delivered > 0
+        else Decimal("0.0")
+    )
+
+    delta_days = (end_date - start_date).days
+    prior_end_date = start_date - timedelta(days=1)
+    prior_start_date = prior_end_date - timedelta(days=delta_days)
+
+    stmt_prior = text("""
+        SELECT
+            COALESCE(SUM(delivered_count), 0) AS prior_delivered,
+            COALESCE(SUM(opened_count), 0) AS prior_opened,
+            COALESCE(SUM(clicked_count), 0) AS prior_clicked
+        FROM campaign_analytics_daily
+        WHERE campaign_id = :campaign_id
+          AND metric_date >= :prior_start_date
+          AND metric_date <= :prior_end_date
+    """)
+    res_prior = await session.execute(
+        stmt_prior,
+        {
+            "campaign_id": campaign_id,
+            "prior_start_date": prior_start_date,
+            "prior_end_date": prior_end_date,
+        },
+    )
+    row_prior = res_prior.fetchone()
+    prior_del = int(row_prior[0]) if row_prior else 0
+    prior_op = int(row_prior[1]) if row_prior else 0
+    prior_cl = int(row_prior[2]) if row_prior else 0
+
+    def calc_growth(curr: int, prior: int) -> Optional[Decimal]:
+        if prior > 0:
+            return (Decimal(str(curr - prior)) / Decimal(str(prior))) * Decimal("100.0")
+        return None
+
+    return CampaignPerformanceDetailResult(
+        campaign_id=camp.campaign_id,
+        merchant_id=camp.merchant_id,
+        campaign_name=camp.campaign_name,
+        campaign_type=camp.campaign_type,
+        campaign_medium=camp.campaign_medium,
+        status=camp.status,
+        start_date=start_date,
+        end_date=end_date,
+        delivered_count=tot_delivered,
+        opened_count=tot_opened,
+        clicked_count=tot_clicked,
+        open_rate=open_rate,
+        click_through_rate=ctr,
+        trends=trends,
+        prior_period_delivered=prior_del,
+        prior_period_opened=prior_op,
+        prior_period_clicked=prior_cl,
+        delivered_growth_pct=calc_growth(tot_delivered, prior_del),
+        opened_growth_pct=calc_growth(tot_opened, prior_op),
+        clicked_growth_pct=calc_growth(tot_clicked, prior_cl),
+    )
+
+
+async def get_campaign_attribution(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignAttributionResult]:
+    """
+    Retrieve multi-perspective deterministic attribution:
+    direct-session, first-touch journey, last-touch journey, assisted (non-exclusive),
+    and explicit CAMPAIGN_CONVERTED records.
+    """
+    stmt_camp = text("SELECT campaign_id, merchant_id FROM campaigns WHERE campaign_id = :campaign_id")
+    res_camp = await session.execute(stmt_camp, {"campaign_id": campaign_id})
+    camp = res_camp.fetchone()
+    if not camp:
+        return None
+    merchant_id = camp.merchant_id
+
+    start_ts = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end_ts = datetime.combine(end_date, time.max, tzinfo=timezone.utc)
+
+    # 1. Direct Session Attribution
+    stmt_direct = text("""
+        SELECT
+            COUNT(DISTINCT o.order_id) AS conv_count,
+            COALESCE(SUM(o.total_amount), 0) AS total_rev
+        FROM orders o
+        JOIN campaign_events ce ON ce.session_id = o.session_id
+        WHERE ce.campaign_id = :campaign_id
+          AND o.merchant_id = :merchant_id
+          AND o.order_status = 'completed'
+          AND COALESCE(o.completed_at, o.placed_at) >= :start_ts
+          AND COALESCE(o.completed_at, o.placed_at) <= :end_ts
+          AND ce.event_type IN ('EMAIL_OPENED', 'EMAIL_CLICKED', 'SMS_CLICKED', 'PUSH_OPENED', 'AD_CLICKED')
+          AND ce.event_timestamp <= COALESCE(o.completed_at, o.placed_at)
+    """)
+    res_direct = await session.execute(
+        stmt_direct,
+        {"campaign_id": campaign_id, "merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts},
+    )
+    row_direct = res_direct.fetchone()
+    direct_count = int(row_direct[0]) if row_direct else 0
+    direct_rev = Decimal(str(row_direct[1])) if row_direct and row_direct[1] else Decimal("0.0")
+    direct_aov = direct_rev / Decimal(str(direct_count)) if direct_count > 0 else Decimal("0.0")
+
+    # 2. Explicit recorded conversion (CAMPAIGN_CONVERTED)
+    stmt_explicit = text("""
+        SELECT
+            COUNT(DISTINCT o.order_id) AS conv_count,
+            COALESCE(SUM(o.total_amount), 0) AS total_rev
+        FROM orders o
+        JOIN campaign_events ce ON CAST(ce.payload->>'order_id' AS UUID) = o.order_id
+        WHERE ce.campaign_id = :campaign_id
+          AND ce.event_type = 'CAMPAIGN_CONVERTED'
+          AND o.merchant_id = :merchant_id
+          AND o.order_status = 'completed'
+          AND COALESCE(o.completed_at, o.placed_at) >= :start_ts
+          AND COALESCE(o.completed_at, o.placed_at) <= :end_ts
+    """)
+    res_explicit = await session.execute(
+        stmt_explicit,
+        {"campaign_id": campaign_id, "merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts},
+    )
+    row_exp = res_explicit.fetchone()
+    exp_count = int(row_exp[0]) if row_exp else 0
+    exp_rev = Decimal(str(row_exp[1])) if row_exp and row_exp[1] else Decimal("0.0")
+    exp_aov = exp_rev / Decimal(str(exp_count)) if exp_count > 0 else Decimal("0.0")
+
+    # 3. Journey Attribution: First-Touch, Last-Touch, Assisted (Any-Touch), Direct vs Cross-Session
+    stmt_journey_attribution = text("""
+        WITH qualifying_orders AS (
+            SELECT 
+                o.order_id,
+                o.session_id AS order_session_id,
+                o.total_amount,
+                COALESCE(o.completed_at, o.placed_at) AS order_time,
+                sj.journey_id
+            FROM orders o
+            JOIN shopper_journeys sj ON sj.order_id = o.order_id
+            WHERE o.merchant_id = :merchant_id
+              AND o.order_status = 'completed'
+              AND COALESCE(o.completed_at, o.placed_at) >= :start_ts
+              AND COALESCE(o.completed_at, o.placed_at) <= :end_ts
+              AND sj.converted = TRUE
+              AND sj.journey_status = 'CONVERTED'
+        ),
+        journey_campaign_touches AS (
+            SELECT 
+                qo.order_id,
+                qo.order_session_id,
+                qo.total_amount,
+                qo.order_time,
+                qo.journey_id,
+                ce.campaign_id,
+                ce.session_id AS touch_session_id,
+                sje.event_timestamp,
+                sje.sequence_number,
+                ROW_NUMBER() OVER (
+                    PARTITION BY qo.journey_id 
+                    ORDER BY sje.sequence_number ASC, sje.event_timestamp ASC
+                ) AS touch_rank_first,
+                ROW_NUMBER() OVER (
+                    PARTITION BY qo.journey_id 
+                    ORDER BY sje.sequence_number DESC, sje.event_timestamp DESC
+                ) AS touch_rank_last
+            FROM qualifying_orders qo
+            JOIN shopper_journey_events sje ON sje.journey_id = qo.journey_id
+            JOIN campaign_events ce ON ce.event_id = sje.source_event_id
+            WHERE sje.source_event_category = 'campaign'
+              AND sje.event_type IN ('EMAIL_OPENED', 'EMAIL_CLICKED', 'SMS_CLICKED', 'PUSH_OPENED', 'AD_CLICKED')
+              AND sje.event_timestamp <= qo.order_time
+        )
+        SELECT 
+            journey_id,
+            order_id,
+            total_amount,
+            campaign_id,
+            touch_rank_first,
+            touch_rank_last,
+            order_session_id,
+            touch_session_id
+        FROM journey_campaign_touches
+    """)
+    res_jt = await session.execute(
+        stmt_journey_attribution,
+        {"merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts},
+    )
+    rows_jt = res_jt.fetchall()
+
+    first_touch_orders: dict[UUID, Decimal] = {}
+    last_touch_orders: dict[UUID, Decimal] = {}
+    assisted_orders: dict[UUID, Decimal] = {}
+
+    direct_session_count = 0
+    cross_session_count = 0
+
+    for r in rows_jt:
+        j_id, o_id, amt, c_id, rank_first, rank_last, o_sess, t_sess = r
+        amt_dec = Decimal(str(amt)) if amt is not None else Decimal("0.0")
+
+        if c_id == campaign_id:
+            assisted_orders[o_id] = amt_dec
+            if rank_first == 1:
+                first_touch_orders[o_id] = amt_dec
+            if rank_last == 1:
+                last_touch_orders[o_id] = amt_dec
+                if o_sess is not None and t_sess is not None and o_sess == t_sess:
+                    direct_session_count += 1
+                else:
+                    cross_session_count += 1
+
+    first_count = len(first_touch_orders)
+    first_rev = sum(first_touch_orders.values(), Decimal("0.0"))
+    first_aov = first_rev / Decimal(str(first_count)) if first_count > 0 else Decimal("0.0")
+
+    last_count = len(last_touch_orders)
+    last_rev = sum(last_touch_orders.values(), Decimal("0.0"))
+    last_aov = last_rev / Decimal(str(last_count)) if last_count > 0 else Decimal("0.0")
+
+    assisted_count = len(assisted_orders)
+    assisted_rev = sum(assisted_orders.values(), Decimal("0.0"))
+    assisted_aov = assisted_rev / Decimal(str(assisted_count)) if assisted_count > 0 else Decimal("0.0")
+
+    return CampaignAttributionResult(
+        campaign_id=campaign_id,
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        direct_session=AttributionModelMetric(
+            conversions_count=direct_count,
+            attributed_revenue=direct_rev,
+            average_order_value=direct_aov,
+        ),
+        first_touch_journey=AttributionModelMetric(
+            conversions_count=first_count,
+            attributed_revenue=first_rev,
+            average_order_value=first_aov,
+        ),
+        last_touch_journey=AttributionModelMetric(
+            conversions_count=last_count,
+            attributed_revenue=last_rev,
+            average_order_value=last_aov,
+        ),
+        assisted_journey=AttributionModelMetric(
+            conversions_count=assisted_count,
+            attributed_revenue=assisted_rev,
+            average_order_value=assisted_aov,
+        ),
+        explicit_recorded=AttributionModelMetric(
+            conversions_count=exp_count,
+            attributed_revenue=exp_rev,
+            average_order_value=exp_aov,
+        ),
+        direct_vs_cross_session_journeys={
+            "direct_session": direct_session_count,
+            "cross_session": cross_session_count,
+        },
+    )
+
+
+async def get_campaign_journey_correlation(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignJourneyCorrelationResult]:
+    """Retrieve shopper journey outcome distribution and drop-offs for journeys touched by this campaign."""
+    stmt_camp = text("SELECT campaign_id, merchant_id FROM campaigns WHERE campaign_id = :campaign_id")
+    res_camp = await session.execute(stmt_camp, {"campaign_id": campaign_id})
+    camp = res_camp.fetchone()
+    if not camp:
+        return None
+    merchant_id = camp.merchant_id
+
+    start_ts = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end_ts = datetime.combine(end_date, time.max, tzinfo=timezone.utc)
+
+    stmt = text("""
+        WITH campaign_touched_journeys AS (
+            SELECT DISTINCT
+                sj.journey_id,
+                sj.journey_status,
+                sj.converted,
+                sj.started_at,
+                sj.ended_at,
+                MIN(sje.event_timestamp) AS first_campaign_touch_at
+            FROM shopper_journeys sj
+            JOIN shopper_journey_events sje ON sje.journey_id = sj.journey_id
+            JOIN campaign_events ce ON ce.event_id = sje.source_event_id
+            WHERE ce.campaign_id = :campaign_id
+              AND sj.merchant_id = :merchant_id
+              AND sje.source_event_category = 'campaign'
+              AND sje.event_type IN ('EMAIL_OPENED', 'EMAIL_CLICKED', 'SMS_CLICKED', 'PUSH_OPENED', 'AD_CLICKED')
+              AND sje.event_timestamp >= :start_ts
+              AND sje.event_timestamp <= :end_ts
+            GROUP BY sj.journey_id, sj.journey_status, sj.converted, sj.started_at, sj.ended_at
+        )
+        SELECT 
+            journey_id,
+            journey_status,
+            converted,
+            started_at,
+            ended_at,
+            first_campaign_touch_at
+        FROM campaign_touched_journeys
+    """)
+    res = await session.execute(
+        stmt,
+        {"campaign_id": campaign_id, "merchant_id": merchant_id, "start_ts": start_ts, "end_ts": end_ts},
+    )
+    rows = res.fetchall()
+
+    total_touched = len(rows)
+    converted_count = 0
+    non_converting_count = 0
+    open_count = 0
+    durations: list[float] = []
+    non_converting_journey_ids: list[UUID] = []
+
+    for r in rows:
+        j_id, status, converted, s_at, e_at, touch_at = r
+        if status == "CONVERTED" or converted is True:
+            converted_count += 1
+            if e_at and touch_at:
+                dur = (e_at - touch_at).total_seconds()
+                if dur >= 0:
+                    durations.append(dur)
+        elif status == "NON_CONVERTING":
+            non_converting_count += 1
+            non_converting_journey_ids.append(j_id)
+        elif status == "OPEN":
+            open_count += 1
+
+    resolved = converted_count + non_converting_count
+    conv_rate = (
+        Decimal(str(converted_count)) / Decimal(str(resolved))
+        if resolved > 0
+        else Decimal("0.0")
+    )
+
+    avg_duration = sum(durations) / len(durations) if durations else None
+
+    drop_off_stages: dict[str, int] = {}
+    if non_converting_journey_ids:
+        stmt_drop = text("""
+            WITH ranked_events AS (
+                SELECT 
+                    journey_id,
+                    event_type,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY journey_id 
+                        ORDER BY sequence_number DESC, event_timestamp DESC
+                    ) AS rn
+                FROM shopper_journey_events
+                WHERE journey_id = ANY(:j_ids)
+            )
+            SELECT event_type, COUNT(*) 
+            FROM ranked_events
+            WHERE rn = 1
+            GROUP BY event_type
+        """)
+        res_drop = await session.execute(stmt_drop, {"j_ids": non_converting_journey_ids})
+        for drop_row in res_drop.fetchall():
+            drop_off_stages[drop_row[0]] = int(drop_row[1])
+
+    return CampaignJourneyCorrelationResult(
+        campaign_id=campaign_id,
+        merchant_id=merchant_id,
+        start_date=start_date,
+        end_date=end_date,
+        total_journeys_touched=total_touched,
+        converted_journeys=converted_count,
+        non_converting_journeys=non_converting_count,
+        open_journeys=open_count,
+        journey_conversion_rate=conv_rate,
+        average_touch_to_conversion_seconds=avg_duration,
+        drop_off_stages=drop_off_stages,
+    )
+
+
+async def get_campaign_audience_analysis(
+    session: AsyncSession, campaign_id: UUID
+) -> Optional[CampaignAudienceAnalysisResult]:
+    """Retrieve reach, engagement, and conversion analysis across target and current segments."""
+    stmt_camp = text("""
+        SELECT c.campaign_id, c.merchant_id, c.segment_id, s.segment_name
+        FROM campaigns c
+        JOIN shopper_segments s ON s.segment_id = c.segment_id
+        WHERE c.campaign_id = :campaign_id
+    """)
+    res_camp = await session.execute(stmt_camp, {"campaign_id": campaign_id})
+    camp = res_camp.fetchone()
+    if not camp:
+        return None
+    merchant_id = camp.merchant_id
+    target_segment_id = camp.segment_id
+    target_segment_name = camp.segment_name
+
+    stmt_target_members = text("""
+        SELECT COUNT(DISTINCT shopper_id)
+        FROM shopper_segment_members
+        WHERE segment_id = :target_segment_id
+    """)
+    res_tm = await session.execute(stmt_target_members, {"target_segment_id": target_segment_id})
+    target_members_count = int(res_tm.scalar() or 0)
+
+    stmt_reached = text("""
+        SELECT DISTINCT shopper_id
+        FROM campaign_events
+        WHERE campaign_id = :campaign_id
+          AND shopper_id IS NOT NULL
+    """)
+    res_reached = await session.execute(stmt_reached, {"campaign_id": campaign_id})
+    reached_shoppers = {r[0] for r in res_reached.fetchall()}
+
+    stmt_engaged = text("""
+        SELECT DISTINCT shopper_id
+        FROM campaign_events
+        WHERE campaign_id = :campaign_id
+          AND shopper_id IS NOT NULL
+          AND event_type IN ('EMAIL_OPENED', 'EMAIL_CLICKED', 'SMS_CLICKED', 'PUSH_OPENED', 'AD_CLICKED')
+    """)
+    res_engaged = await session.execute(stmt_engaged, {"campaign_id": campaign_id})
+    engaged_shoppers = {r[0] for r in res_engaged.fetchall()}
+
+    stmt_converted = text("""
+        SELECT DISTINCT o.shopper_id
+        FROM orders o
+        JOIN campaign_events ce ON ce.session_id = o.session_id
+        WHERE ce.campaign_id = :campaign_id
+          AND o.order_status = 'completed'
+        UNION
+        SELECT DISTINCT sj.shopper_id
+        FROM shopper_journeys sj
+        JOIN shopper_journey_events sje ON sje.journey_id = sj.journey_id
+        JOIN campaign_events ce ON ce.event_id = sje.source_event_id
+        WHERE ce.campaign_id = :campaign_id
+          AND sj.converted = TRUE
+          AND sj.journey_status = 'CONVERTED'
+        UNION
+        SELECT DISTINCT ce.shopper_id
+        FROM campaign_events ce
+        WHERE ce.campaign_id = :campaign_id
+          AND ce.event_type = 'CAMPAIGN_CONVERTED'
+          AND ce.shopper_id IS NOT NULL
+    """)
+    res_converted = await session.execute(stmt_converted, {"campaign_id": campaign_id})
+    converted_shoppers = {r[0] for r in res_converted.fetchall()}
+
+    stmt_target_member_shoppers = text("""
+        SELECT DISTINCT shopper_id
+        FROM shopper_segment_members
+        WHERE segment_id = :target_segment_id
+    """)
+    res_tms = await session.execute(stmt_target_member_shoppers, {"target_segment_id": target_segment_id})
+    target_member_ids = {r[0] for r in res_tms.fetchall()}
+
+    target_reached = len(reached_shoppers.intersection(target_member_ids))
+    target_engaged = len(engaged_shoppers.intersection(target_member_ids))
+    target_converted = len(converted_shoppers.intersection(target_member_ids))
+
+    non_target_reached = len(reached_shoppers.difference(target_member_ids))
+    non_target_engaged = len(engaged_shoppers.difference(target_member_ids))
+    non_target_converted = len(converted_shoppers.difference(target_member_ids))
+
+    stmt_all_segments = text("""
+        SELECT s.segment_id, s.segment_name, COUNT(DISTINCT m.shopper_id) AS current_members
+        FROM shopper_segments s
+        LEFT JOIN shopper_segment_members m ON m.segment_id = s.segment_id
+        WHERE s.merchant_id = :merchant_id
+        GROUP BY s.segment_id, s.segment_name
+        ORDER BY s.segment_name ASC
+    """)
+    res_all_segs = await session.execute(stmt_all_segments, {"merchant_id": merchant_id})
+    seg_breakdown: list[CurrentSegmentAudienceMetric] = []
+
+    for seg_row in res_all_segs.fetchall():
+        s_id, s_name, curr_m = seg_row
+        curr_m_int = int(curr_m or 0)
+
+        stmt_seg_shoppers = text("""
+            SELECT DISTINCT shopper_id
+            FROM shopper_segment_members
+            WHERE segment_id = :s_id
+        """)
+        res_ss = await session.execute(stmt_seg_shoppers, {"s_id": s_id})
+        seg_shopper_ids = {r[0] for r in res_ss.fetchall()}
+
+        s_reached = len(reached_shoppers.intersection(seg_shopper_ids))
+        s_engaged = len(engaged_shoppers.intersection(seg_shopper_ids))
+        s_converted = len(converted_shoppers.intersection(seg_shopper_ids))
+        s_conv_rate = (
+            Decimal(str(s_converted)) / Decimal(str(s_reached))
+            if s_reached > 0
+            else Decimal("0.0")
+        )
+
+        seg_breakdown.append(
+            CurrentSegmentAudienceMetric(
+                segment_id=s_id,
+                segment_name=s_name,
+                current_members_count=curr_m_int,
+                reached_shoppers_count=s_reached,
+                engaged_shoppers_count=s_engaged,
+                converted_shoppers_count=s_converted,
+                conversion_rate=s_conv_rate,
+            )
+        )
+
+    return CampaignAudienceAnalysisResult(
+        campaign_id=campaign_id,
+        merchant_id=merchant_id,
+        target_segment_id=target_segment_id,
+        target_segment_name=target_segment_name,
+        target_segment_current_members=target_members_count,
+        unique_shoppers_reached=len(reached_shoppers),
+        unique_shoppers_engaged=len(engaged_shoppers),
+        unique_shoppers_converted=len(converted_shoppers),
+        target_segment_current_members_reached=target_reached,
+        target_segment_current_members_engaged=target_engaged,
+        target_segment_current_members_converted=target_converted,
+        non_target_current_shoppers_reached=non_target_reached,
+        non_target_current_shoppers_engaged=non_target_engaged,
+        non_target_current_shoppers_converted=non_target_converted,
+        current_segments_breakdown=seg_breakdown,
+    )
+
 

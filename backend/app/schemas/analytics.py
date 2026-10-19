@@ -217,3 +217,115 @@ class RevenueAnalyticsResult(BaseModel):
     average_order_value: Decimal
     prior_period_comparison: PriorPeriodComparison
     customer_revenue_breakdown: CustomerRevenueBreakdown
+
+
+class CampaignDailyTrendPoint(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    metric_date: date
+    delivered_count: int
+    opened_count: int
+    clicked_count: int
+    converted_count: int
+    attributed_order_count: int
+    attributed_revenue: Decimal
+    open_rate: Decimal
+    click_through_rate: Decimal
+    conversion_rate: Decimal
+
+
+class CampaignPerformanceDetailResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    campaign_id: UUID
+    merchant_id: UUID
+    campaign_name: str
+    campaign_type: str
+    campaign_medium: str
+    status: str
+    start_date: date
+    end_date: date
+    delivered_count: int
+    opened_count: int
+    clicked_count: int
+    open_rate: Decimal
+    click_through_rate: Decimal
+    trends: list[CampaignDailyTrendPoint]
+    prior_period_delivered: int
+    prior_period_opened: int
+    prior_period_clicked: int
+    delivered_growth_pct: Optional[Decimal] = None
+    opened_growth_pct: Optional[Decimal] = None
+    clicked_growth_pct: Optional[Decimal] = None
+
+
+class AttributionModelMetric(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    conversions_count: int
+    attributed_revenue: Decimal
+    average_order_value: Decimal
+
+
+class CampaignAttributionResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    campaign_id: UUID
+    merchant_id: UUID
+    start_date: date
+    end_date: date
+    direct_session: AttributionModelMetric
+    first_touch_journey: AttributionModelMetric
+    last_touch_journey: AttributionModelMetric
+    assisted_journey: AttributionModelMetric
+    explicit_recorded: AttributionModelMetric
+    direct_vs_cross_session_journeys: dict[str, int]
+
+
+class CampaignJourneyCorrelationResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    campaign_id: UUID
+    merchant_id: UUID
+    start_date: date
+    end_date: date
+    total_journeys_touched: int
+    converted_journeys: int
+    non_converting_journeys: int
+    open_journeys: int
+    journey_conversion_rate: Decimal
+    average_touch_to_conversion_seconds: Optional[float] = None
+    drop_off_stages: dict[str, int]
+
+
+class CurrentSegmentAudienceMetric(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    segment_id: UUID
+    segment_name: str
+    current_members_count: int
+    reached_shoppers_count: int
+    engaged_shoppers_count: int
+    converted_shoppers_count: int
+    conversion_rate: Decimal
+
+
+class CampaignAudienceAnalysisResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    campaign_id: UUID
+    merchant_id: UUID
+    target_segment_id: UUID
+    target_segment_name: str
+    target_segment_current_members: int
+    unique_shoppers_reached: int
+    unique_shoppers_engaged: int
+    unique_shoppers_converted: int
+    target_segment_current_members_reached: int
+    target_segment_current_members_engaged: int
+    target_segment_current_members_converted: int
+    non_target_current_shoppers_reached: int
+    non_target_current_shoppers_engaged: int
+    non_target_current_shoppers_converted: int
+    current_segments_breakdown: list[CurrentSegmentAudienceMetric]
+

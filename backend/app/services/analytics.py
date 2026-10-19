@@ -19,11 +19,20 @@ from app.data_access.analytics import (
     get_shopper_journey_analytics as da_get_shopper_journey_analytics,
     get_shopper_behavior_analytics as da_get_shopper_behavior_analytics,
     get_revenue_analytics as da_get_revenue_analytics,
+    get_campaign_performance as da_get_campaign_performance,
+    get_campaign_attribution as da_get_campaign_attribution,
+    get_campaign_journey_correlation as da_get_campaign_journey_correlation,
+    get_campaign_audience_analysis as da_get_campaign_audience_analysis,
     refresh_aggregate_views as da_refresh_aggregate_views,
 )
+from app.data_access.campaign import get_campaign
 from app.data_access.merchant import get_merchant_by_id
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
+    CampaignAttributionResult,
+    CampaignAudienceAnalysisResult,
+    CampaignJourneyCorrelationResult,
+    CampaignPerformanceDetailResult,
     ConversionFunnelResult,
     FeatureMetricsResult,
     MerchantMetricsSummaryResult,
@@ -117,4 +126,51 @@ async def get_revenue_analytics(
     if not merchant:
         return None
     return await da_get_revenue_analytics(session, merchant_id, start_date, end_date)
+
+
+async def get_campaign_performance(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignPerformanceDetailResult]:
+    """Retrieve detailed campaign delivery, engagement trends, and period comparison."""
+    if start_date > end_date:
+        raise ValueError("start_date cannot be after end_date")
+    campaign = await get_campaign(session, campaign_id)
+    if not campaign:
+        return None
+    return await da_get_campaign_performance(session, campaign_id, start_date, end_date)
+
+
+async def get_campaign_attribution(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignAttributionResult]:
+    """Retrieve multi-perspective deterministic attribution for a campaign."""
+    if start_date > end_date:
+        raise ValueError("start_date cannot be after end_date")
+    campaign = await get_campaign(session, campaign_id)
+    if not campaign:
+        return None
+    return await da_get_campaign_attribution(session, campaign_id, start_date, end_date)
+
+
+async def get_campaign_journey_correlation(
+    session: AsyncSession, campaign_id: UUID, start_date: date, end_date: date
+) -> Optional[CampaignJourneyCorrelationResult]:
+    """Retrieve shopper journey outcome distribution and drop-offs for journeys touched by a campaign."""
+    if start_date > end_date:
+        raise ValueError("start_date cannot be after end_date")
+    campaign = await get_campaign(session, campaign_id)
+    if not campaign:
+        return None
+    return await da_get_campaign_journey_correlation(session, campaign_id, start_date, end_date)
+
+
+async def get_campaign_audience_analysis(
+    session: AsyncSession, campaign_id: UUID
+) -> Optional[CampaignAudienceAnalysisResult]:
+    """Retrieve reach, engagement, and conversion analysis across target and current segments for a campaign."""
+    campaign = await get_campaign(session, campaign_id)
+    if not campaign:
+        return None
+    return await da_get_campaign_audience_analysis(session, campaign_id)
+
 
