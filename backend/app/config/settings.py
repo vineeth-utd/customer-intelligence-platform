@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     shopper_journey_job_interval_minutes: int = 15
     merchant_journey_job_interval_minutes: int = 15
     shopper_segment_membership_job_interval_minutes: int = 15
+    merchant_health_job_interval_minutes: int = 15
     journey_max_window_days: int = 7
 
     class Config:

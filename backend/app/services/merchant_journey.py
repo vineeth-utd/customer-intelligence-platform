@@ -9,6 +9,7 @@ from app.data_access.merchant_journey import (
     get_merchant_journeys_by_merchant,
     get_qualifying_events_for_merchant,
 )
+from app.data_access.processing_state import record_domain_activity
 from app.models.journey import MerchantJourney, MerchantJourneyEvent
 from app.schemas.events.event_types import MerchantEventType
 
@@ -48,6 +49,7 @@ async def generate_merchant_journeys_for_merchant(
     raw_events = await get_qualifying_events_for_merchant(session, merchant_id)
     if not raw_events:
         await delete_merchant_journeys(session, merchant_id)
+        await record_domain_activity(session, "merchant", merchant_id, "journey", datetime.now(timezone.utc))
         return
 
     # Delete existing journeys for this merchant to ensure idempotent full regeneration
@@ -137,6 +139,8 @@ async def generate_merchant_journeys_for_merchant(
         session.add_all(journeys_to_insert)
     if events_to_insert:
         session.add_all(events_to_insert)
+
+    await record_domain_activity(session, "merchant", merchant_id, "journey", generated_at)
 
 
 async def get_merchant_journeys_for_merchant(

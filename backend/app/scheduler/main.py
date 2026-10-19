@@ -9,6 +9,7 @@ from app.scheduler.journey_job import run_shopper_journey_job
 from app.scheduler.merchant_journey_job import run_merchant_journey_job
 from app.scheduler.profile_job import run_merchant_profile_job, run_shopper_profile_job
 from app.scheduler.segment_job import run_shopper_segment_membership_job
+from app.scheduler.merchant_health_job import run_merchant_health_job
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +90,23 @@ def setup_scheduler():
         coalesce=True
     )
     
+    scheduler.add_job(
+        run_merchant_health_job,
+        trigger=IntervalTrigger(minutes=settings.merchant_health_job_interval_minutes),
+        id="merchant_health_job",
+        name="Incrementally generate Merchant Health assessments",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True
+    )
+    
     logger.info(f"Registered analytics job to run at minute {settings.analytics_job_cron_minute} of every hour.")
     logger.info(f"Registered merchant profile job to run every {settings.merchant_profile_job_interval_minutes} minutes.")
     logger.info(f"Registered shopper profile job to run every {settings.shopper_profile_job_interval_minutes} minutes.")
     logger.info(f"Registered shopper journey job to run every {settings.shopper_journey_job_interval_minutes} minutes.")
     logger.info(f"Registered merchant journey job to run every {settings.merchant_journey_job_interval_minutes} minutes.")
     logger.info(f"Registered shopper segment membership job to run every {settings.shopper_segment_membership_job_interval_minutes} minutes.")
+    logger.info(f"Registered merchant health job to run every {settings.merchant_health_job_interval_minutes} minutes.")
     
     scheduler.start()
     logger.info("Background scheduler started.")

@@ -43,6 +43,7 @@ async def generate_merchant_profile_callback(session: AsyncSession, merchant_id:
     # 3. Upsert Profile
     generated_at = datetime.now(timezone.utc)
     await upsert_merchant_profile(session, merchant_id, data, generated_at)
+    await record_domain_activity(session, "merchant", merchant_id, "profile", generated_at)
 
 
 async def generate_shopper_profile_callback(session: AsyncSession, shopper_id: uuid.UUID) -> None:

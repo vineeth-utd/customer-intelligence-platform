@@ -62,6 +62,7 @@ TARGET_DEPENDENCIES: dict[str, list[str]] = {
     "shopper_journey": ["shopper", "campaign"],
     "merchant_journey": ["merchant", "campaign"],
     "segment_membership": ["profile", "journey", "shopper"],
+    "merchant_health": ["merchant", "profile", "journey", "analytics"],
 }
 
 async def get_eligible_entities_for_target(
