@@ -431,15 +431,15 @@ Business services should focus on business behaviour rather than technical imple
 
 ## 5.2 Business Domain Services
 
-Business logic is organized around the platform's core business domains.
+Business logic is organized around the platform's core business domains and derived products:
 
-Examples include:
-
-* Merchant Service
-* Shopper Service
-* Campaign Service
-* Analytics Service
-* Investigation Service
+* **Merchant Service** (`app/services/merchant.py`): Manages merchant operational lifecycle, merchant profiles, and merchant journey reconstruction.
+* **Shopper Service** (`app/services/shopper.py`): Coordinates shopper identity, profiles, and 7-day shopper journey reconstruction across storefront touchpoints.
+* **Segment Service** (`app/services/segment.py`): Evaluates deterministic segment criteria (`has_recent_session` with explicit window parameters, `total_spend` lifetime thresholds, and `abandoned_cart_24h` within non-converting journeys). Coordinates membership generation and invalidation cascades.
+* **Merchant Health Service** (`app/services/merchant_health.py`): Computes 0–100 merchant health and churn risk scores based on equal weighting across Feature Adoption (resolving plan-specific entitlements with explicit Free tier fallback and deterministic empty fallback), Engagement, and Business Performance (`(feature_adoption + engagement + business_performance) / 3.0`), with deterministic lifecycle modifiers (uninstalled, subscription status). Produces structured, explainable contributing factors.
+* **Analytics Service** (`app/services/analytics.py` & `app/data_access/analytics.py`): Answers primary business intelligence questions including store funnels, shopper journey funnels, shopper behavior, repeat purchase analytics, period-over-period revenue comparisons, campaign audience segment analysis, and multi-perspective attribution (direct session, first-touch journey, last-touch journey, assisted).
+* **Campaign Service** (`app/services/campaign.py`): Coordinates campaign operational workflows and daily campaign performance metrics.
+* **Investigation Service**: Coordinates cross-domain analytical queries and structured context retrieval for AI-assisted investigations.
 
 Each service owns the business operations related to its domain while collaborating with other services when implementing cross-domain workflows.
 
@@ -651,15 +651,17 @@ Event processing components remain lightweight and do not implement business log
 
 ## 7.2 Scheduled Processing
 
-Scheduled processing executes recurring backend tasks that maintain the platform's derived business data and AI knowledge.
+Scheduled processing executes recurring backend tasks that maintain the platform's derived business data products and analytical views.
 
-Examples include:
+Authoritative scheduled jobs registered in the scheduler (`app/scheduler/main.py`) include:
 
-* Merchant profile generation.
-* Shopper profile generation.
-* Business metric generation.
-* AI knowledge generation.
-* Periodic maintenance tasks.
+* **Merchant Profile Job** (`run_merchant_profile_job`): Periodically queries stale merchant entities and updates `MerchantProfile` records.
+* **Shopper Profile Job** (`run_shopper_profile_job`): Periodically queries stale shopper entities and updates `ShopperProfile` records.
+* **Merchant Journey Job** (`run_merchant_journey_job`): Periodically queries stale merchant journey states and reconstructs lifecycle milestones.
+* **Shopper Journey Job** (`run_shopper_journey_job`): Periodically queries stale shopper journey states and reconstructs 7-day shopper journeys.
+* **Shopper Segment Membership Job** (`run_shopper_segment_membership_job`): Periodically evaluates active segment definition rules against stale profiles and journeys, maintaining `ShopperSegmentMember` records idempotently.
+* **Merchant Health Job** (`run_merchant_health_job`): Periodically evaluates multi-dimensional health metrics and explainable contributing factors for stale merchants, updating `MerchantHealth`.
+* **Daily Analytics Job** (`run_daily_analytics_job`): Runs daily cron aggregations to compute `MerchantMetricsDaily`, platform metrics, and campaign daily aggregates.
 
 Like event processing, scheduled jobs invoke business services rather than implementing business logic directly.
 

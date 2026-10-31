@@ -648,6 +648,17 @@ Complete the deterministic customer-intelligence and business-analytics layer re
 * Derived analytical products remain reproducible from authoritative platform data.
 * The deterministic platform can answer the primary MVP business-intelligence questions without requiring the AI layer.
 
+### Status
+
+**COMPLETED**: Phase 2 Milestone 3 is complete.
+
+* **Architecture Outcome**: Shopper Segment Membership, Merchant Health, Shopper & Business Analytics, and Campaign Analytics & Attribution are fully implemented as deterministic, incrementally maintained derived business data products and analytical services.
+  * **Shopper Segment Membership (Unit 3.1)**: Deterministic evaluation engine (`has_recent_session` with explicit window parameter, `total_spend` lifetime threshold, `abandoned_cart_24h` within non-converting journeys). Downstream invalidation and incremental regeneration cascade from shopper events, orders, journeys, and segment definition updates.
+  * **Merchant Health (Unit 3.2)**: Normalized 0–100 health score and inverse churn risk score (`churn_risk_score = 100 - health_score`) based on equal weighting across Feature Adoption (resolving merchant plan entitlements with explicit Free tier fallback and deterministic empty fallback), Engagement, and Business Performance (`(feature_adoption + engagement + business_performance) / 3.0`), with deterministic lifecycle modifiers (uninstalled, subscription status), persisting explainable contributing factors in `factors` JSONB.
+  * **Shopper & Business Analytics (Unit 3.3)**: Store event funnel and journey conversion funnels, new vs. returning shoppers, repeat purchaser rate from completed orders, period-over-period comparisons (null percentage change for zero denominators), and merchant zero-state resilience.
+  * **Campaign Analytics & Attribution (Unit 3.4)**: Multi-perspective attribution (direct session match, first-touch journey, last-touch journey, and assisted touch within 7-day converting journey windows bounded to completed orders), explicit operational conversion counts kept distinct, and audience segment response analysis.
+  * **Milestone Integration & Verification (Unit 3.5)**: Focused end-to-end integration suite (`test_milestone_3_integration.py`) verifies cross-product dependency cascade (`raw events -> profiles/journeys -> segment membership & merchant health`), incremental invalidation and idempotency, and deterministic answerability of primary MVP BI questions without AI. Full regression suite confirms 277 passing tests across all layers.
+
 ---
 
 ## Milestone 4 - MVP Business APIs & Internal Intelligence Experience
