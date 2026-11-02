@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_allowed_origins: str = "http://localhost:5173"
 
+    auth_secret_key: str = "dev-insecure-secret-key-change-in-production"
+    auth_token_expire_minutes: int = 1440
+
     postgres_host: str = "localhost"
     postgres_port: int = 5433
     postgres_user: str = "cip_user"

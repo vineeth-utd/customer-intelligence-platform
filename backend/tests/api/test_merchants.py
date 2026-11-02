@@ -4,25 +4,41 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 import uuid
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
+from app.auth.token import create_access_token
 from app.main import app
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
     MerchantMetricsSummaryResult,
     MerchantMetricsTrendResult,
 )
-from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse, SubscriptionResponse
-from app.schemas.shopper import ShopperResponse
+from app.schemas.auth import AccessScope
+from app.schemas.merchant import (
+    MerchantDetailResponse,
+    MerchantSummaryResponse,
+    SubscriptionResponse,
+)
 from app.schemas.order import OrderResponse
+from app.schemas.shopper import ShopperResponse
 
 client = TestClient(app)
 
 MERCHANT_ID = uuid.uuid4()
 
+
+@pytest.fixture
+def auth_headers():
+    token = create_access_token(
+        user_id="test_admin",
+        scope=AccessScope.INTERNAL,
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
 @patch("app.api.merchants.list_merchants")
-def test_read_merchants(mock_list):
+def test_read_merchants(mock_list, auth_headers):
     mock_list.return_value = (
         [
             MerchantSummaryResponse(
@@ -32,19 +48,20 @@ def test_read_merchants(mock_list):
                 email="admin@test.com",
                 store_currency="USD",
                 app_install_status="installed",
-                last_active_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+                last_active_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc),
             )
         ],
-        1
+        1,
     )
-    response = client.get("/api/v1/merchants")
+    response = client.get("/api/v1/merchants", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["merchant_name"] == "Test Store"
 
+
 @patch("app.api.merchants.get_merchant_detail")
-def test_read_merchant_detail(mock_get):
+def test_read_merchant_detail(mock_get, auth_headers):
     mock_get.return_value = MerchantDetailResponse(
         merchant_id=MERCHANT_ID,
         merchant_name="Test Store",
@@ -60,42 +77,45 @@ def test_read_merchant_detail(mock_get):
             status="active",
             billing_cycle="monthly",
             amount_paid=99.99,
-            started_at=datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
-        )
+            started_at=datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc),
+        ),
     )
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}")
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["merchant_name"] == "Test Store"
     assert data["active_subscription"]["status"] == "active"
 
+
 @patch("app.api.merchants.get_merchant_detail")
-def test_read_merchant_detail_not_found(mock_get):
+def test_read_merchant_detail_not_found(mock_get, auth_headers):
     mock_get.return_value = None
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}")
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}", headers=auth_headers)
     assert response.status_code == 404
 
+
 @patch("app.api.merchants.list_shoppers")
-def test_read_merchant_shoppers(mock_list):
+def test_read_merchant_shoppers(mock_list, auth_headers):
     shopper_id = uuid.uuid4()
     mock_list.return_value = (
         [
             ShopperResponse(
                 shopper_id=shopper_id,
                 merchant_id=MERCHANT_ID,
-                email="shopper@test.com"
+                email="shopper@test.com",
             )
         ],
-        1
+        1,
     )
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/shoppers")
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/shoppers", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["email"] == "shopper@test.com"
 
+
 @patch("app.api.merchants.list_orders")
-def test_read_merchant_orders(mock_list):
+def test_read_merchant_orders(mock_list, auth_headers):
     order_id = uuid.uuid4()
     mock_list.return_value = (
         [
@@ -106,21 +126,20 @@ def test_read_merchant_orders(mock_list):
                 order_status="completed",
                 currency="USD",
                 total_amount=100.0,
-                placed_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+                placed_at=datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc),
             )
         ],
-        1
+        1,
     )
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/orders")
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/orders", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["order_status"] == "completed"
 
 
-
 @patch("app.api.merchants.get_merchant_metrics_summary")
-def test_read_merchant_metrics_summary_success(mock_get):
+def test_read_merchant_metrics_summary_success(mock_get, auth_headers):
     mock_get.return_value = MerchantMetricsSummaryResult(
         merchant_id=MERCHANT_ID,
         revenue=Decimal("500.00"),
@@ -140,32 +159,44 @@ def test_read_merchant_metrics_summary_success(mock_get):
         platform_login_count=5,
         campaign_created_count=2,
         feature_enable_count=1,
-        feature_disable_count=0
+        feature_disable_count=0,
     )
-    
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-01&end_date=2023-10-31")
+
+    response = client.get(
+        f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-01&end_date=2023-10-31",
+        headers=auth_headers,
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["merchant_id"] == str(MERCHANT_ID)
     assert data["revenue"] == "500.00"
 
+
 @patch("app.api.merchants.get_merchant_metrics_summary")
-def test_read_merchant_metrics_summary_not_found(mock_get):
+def test_read_merchant_metrics_summary_not_found(mock_get, auth_headers):
     mock_get.return_value = None
-    
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-01&end_date=2023-10-31")
+
+    response = client.get(
+        f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-01&end_date=2023-10-31",
+        headers=auth_headers,
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["revenue"] == "0"
     assert data["order_count"] == 0
 
-def test_read_merchant_metrics_summary_invalid_dates():
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-31&end_date=2023-10-01")
+
+def test_read_merchant_metrics_summary_invalid_dates(auth_headers):
+    response = client.get(
+        f"/api/v1/merchants/{MERCHANT_ID}/analytics/summary?start_date=2023-10-31&end_date=2023-10-01",
+        headers=auth_headers,
+    )
     assert response.status_code == 400
     assert "cannot be after" in response.json()["detail"]
 
+
 @patch("app.api.merchants.get_merchant_metrics_trend")
-def test_read_merchant_metrics_trend_success(mock_get):
+def test_read_merchant_metrics_trend_success(mock_get, auth_headers):
     mock_get.return_value = [
         MerchantMetricsTrendResult(
             metric_date=date(2023, 10, 1),
@@ -187,23 +218,31 @@ def test_read_merchant_metrics_trend_success(mock_get):
             platform_login_count=1,
             campaign_created_count=0,
             feature_enable_count=0,
-            feature_disable_count=0
+            feature_disable_count=0,
         )
     ]
-    
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/trend?start_date=2023-10-01&end_date=2023-10-31")
+
+    response = client.get(
+        f"/api/v1/merchants/{MERCHANT_ID}/analytics/trend?start_date=2023-10-01&end_date=2023-10-31",
+        headers=auth_headers,
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["revenue"] == "100.00"
 
-def test_read_merchant_metrics_trend_invalid_dates():
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/analytics/trend?start_date=2023-10-31&end_date=2023-10-01")
+
+def test_read_merchant_metrics_trend_invalid_dates(auth_headers):
+    response = client.get(
+        f"/api/v1/merchants/{MERCHANT_ID}/analytics/trend?start_date=2023-10-31&end_date=2023-10-01",
+        headers=auth_headers,
+    )
     assert response.status_code == 400
     assert "cannot be after" in response.json()["detail"]
 
+
 @patch("app.api.merchants.get_campaign_analytics_for_merchant")
-def test_read_campaign_analytics_success(mock_get):
+def test_read_campaign_analytics_success(mock_get, auth_headers):
     mock_get.return_value = [
         CampaignAnalyticsResult(
             campaign_id=uuid.uuid4(),
@@ -219,20 +258,21 @@ def test_read_campaign_analytics_success(mock_get):
             attributed_revenue=Decimal("500.00"),
             open_rate=Decimal("0.5"),
             click_through_rate=Decimal("0.1"),
-            conversion_rate=Decimal("0.01")
+            conversion_rate=Decimal("0.01"),
         )
     ]
-    
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/campaigns/analytics")
+
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/campaigns/analytics", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["campaign_name"] == "Test Campaign"
 
+
 @patch("app.api.merchants.get_campaign_analytics_for_merchant")
-def test_read_campaign_analytics_empty(mock_get):
+def test_read_campaign_analytics_empty(mock_get, auth_headers):
     mock_get.return_value = []
-    
-    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/campaigns/analytics")
+
+    response = client.get(f"/api/v1/merchants/{MERCHANT_ID}/campaigns/analytics", headers=auth_headers)
     assert response.status_code == 200
     assert response.json() == []

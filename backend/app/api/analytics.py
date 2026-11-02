@@ -2,27 +2,33 @@ from datetime import date
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_internal_principal
 from app.dependencies.db import get_db
 from app.schemas.analytics import (
     FeatureMetricsResult,
     PlatformSummaryResult,
     PlatformTrendResult,
 )
+from app.schemas.auth import Principal
 from app.services.analytics import (
     get_feature_metrics_summary,
     get_platform_metrics_trend,
     get_platform_summary,
 )
 
-router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
+router = APIRouter(
+    prefix="/api/v1/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(require_internal_principal)],
+)
 
 
 @router.get("/platform/summary", response_model=PlatformSummaryResult)
 async def read_platform_summary(
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_internal_principal),
 ):
     """
     Retrieve the platform metrics summary (total merchants, revenue, etc.).
@@ -44,7 +50,8 @@ async def read_platform_summary(
 async def read_platform_trend(
     start_date: date,
     end_date: date,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_internal_principal),
 ):
     """
     Retrieve platform metrics over a time period.
@@ -57,7 +64,8 @@ async def read_platform_trend(
 
 @router.get("/features", response_model=List[FeatureMetricsResult])
 async def read_feature_metrics(
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_internal_principal),
 ):
     """
     Retrieve feature adoption and usage metrics.

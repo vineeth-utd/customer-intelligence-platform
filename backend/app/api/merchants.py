@@ -3,28 +3,28 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_internal_principal, require_merchant_access
 from app.dependencies.db import get_db
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
     MerchantMetricsSummaryResult,
     MerchantMetricsTrendResult,
 )
+from app.schemas.auth import Principal
 from app.schemas.common import PaginatedResponse
 from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse
-from app.schemas.shopper import ShopperResponse
 from app.schemas.order import OrderResponse
-
+from app.schemas.shopper import ShopperResponse
 from app.services.analytics import (
     get_campaign_analytics_for_merchant,
     get_merchant_metrics_summary,
     get_merchant_metrics_trend,
 )
-from app.services.merchant import list_merchants, get_merchant_detail
-from app.services.shopper import list_shoppers
+from app.services.merchant import get_merchant_detail, list_merchants
 from app.services.order import list_orders
+from app.services.shopper import list_shoppers
 
 router = APIRouter(prefix="/api/v1/merchants", tags=["merchants"])
 
@@ -33,10 +33,12 @@ router = APIRouter(prefix="/api/v1/merchants", tags=["merchants"])
 async def read_merchants(
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_internal_principal),
 ):
     """
     List installed merchants to populate the internal dashboard selector.
+    Requires INTERNAL platform-wide access.
     """
     items, total = await list_merchants(session, limit, offset)
     return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
@@ -45,7 +47,8 @@ async def read_merchants(
 @router.get("/{merchant_id}", response_model=MerchantDetailResponse)
 async def read_merchant(
     merchant_id: UUID,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Retrieve basic merchant profile.
@@ -61,7 +64,8 @@ async def read_merchant_shoppers(
     merchant_id: UUID,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Provide recent shopper activity for dashboard drill-down views.
@@ -75,7 +79,8 @@ async def read_merchant_orders(
     merchant_id: UUID,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Provide recent business activity (orders) for dashboard drill-down views.
@@ -89,7 +94,8 @@ async def read_merchant_metrics_summary(
     merchant_id: UUID,
     start_date: date,
     end_date: date,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Retrieve aggregated analytical metrics for a specific merchant.
@@ -128,7 +134,8 @@ async def read_merchant_metrics_trend(
     merchant_id: UUID,
     start_date: date,
     end_date: date,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Retrieve time-series analytical trends for a specific merchant.
@@ -142,7 +149,8 @@ async def read_merchant_metrics_trend(
 @router.get("/{merchant_id}/campaigns/analytics", response_model=List[CampaignAnalyticsResult])
 async def read_campaign_analytics(
     merchant_id: UUID,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
 ):
     """
     Retrieve a summary of all campaigns and their performance for a merchant.
