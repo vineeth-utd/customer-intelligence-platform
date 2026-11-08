@@ -66,3 +66,24 @@ async def list_merchant_orders_paginated(session: AsyncSession, merchant_id: uui
     result = await session.execute(stmt)
     items = list(result.scalars().all())
     return items, total or 0
+
+
+async def list_shopper_orders_paginated(
+    session: AsyncSession, merchant_id: uuid.UUID, shopper_id: uuid.UUID, limit: int, offset: int
+) -> tuple[list[Order], int]:
+    """Retrieve orders for a specific shopper under a merchant with pagination."""
+    count_stmt = select(func.count(Order.order_id)).where(
+        Order.merchant_id == merchant_id, Order.shopper_id == shopper_id
+    )
+    total = await session.scalar(count_stmt)
+
+    stmt = (
+        select(Order)
+        .where(Order.merchant_id == merchant_id, Order.shopper_id == shopper_id)
+        .order_by(Order.placed_at.desc(), Order.order_id.asc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.execute(stmt)
+    items = list(result.scalars().all())
+    return items, total or 0

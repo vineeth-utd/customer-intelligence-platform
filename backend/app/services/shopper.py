@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -6,20 +7,25 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.merchant import get_merchant_by_id
-from app.data_access.order import get_order, create_order, create_order_items
+from app.data_access.order import create_order, create_order_items, get_order
 from app.data_access.processing_state import record_domain_activity
-from app.data_access.product import get_product_variant_with_product, decrement_inventory
-from app.data_access.shopper import list_merchant_shoppers_paginated, upsert_shopper, enrich_shopper_email
-
+from app.data_access.product import decrement_inventory, get_product_variant_with_product
+from app.data_access.shopper import (
+    enrich_shopper_email,
+    get_shopper as dal_get_shopper,
+    list_merchant_shoppers_paginated,
+    upsert_shopper,
+)
+from app.data_access.shopper_events import list_shopper_events_paginated
 from app.models.shopper import Shopper
-
 from app.schemas.events.envelope import ShopperEventEnvelope
 from app.schemas.events.event_types import ShopperEventType
 from app.schemas.events.payloads.shopper import (
-    SessionStartedPayload,
     CheckoutStartedPayload,
     PurchaseCompletedPayload,
+    SessionStartedPayload,
 )
+from app.schemas.shopper import ShopperActivityEventResponse
 
 
 class IdentityConflictError(ValueError):
@@ -135,3 +141,84 @@ async def process_shopper_event(session: AsyncSession, envelope: ShopperEventEnv
 
 async def list_shoppers(session: AsyncSession, merchant_id: uuid.UUID, limit: int, offset: int) -> tuple[list[Shopper], int]:
     return await list_merchant_shoppers_paginated(session, merchant_id, limit, offset)
+
+
+async def get_shopper(session: AsyncSession, merchant_id: uuid.UUID, shopper_id: uuid.UUID) -> Shopper | None:
+    """Retrieve a shopper by ID ensuring strict merchant ownership boundary."""
+    return await dal_get_shopper(session, merchant_id, shopper_id)
+
+
+def _extract_activity_details(payload: dict[str, Any]) -> dict[str, Any]:
+    """Curate business drill-down fields from event payload, omitting raw mechanical fields."""
+    allowed_keys = {
+        "url",
+        "path",
+        "referrer",
+        "search_query",
+        "query",
+        "category_id",
+        "category_name",
+        "product_id",
+        "variant_id",
+        "product_name",
+        "price",
+        "unit_price",
+        "quantity",
+        "cart_total",
+        "item_count",
+        "order_id",
+        "total_amount",
+        "currency",
+        "recommendation_id",
+        "session_duration_seconds",
+    }
+    return {k: v for k, v in payload.items() if k in allowed_keys}
+
+
+async def list_shopper_activity(
+    session: AsyncSession,
+    merchant_id: uuid.UUID,
+    shopper_id: uuid.UUID,
+    limit: int = 50,
+    offset: int = 0,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> tuple[list[ShopperActivityEventResponse], int] | None:
+    """
+    Retrieve curated activity events for a shopper under a merchant.
+    Returns None if the shopper does not exist or does not belong to the merchant.
+    """
+    shopper = await get_shopper(session, merchant_id, shopper_id)
+    if not shopper:
+        return None
+
+    start_time: datetime | None = None
+    if start_date is not None:
+        start_time = datetime.combine(start_date, time.min).replace(tzinfo=timezone.utc)
+
+    end_time: datetime | None = None
+    if end_date is not None:
+        end_time = datetime.combine(end_date, time.max).replace(tzinfo=timezone.utc)
+
+    events, total = await list_shopper_events_paginated(
+        session,
+        merchant_id=merchant_id,
+        shopper_id=shopper_id,
+        limit=limit,
+        offset=offset,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    activity_items = [
+        ShopperActivityEventResponse(
+            event_id=e.event_id,
+            session_id=e.session_id,
+            event_type=e.event_type,
+            event_timestamp=e.event_timestamp,
+            source=e.source,
+            activity_details=_extract_activity_details(e.payload),
+        )
+        for e in events
+    ]
+    return activity_items, total

@@ -23,6 +23,7 @@ from app.models.merchant import MerchantFeature, PlanFeature, PlatformFeature
 from app.models.merchant_health import MerchantHealth
 from app.models.metrics import MerchantMetricsDaily
 from app.reference_data.plans import PlanKey
+from app.services.merchant import resolve_merchant_feature_entitlements
 from app.services.merchant_health_rules import (
     calculate_business_performance_score,
     calculate_engagement_score,
@@ -31,48 +32,6 @@ from app.services.merchant_health_rules import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-async def _resolve_entitled_and_enabled_features(
-    session: AsyncSession, merchant_id: uuid.UUID
-) -> tuple[list[str], list[str]]:
-    """
-    Resolves entitled feature keys based on the merchant's active plan, falling back
-    deterministically to the canonical Free plan entitlements, and lists currently enabled features.
-    """
-    # 1. Resolve Plan
-    sub = await get_active_subscription(session, merchant_id)
-    plan_id: uuid.UUID | None = sub.plan_id if sub else None
-
-    if plan_id is None:
-        free_plan = await get_plan_by_key(session, PlanKey.FREE)
-        if free_plan:
-            plan_id = free_plan.plan_id
-
-    # 2. Query entitled features
-    entitled_feature_keys: list[str] = []
-    if plan_id is not None:
-        stmt_entitled = (
-            select(PlatformFeature.feature_key)
-            .join(PlanFeature, PlatformFeature.feature_id == PlanFeature.feature_id)
-            .where(PlanFeature.plan_id == plan_id)
-        )
-        res_entitled = await session.execute(stmt_entitled)
-        entitled_feature_keys = list(res_entitled.scalars().all())
-
-    # 3. Query enabled features for the merchant
-    stmt_enabled = (
-        select(PlatformFeature.feature_key)
-        .join(MerchantFeature, PlatformFeature.feature_id == MerchantFeature.feature_id)
-        .where(
-            MerchantFeature.merchant_id == merchant_id,
-            MerchantFeature.is_enabled.is_(True),
-        )
-    )
-    res_enabled = await session.execute(stmt_enabled)
-    enabled_feature_keys = list(res_enabled.scalars().all())
-
-    return entitled_feature_keys, enabled_feature_keys
 
 
 async def _get_recent_and_prior_analytics(
@@ -146,7 +105,7 @@ async def generate_merchant_health_callback(
     subscription_status = sub.status if sub else None
 
     # 2. Feature Entitlements & Adoption
-    entitled_keys, enabled_keys = await _resolve_entitled_and_enabled_features(session, merchant_id)
+    entitled_keys, enabled_keys = await resolve_merchant_feature_entitlements(session, merchant_id)
     feature_score, _ = calculate_feature_adoption_score(entitled_keys, enabled_keys)
 
     # 3. Journey & Profile data
@@ -240,7 +199,7 @@ async def get_merchant_health_with_factors(
     sub = await get_active_subscription(session, merchant_id)
     subscription_status = sub.status if sub else None
 
-    entitled_keys, enabled_keys = await _resolve_entitled_and_enabled_features(session, merchant_id)
+    entitled_keys, enabled_keys = await resolve_merchant_feature_entitlements(session, merchant_id)
     _, feature_factors = calculate_feature_adoption_score(entitled_keys, enabled_keys)
 
     journeys = await get_merchant_journeys_by_merchant(session, merchant_id)

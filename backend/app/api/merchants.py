@@ -14,7 +14,16 @@ from app.schemas.analytics import (
 )
 from app.schemas.auth import Principal
 from app.schemas.common import PaginatedResponse
-from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse
+from app.schemas.merchant import (
+    MerchantDetailResponse,
+    MerchantFeatureResponse,
+    MerchantHealthResponse,
+    MerchantJourneyDetailResponse,
+    MerchantJourneyResponse,
+    MerchantProfileResponse,
+    MerchantSummaryResponse,
+    SubscriptionResponse,
+)
 from app.schemas.order import OrderResponse
 from app.schemas.shopper import ShopperResponse
 from app.services.analytics import (
@@ -22,8 +31,19 @@ from app.services.analytics import (
     get_merchant_metrics_summary,
     get_merchant_metrics_trend,
 )
-from app.services.merchant import get_merchant_detail, list_merchants
+from app.services.merchant import (
+    get_merchant_detail,
+    get_merchant_features,
+    get_merchant_subscription_detail,
+    list_merchants,
+)
+from app.services.merchant_health import get_merchant_health_with_factors
+from app.services.merchant_journey import (
+    get_merchant_journey,
+    get_merchant_journeys_for_merchant,
+)
 from app.services.order import list_orders
+from app.services.profile import get_merchant_profile
 from app.services.shopper import list_shoppers
 
 router = APIRouter(prefix="/api/v1/merchants", tags=["merchants"])
@@ -57,6 +77,91 @@ async def read_merchant(
     if not result:
         raise HTTPException(status_code=404, detail="Merchant not found")
     return result
+
+
+@router.get("/{merchant_id}/profile", response_model=MerchantProfileResponse)
+async def read_merchant_profile(
+    merchant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve the calculated merchant profile data product.
+    """
+    profile = await get_merchant_profile(session, merchant_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Merchant profile not found")
+    return profile
+
+
+@router.get("/{merchant_id}/health", response_model=MerchantHealthResponse)
+async def read_merchant_health(
+    merchant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve calculated merchant health metrics and explainable contributing factors.
+    """
+    health = await get_merchant_health_with_factors(session, merchant_id)
+    if not health:
+        raise HTTPException(status_code=404, detail="Merchant health not found")
+    return health
+
+
+@router.get("/{merchant_id}/journeys", response_model=List[MerchantJourneyResponse])
+async def read_merchant_journeys(
+    merchant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve lifecycle journeys for a merchant.
+    """
+    return await get_merchant_journeys_for_merchant(session, merchant_id, include_events=False)
+
+
+@router.get("/{merchant_id}/journeys/{merchant_journey_id}", response_model=MerchantJourneyDetailResponse)
+async def read_merchant_journey_detail(
+    merchant_id: UUID,
+    merchant_journey_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve a single merchant journey with its ordered milestones and events.
+    """
+    journey = await get_merchant_journey(session, merchant_journey_id, include_events=True)
+    if not journey or journey.merchant_id != merchant_id:
+        raise HTTPException(status_code=404, detail="Merchant journey not found")
+    return journey
+
+
+@router.get("/{merchant_id}/features", response_model=List[MerchantFeatureResponse])
+async def read_merchant_features(
+    merchant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve feature entitlements and enablement state for a merchant.
+    """
+    return await get_merchant_features(session, merchant_id)
+
+
+@router.get("/{merchant_id}/subscription", response_model=SubscriptionResponse)
+async def read_merchant_subscription(
+    merchant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve current/latest subscription lifecycle state for a merchant.
+    """
+    subscription = await get_merchant_subscription_detail(session, merchant_id)
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found for merchant")
+    return subscription
 
 
 @router.get("/{merchant_id}/shoppers", response_model=PaginatedResponse[ShopperResponse])

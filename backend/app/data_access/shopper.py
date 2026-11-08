@@ -66,3 +66,14 @@ async def list_merchant_shoppers_paginated(session: AsyncSession, merchant_id: u
     result = await session.execute(stmt)
     items = list(result.scalars().all())
     return items, total or 0
+
+
+async def get_shopper(
+    session: AsyncSession, merchant_id: uuid.UUID, shopper_id: uuid.UUID
+) -> Shopper | None:
+    """Retrieve a shopper by ID, scoped to a specific merchant for ownership safety."""
+    stmt = select(Shopper).where(
+        and_(Shopper.merchant_id == merchant_id, Shopper.shopper_id == shopper_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

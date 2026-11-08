@@ -6,30 +6,31 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.merchant import (
+    cancel_subscription,
     create_merchant,
     get_active_subscription,
+    get_all_platform_features,
+    get_enabled_merchant_feature_keys,
     get_feature_by_key,
+    get_latest_subscription,
     get_merchant_by_id,
     get_plan_by_key,
+    get_plan_entitled_feature_keys,
     list_merchants_paginated,
     update_merchant_fields,
     update_merchant_install_status,
     update_merchant_last_active_at,
-)
-from app.data_access.processing_state import record_domain_activity
-from app.data_access.merchant import (
     update_subscription_plan,
     update_subscription_renewal,
     upsert_active_subscription,
     upsert_feature,
     upsert_merchant_feature,
     upsert_plan,
-    cancel_subscription,
 )
+from app.data_access.processing_state import record_domain_activity
 from app.models.merchant import Merchant, PlanFeature, PlatformFeature, SubscriptionPlan
 from app.reference_data.features import FEATURE_CATALOG, FeatureKey
 from app.reference_data.plans import PLAN_CATALOG, PlanKey
-from app.schemas.merchant import MerchantDetailResponse, MerchantSummaryResponse, SubscriptionResponse
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
 from app.schemas.events.payloads.merchant import (
@@ -45,6 +46,12 @@ from app.schemas.events.payloads.merchant import (
     SubscriptionRenewedPayload,
     SubscriptionStartedPayload,
     SubscriptionUpgradedPayload,
+)
+from app.schemas.merchant import (
+    MerchantDetailResponse,
+    MerchantFeatureResponse,
+    MerchantSummaryResponse,
+    SubscriptionResponse,
 )
 
 _SUPPORTED_CONFIGURATION_FIELDS = {"timezone", "country", "store_currency"}
@@ -277,4 +284,71 @@ async def get_merchant_detail(session: AsyncSession, merchant_id: uuid.UUID) -> 
         app_install_status=merchant.app_install_status,
         last_active_at=merchant.last_active_at,
         active_subscription=sub_response
+    )
+
+
+async def resolve_merchant_feature_entitlements(
+    session: AsyncSession, merchant_id: uuid.UUID
+) -> tuple[list[str], list[str]]:
+    """
+    Authoritative entitlement and enabled feature resolution for a merchant.
+    Resolves entitled feature keys based on the merchant's active plan, falling back
+    deterministically to canonical Free plan entitlements, and lists currently enabled features.
+    """
+    sub = await get_active_subscription(session, merchant_id)
+    plan_id: uuid.UUID | None = sub.plan_id if sub else None
+
+    if plan_id is None:
+        free_plan = await get_plan_by_key(session, PlanKey.FREE)
+        if free_plan:
+            plan_id = free_plan.plan_id
+
+    entitled_feature_keys: list[str] = []
+    if plan_id is not None:
+        entitled_feature_keys = await get_plan_entitled_feature_keys(session, plan_id)
+
+    enabled_feature_keys = await get_enabled_merchant_feature_keys(session, merchant_id)
+    return entitled_feature_keys, enabled_feature_keys
+
+
+async def get_merchant_features(
+    session: AsyncSession, merchant_id: uuid.UUID
+) -> list[MerchantFeatureResponse]:
+    """Retrieve all catalogued features with their entitlement and enabled status for a merchant."""
+    all_features = await get_all_platform_features(session)
+    entitled_keys, enabled_keys = await resolve_merchant_feature_entitlements(session, merchant_id)
+    entitled_set = set(entitled_keys)
+    enabled_set = set(enabled_keys)
+
+    return [
+        MerchantFeatureResponse(
+            feature_id=f.feature_id,
+            feature_key=f.feature_key,
+            feature_name=f.feature_name,
+            feature_category=f.feature_category,
+            description=f.description,
+            is_entitled=f.feature_key in entitled_set,
+            is_enabled=f.feature_key in enabled_set,
+        )
+        for f in all_features
+    ]
+
+
+async def get_merchant_subscription_detail(
+    session: AsyncSession, merchant_id: uuid.UUID
+) -> SubscriptionResponse | None:
+    """Retrieve the latest subscription lifecycle record for a merchant."""
+    sub = await get_latest_subscription(session, merchant_id)
+    if not sub:
+        return None
+
+    return SubscriptionResponse(
+        plan_id=sub.plan_id,
+        plan_name=sub.plan.plan_name if sub.plan else "Unknown",
+        status=sub.status,
+        billing_cycle=sub.billing_cycle,
+        amount_paid=float(sub.amount_paid),
+        started_at=sub.started_at,
+        renewal_at=sub.renewal_at,
+        cancelled_at=sub.cancelled_at,
     )

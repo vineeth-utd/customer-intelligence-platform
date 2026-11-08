@@ -222,6 +222,51 @@ async def get_active_subscription(session: AsyncSession, merchant_id: uuid.UUID)
     return result.scalar_one_or_none()
 
 
+async def get_latest_subscription(session: AsyncSession, merchant_id: uuid.UUID) -> Subscription | None:
+    """Retrieve the latest subscription lifecycle state for a merchant."""
+    stmt = (
+        select(Subscription)
+        .where(Subscription.merchant_id == merchant_id)
+        .order_by(Subscription.started_at.desc(), Subscription.created_at.desc())
+        .options(joinedload(Subscription.plan))
+        .execution_options(populate_existing=True)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_all_platform_features(session: AsyncSession) -> list[PlatformFeature]:
+    """Retrieve all catalogued platform features."""
+    stmt = select(PlatformFeature).order_by(PlatformFeature.feature_category.asc(), PlatformFeature.feature_key.asc())
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_plan_entitled_feature_keys(session: AsyncSession, plan_id: uuid.UUID) -> list[str]:
+    """Retrieve feature keys entitled to a given subscription plan."""
+    stmt = (
+        select(PlatformFeature.feature_key)
+        .join(PlanFeature, PlatformFeature.feature_id == PlanFeature.feature_id)
+        .where(PlanFeature.plan_id == plan_id)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_enabled_merchant_feature_keys(session: AsyncSession, merchant_id: uuid.UUID) -> list[str]:
+    """Retrieve currently enabled feature keys for a merchant."""
+    stmt = (
+        select(PlatformFeature.feature_key)
+        .join(MerchantFeature, PlatformFeature.feature_id == MerchantFeature.feature_id)
+        .where(
+            MerchantFeature.merchant_id == merchant_id,
+            MerchantFeature.is_enabled.is_(True),
+        )
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def upsert_active_subscription(
     session: AsyncSession,
     *,
