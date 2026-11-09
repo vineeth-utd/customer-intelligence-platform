@@ -9,8 +9,12 @@ from app.dependencies.auth import require_internal_principal, require_merchant_a
 from app.dependencies.db import get_db
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
+    ConversionFunnelResult,
     MerchantMetricsSummaryResult,
     MerchantMetricsTrendResult,
+    RevenueAnalyticsResult,
+    ShopperBehaviorAnalyticsResult,
+    ShopperJourneyAnalyticsResult,
 )
 from app.schemas.auth import Principal
 from app.schemas.common import PaginatedResponse
@@ -28,8 +32,12 @@ from app.schemas.order import OrderResponse
 from app.schemas.shopper import ShopperResponse
 from app.services.analytics import (
     get_campaign_analytics_for_merchant,
+    get_conversion_funnel,
     get_merchant_metrics_summary,
     get_merchant_metrics_trend,
+    get_revenue_analytics,
+    get_shopper_behavior_analytics,
+    get_shopper_journey_analytics,
 )
 from app.services.merchant import (
     get_merchant_detail,
@@ -261,3 +269,84 @@ async def read_campaign_analytics(
     Retrieve a summary of all campaigns and their performance for a merchant.
     """
     return await get_campaign_analytics_for_merchant(session, merchant_id)
+
+
+@router.get("/{merchant_id}/analytics/funnel", response_model=ConversionFunnelResult)
+async def read_merchant_conversion_funnel(
+    merchant_id: UUID,
+    start_date: date,
+    end_date: date,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve store-level conversion funnel and secondary engagement metrics.
+    """
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
+
+    result = await get_conversion_funnel(session, merchant_id, start_date, end_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return result
+
+
+@router.get("/{merchant_id}/analytics/journeys", response_model=ShopperJourneyAnalyticsResult)
+async def read_merchant_shopper_journeys_analytics(
+    merchant_id: UUID,
+    start_date: date,
+    end_date: date,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve aggregate shopper journey multi-touch outcome and funnel analytics.
+    """
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
+
+    result = await get_shopper_journey_analytics(session, merchant_id, start_date, end_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return result
+
+
+@router.get("/{merchant_id}/analytics/behavior", response_model=ShopperBehaviorAnalyticsResult)
+async def read_merchant_shopper_behavior_analytics(
+    merchant_id: UUID,
+    start_date: date,
+    end_date: date,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve store-level shopper behavioral analytics (new vs returning, repeat purchase rate).
+    """
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
+
+    result = await get_shopper_behavior_analytics(session, merchant_id, start_date, end_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return result
+
+
+@router.get("/{merchant_id}/analytics/revenue", response_model=RevenueAnalyticsResult)
+async def read_merchant_revenue_analytics(
+    merchant_id: UUID,
+    start_date: date,
+    end_date: date,
+    session: AsyncSession = Depends(get_db),
+    _principal: Principal = Depends(require_merchant_access),
+):
+    """
+    Retrieve store-level revenue, order count, AOV, and period-over-period comparison analytics.
+    """
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
+
+    result = await get_revenue_analytics(session, merchant_id, start_date, end_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return result
+

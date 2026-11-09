@@ -1,5 +1,6 @@
-from app.api import analytics, campaigns, merchants, shoppers
+from app.api import analytics, campaigns, dashboard, merchants, shoppers
 
-__all__ = ["analytics", "campaigns", "merchants", "shoppers"]
+__all__ = ["analytics", "campaigns", "dashboard", "merchants", "shoppers"]
+
 
 
