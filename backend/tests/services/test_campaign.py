@@ -14,6 +14,9 @@ from app.schemas.events.event_types import CampaignEventType
 from app.schemas.events.envelope import CampaignEventEnvelope
 from app.services.campaign import (
     process_campaign_event,
+    get_campaign_detail,
+    list_campaigns,
+    verify_campaign_ownership,
     UnresolvedReferenceError,
     UnsupportedConfigurationFieldError,
     AttributionError
@@ -224,6 +227,102 @@ async def test_campaign_updated_invalid_values(db_session: AsyncSession, setup_d
     campaign = (await db_session.execute(stmt)).scalar_one()
     assert campaign.start_at is None
     assert campaign.end_at is None
+
+
+@pytest.mark.asyncio
+async def test_campaign_ownership_and_detail(db_session: AsyncSession, setup_data):
+    merchant_id = setup_data["merchant_id"]
+    segment_id = setup_data["segment_id"]
+    other_merchant_id = uuid.uuid4()
+    campaign_id = uuid.uuid4()
+
+    env_create = build_envelope(
+        CampaignEventType.CAMPAIGN_CREATED.value,
+        campaign_id,
+        merchant_id,
+        {
+            "campaign_name": "VIP Test Campaign",
+            "campaign_type": "email",
+            "campaign_medium": "email",
+            "segment_id": str(segment_id),
+            "status": "active",
+        },
+    )
+    await process_campaign_event(db_session, env_create)
+    await db_session.commit()
+
+    # 1. Ownership check by owning merchant -> returns Campaign
+    camp = await verify_campaign_ownership(db_session, merchant_id, campaign_id)
+    assert camp is not None
+    assert camp.campaign_id == campaign_id
+    assert camp.merchant_id == merchant_id
+
+    # 2. Ownership check by different merchant -> returns None
+    other_camp = await verify_campaign_ownership(db_session, other_merchant_id, campaign_id)
+    assert other_camp is None
+
+    # 3. Campaign detail includes segment name
+    detail = await get_campaign_detail(db_session, merchant_id, campaign_id)
+    assert detail is not None
+    assert detail.campaign_id == campaign_id
+    assert detail.campaign_name == "VIP Test Campaign"
+    assert detail.target_segment_name == "Test Segment"
+
+    # 4. Campaign detail for wrong merchant -> returns None
+    wrong_detail = await get_campaign_detail(db_session, other_merchant_id, campaign_id)
+    assert wrong_detail is None
+
+
+@pytest.mark.asyncio
+async def test_list_campaigns_paginated_and_status_filtered(db_session: AsyncSession, setup_data):
+    merchant_id = setup_data["merchant_id"]
+    segment_id = setup_data["segment_id"]
+
+    camp1_id = uuid.uuid4()
+    camp2_id = uuid.uuid4()
+    camp3_id = uuid.uuid4()
+
+    for cid, name, status in [
+        (camp1_id, "Camp 1 Draft", "draft"),
+        (camp2_id, "Camp 2 Active", "active"),
+        (camp3_id, "Camp 3 Active", "active"),
+    ]:
+        env = build_envelope(
+            CampaignEventType.CAMPAIGN_CREATED.value,
+            cid,
+            merchant_id,
+            {
+                "campaign_name": name,
+                "campaign_type": "email",
+                "campaign_medium": "email",
+                "segment_id": str(segment_id),
+                "status": status,
+            },
+        )
+        await process_campaign_event(db_session, env)
+    await db_session.commit()
+
+    # List all
+    items, total = await list_campaigns(db_session, merchant_id, limit=50, offset=0)
+    assert total >= 3
+    matching_ids = [c.campaign_id for c in items]
+    assert camp1_id in matching_ids
+    assert camp2_id in matching_ids
+    assert camp3_id in matching_ids
+
+    # Filter by active
+    items_active, total_active = await list_campaigns(db_session, merchant_id, limit=50, offset=0, status="active")
+    assert total_active >= 2
+    active_ids = [c.campaign_id for c in items_active]
+    assert camp2_id in active_ids
+    assert camp3_id in active_ids
+    assert camp1_id not in active_ids
+
+    # Pagination bounds
+    items_paged, total_paged = await list_campaigns(db_session, merchant_id, limit=1, offset=0)
+    assert len(items_paged) == 1
+    assert total_paged >= 3
+
 
 
 

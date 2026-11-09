@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.kafka.producer import event_producer
 from app.scheduler.main import setup_scheduler, stop_scheduler
-from app.api import analytics, merchants, shoppers
+from app.api import analytics, campaigns, merchants, shoppers
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,7 @@ app.add_middleware(
 
 app.include_router(analytics.router)
 app.include_router(merchants.router)
+app.include_router(campaigns.router)
 app.include_router(shoppers.router)
 
 @app.get("/health")

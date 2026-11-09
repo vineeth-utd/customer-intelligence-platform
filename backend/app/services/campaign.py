@@ -1,6 +1,6 @@
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Optional
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,19 +8,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data_access.campaign import (
     create_campaign,
     get_campaign,
+    get_campaign_detail_with_segment,
+    get_campaign_for_merchant,
     is_order_attributed_to_campaign,
+    list_merchant_campaigns,
     update_campaign_fields,
 )
-from app.data_access.processing_state import record_domain_activity
 from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order
+from app.data_access.processing_state import record_domain_activity
 from app.data_access.segment import get_merchant_segments
+from app.models.campaign import Campaign
+from app.schemas.campaign import CampaignDetailResponse, CampaignSummaryResponse
 from app.schemas.events.envelope import CampaignEventEnvelope
 from app.schemas.events.event_types import CampaignEventType
 from app.schemas.events.payloads.campaign import (
+    CampaignConvertedPayload,
     CampaignCreatedPayload,
     CampaignUpdatedPayload,
-    CampaignConvertedPayload,
 )
 
 _SUPPORTED_UPDATED_FIELDS = {"campaign_name", "segment_id", "status", "start_at", "end_at"}
@@ -182,3 +187,57 @@ async def process_campaign_event(session: AsyncSession, envelope: CampaignEventE
     await record_domain_activity(session, "merchant", envelope.merchant_id, "campaign", envelope.event_timestamp)
     if envelope.shopper_id:
         await record_domain_activity(session, "shopper", envelope.shopper_id, "campaign", envelope.event_timestamp)
+
+
+async def verify_campaign_ownership(
+    session: AsyncSession, merchant_id: uuid.UUID, campaign_id: uuid.UUID
+) -> Optional[Campaign]:
+    """
+    Verifies that the requested campaign exists and is owned by the specified merchant.
+    Returns the Campaign instance if valid, or None if not found / mismatched.
+    """
+    return await get_campaign_for_merchant(session, merchant_id, campaign_id)
+
+
+async def get_campaign_detail(
+    session: AsyncSession, merchant_id: uuid.UUID, campaign_id: uuid.UUID
+) -> Optional[CampaignDetailResponse]:
+    """
+    Retrieves full details for a merchant-owned campaign including target segment metadata.
+    """
+    result = await get_campaign_detail_with_segment(session, merchant_id, campaign_id)
+    if not result:
+        return None
+    campaign, segment_name = result
+    return CampaignDetailResponse(
+        campaign_id=campaign.campaign_id,
+        merchant_id=campaign.merchant_id,
+        segment_id=campaign.segment_id,
+        campaign_name=campaign.campaign_name,
+        campaign_type=campaign.campaign_type,
+        campaign_medium=campaign.campaign_medium,
+        status=campaign.status,
+        start_at=campaign.start_at,
+        end_at=campaign.end_at,
+        created_at=campaign.created_at,
+        updated_at=campaign.updated_at,
+        target_segment_name=segment_name,
+    )
+
+
+async def list_campaigns(
+    session: AsyncSession,
+    merchant_id: uuid.UUID,
+    limit: int = 50,
+    offset: int = 0,
+    status: Optional[str] = None,
+) -> tuple[list[CampaignSummaryResponse], int]:
+    """
+    Retrieves paginated campaign summaries for a merchant with optional status filtering.
+    """
+    campaigns, total = await list_merchant_campaigns(
+        session, merchant_id, limit=limit, offset=offset, status=status
+    )
+    items = [CampaignSummaryResponse.model_validate(c) for c in campaigns]
+    return items, total
+
