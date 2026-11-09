@@ -98,6 +98,10 @@ services:
       POSTGRES_PASSWORD: cip_password
       POSTGRES_DB: cip_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+    volumes:
+      - ./backend/app:/app/app
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       postgres:
         condition: service_healthy

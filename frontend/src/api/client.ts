@@ -52,13 +52,18 @@ async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Prom
       // Ignore if not json
     }
 
-    const message =
-      errorData?.detail ||
-      (response.status === 401
-        ? 'Unauthorized: Valid authentication token required.'
-        : response.status === 403
-        ? 'Forbidden: Access denied for this tenant or resource.'
-        : `API Request failed with status ${response.status}`);
+    let message = errorData?.detail;
+    if (response.status === 404) {
+      message = errorData?.detail && errorData.detail !== 'Not Found'
+        ? errorData.detail
+        : `Endpoint not found (404): ${endpoint}. Ensure backend is running in development mode with current routes.`;
+    } else if (response.status === 401) {
+      message = errorData?.detail || 'Unauthorized: Valid authentication token required.';
+    } else if (response.status === 403) {
+      message = errorData?.detail || 'Forbidden: Access denied for this tenant or resource.';
+    } else if (!message) {
+      message = `API Request failed with status ${response.status}`;
+    }
 
     throw new ApiError(response.status, message, errorData);
   }

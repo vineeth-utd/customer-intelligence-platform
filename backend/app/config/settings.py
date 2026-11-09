@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     app_name: str = "Customer Intelligence Platform API"
     environment: str = "development"
-    cors_allowed_origins: str = "http://localhost:5173"
+    cors_allowed_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
 
     auth_secret_key: str = "dev-insecure-secret-key-change-in-production"
     auth_token_expire_minutes: int = 1440
