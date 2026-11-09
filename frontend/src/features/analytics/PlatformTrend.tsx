@@ -4,9 +4,18 @@ import { usePlatformTrend } from '../../hooks/queries';
 import { BaseChart } from '../../components/charts/BaseChart';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import type { PlatformTrendResult } from '../../types';
 
-export function PlatformTrend({ startDate, endDate }: { startDate: string; endDate: string }) {
-  const { data, isLoading, isError, refetch } = usePlatformTrend(startDate, endDate);
+interface PlatformTrendProps {
+  startDate: string;
+  endDate: string;
+  trends?: PlatformTrendResult[];
+}
+
+export function PlatformTrend({ startDate, endDate, trends }: PlatformTrendProps) {
+  const { data: fetchedData, isLoading, isError, refetch } = usePlatformTrend(startDate, endDate);
+  const data = trends ?? fetchedData;
+
 
   const chartOption = useMemo<EChartsOption>(() => {
     if (!data) return {};
@@ -75,15 +84,15 @@ export function PlatformTrend({ startDate, endDate }: { startDate: string; endDa
     };
   }, [data]);
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return <div className="bg-white p-6 rounded-lg shadow"><LoadingSpinner message="Loading trends..." /></div>;
   }
 
-  if (isError || !data) {
+  if ((isError || !data) && !trends) {
     return <div className="bg-white p-6 rounded-lg shadow"><ErrorMessage message="Failed to load trends." retry={() => refetch()} /></div>;
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow flex flex-col items-center justify-center min-h-[400px]">
         <p className="text-gray-500">No trend data available for this period.</p>

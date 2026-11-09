@@ -96,3 +96,90 @@ export interface CampaignAnalyticsResult {
   click_through_rate: number;
   conversion_rate: number;
 }
+
+export interface ConversionFunnelStage {
+  stage_name: string;
+  count: number;
+  step_conversion_rate: number | null;
+  drop_off_count: number;
+  drop_off_rate: number;
+  overall_conversion_rate: number;
+}
+
+export interface ConversionFunnelResult {
+  merchant_id: string;
+  start_date: string;
+  end_date: string;
+  stages: ConversionFunnelStage[];
+  overall_conversion_rate: number;
+  cart_abandonment_rate: number;
+  checkout_abandonment_rate: number;
+  secondary_engagement: Record<string, number>;
+}
+
+export interface JourneyEntrySourcePerformance {
+  entry_source: string;
+  total_journeys: number;
+  converted_journeys: number;
+  non_converting_journeys: number;
+  open_journeys: number;
+  conversion_rate: number;
+}
+
+export interface ShopperJourneyAnalyticsResult {
+  merchant_id: string;
+  start_date: string;
+  end_date: string;
+  total_journeys: number;
+  converted_journeys: number;
+  non_converting_journeys: number;
+  open_journeys: number;
+  journey_conversion_rate: number;
+  average_conversion_duration_seconds: number | null;
+  drop_off_stages: Record<string, number>;
+  by_entry_source: JourneyEntrySourcePerformance[];
+}
+
+export interface ShopperBehaviorAnalyticsResult {
+  merchant_id: string;
+  start_date: string;
+  end_date: string;
+  total_active_shoppers: number;
+  new_shoppers: number;
+  returning_shoppers: number;
+  total_purchasing_shoppers: number;
+  repeat_purchasing_shoppers: number;
+  repeat_purchase_rate: number;
+  average_order_value: number;
+  secondary_engagement: Record<string, number>;
+}
+
+export interface PriorPeriodComparison {
+  prior_start_date: string;
+  prior_end_date: string;
+  prior_revenue: number;
+  prior_orders: number;
+  prior_average_order_value: number;
+  revenue_growth_pct: number | null;
+  order_growth_pct: number | null;
+  aov_growth_pct: number | null;
+}
+
+export interface CustomerRevenueBreakdown {
+  new_customer_revenue: number;
+  new_customer_order_count: number;
+  repeat_customer_revenue: number;
+  repeat_customer_order_count: number;
+}
+
+export interface RevenueAnalyticsResult {
+  merchant_id: string;
+  start_date: string;
+  end_date: string;
+  total_revenue: number;
+  total_orders: number;
+  average_order_value: number;
+  prior_period_comparison: PriorPeriodComparison;
+  customer_revenue_breakdown: CustomerRevenueBreakdown;
+}
+

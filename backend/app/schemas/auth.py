@@ -33,3 +33,29 @@ class TokenPayload(BaseModel):
     iat: int
     exp: int
 
+
+class DevTokenRequest(BaseModel):
+    user_id: Optional[str] = None
+    scope: AccessScope = AccessScope.INTERNAL
+    merchant_id: Optional[UUID] = None
+    email: Optional[str] = None
+    roles: Optional[List[str]] = None
+
+
+class DevTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    principal: Principal
+
+
+class DevMerchantOption(BaseModel):
+    merchant_id: UUID
+    merchant_name: str
+    shopify_store_id: str
+
+
+class DevPrincipalsResponse(BaseModel):
+    internal: Principal
+    merchants: List[DevMerchantOption]
+
+

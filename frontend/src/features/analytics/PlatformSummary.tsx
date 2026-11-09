@@ -2,17 +2,25 @@ import { usePlatformSummary } from '../../hooks/queries';
 import { KpiCard } from '../../components/common/KpiCard';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import type { PlatformSummaryResult } from '../../types';
 
-export function PlatformSummary() {
-  const { data, isLoading, isError, refetch } = usePlatformSummary();
+interface PlatformSummaryProps {
+  summary?: PlatformSummaryResult;
+}
 
-  if (isLoading) {
+export function PlatformSummary({ summary }: PlatformSummaryProps) {
+  const { data: fetchedData, isLoading, isError, refetch } = usePlatformSummary();
+  const data = summary ?? fetchedData;
+
+  if (isLoading && !data) {
     return <LoadingSpinner message="Loading platform summary..." />;
   }
 
-  if (isError || !data) {
+  if ((isError || !data) && !summary) {
     return <ErrorMessage message="Failed to load platform summary." retry={() => refetch()} />;
   }
+
+  if (!data) return null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

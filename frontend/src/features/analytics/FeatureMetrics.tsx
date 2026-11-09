@@ -1,19 +1,26 @@
 import { useFeatureMetrics } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import type { FeatureMetricsResult } from '../../types';
 
-export function FeatureMetrics() {
-  const { data, isLoading, isError, refetch } = useFeatureMetrics();
+interface FeatureMetricsProps {
+  features?: FeatureMetricsResult[];
+}
 
-  if (isLoading) {
+export function FeatureMetrics({ features }: FeatureMetricsProps) {
+  const { data: fetchedData, isLoading, isError, refetch } = useFeatureMetrics();
+  const data = features ?? fetchedData;
+
+  if (isLoading && !data) {
     return <div className="bg-white p-6 rounded-lg shadow"><LoadingSpinner message="Loading feature metrics..." /></div>;
   }
 
-  if (isError || !data) {
+  if ((isError || !data) && !features) {
     return <div className="bg-white p-6 rounded-lg shadow"><ErrorMessage message="Failed to load feature metrics." retry={() => refetch()} /></div>;
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
+
     return (
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Feature Adoption</h3>

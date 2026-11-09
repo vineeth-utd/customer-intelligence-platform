@@ -1,5 +1,20 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+let currentToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('cip_auth_token') : null;
+
+export const setClientAuthToken = (token: string | null) => {
+  currentToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('cip_auth_token', token);
+    } else {
+      localStorage.removeItem('cip_auth_token');
+    }
+  }
+};
+
+export const getClientAuthToken = () => currentToken;
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -20,6 +35,10 @@ async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Prom
     headers.set('Content-Type', 'application/json');
   }
 
+  if (currentToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${currentToken}`);
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,
@@ -32,15 +51,21 @@ async function fetchClient<T>(endpoint: string, options: RequestInit = {}): Prom
     } catch {
       // Ignore if not json
     }
-    throw new ApiError(
-      response.status,
-      errorData?.detail || `API Request failed with status ${response.status}`,
-      errorData
-    );
+
+    const message =
+      errorData?.detail ||
+      (response.status === 401
+        ? 'Unauthorized: Valid authentication token required.'
+        : response.status === 403
+        ? 'Forbidden: Access denied for this tenant or resource.'
+        : `API Request failed with status ${response.status}`);
+
+    throw new ApiError(response.status, message, errorData);
   }
 
   return response.json() as Promise<T>;
 }
+
 
 export const apiClient = {
   get: <T>(endpoint: string, params?: Record<string, unknown>, options?: RequestInit) => {

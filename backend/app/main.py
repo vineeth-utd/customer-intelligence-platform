@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.kafka.producer import event_producer
 from app.scheduler.main import setup_scheduler, stop_scheduler
-from app.api import analytics, campaigns, dashboard, merchants, shoppers
+from app.api import analytics, auth, campaigns, dashboard, merchants, shoppers
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,9 @@ app.include_router(dashboard.router)
 app.include_router(merchants.router)
 app.include_router(campaigns.router)
 app.include_router(shoppers.router)
+
+if settings.environment == "development":
+    app.include_router(auth.router)
 
 @app.get("/health")
 async def health_check():
