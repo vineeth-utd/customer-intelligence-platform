@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context';
 import { DevAuthModal } from './components/common/DevAuthModal';
 import { Dashboard } from './pages/Dashboard';
@@ -9,8 +9,14 @@ import { CampaignIntelligence } from './pages/CampaignIntelligence';
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, isInternal, isMerchant, principal, merchantId, logout } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   return (
     <>
@@ -21,7 +27,10 @@ function Navigation() {
               <div className="flex-shrink-0 flex items-center">
                 <span className="text-xl font-black text-indigo-600 tracking-tight">CIP</span>
                 <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                  MVP 4.7
+                  MVP 4.8
+                </span>
+                <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wider">
+                  DEV AUTH
                 </span>
               </div>
 
@@ -93,15 +102,16 @@ function Navigation() {
                   <button
                     type="button"
                     onClick={() => setModalOpen(true)}
-                    className="text-xs text-gray-600 hover:text-gray-900 font-medium px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-50"
+                    className="inline-flex items-center gap-1 text-xs text-gray-700 hover:text-gray-900 font-medium px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-50 transition-colors"
                   >
-                    Switch Identity
+                    <span className="text-amber-500 font-mono text-[11px]">⚙</span>
+                    <span>Dev: Switch Identity</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={logout}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2.5 py-1 rounded hover:bg-red-50"
+                    onClick={handleLogout}
+                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2.5 py-1 rounded hover:bg-red-50 transition-colors"
                   >
                     Log Out
                   </button>
@@ -110,9 +120,10 @@ function Navigation() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(true)}
-                  className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-md"
+                  className="inline-flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-3 py-1.5 rounded-md shadow-xs transition-colors"
                 >
-                  Select Identity
+                  <span className="text-amber-300 font-mono text-[11px]">⚙</span>
+                  <span>Dev: Select Identity</span>
                 </button>
               )}
             </div>

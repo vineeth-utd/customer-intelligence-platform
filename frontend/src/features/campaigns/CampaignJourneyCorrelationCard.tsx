@@ -90,7 +90,8 @@ export function CampaignJourneyCorrelationCard({
     };
   }, [drop_off_stages]);
 
-  const hasDropOffs = Object.keys(drop_off_stages || {}).length > 0;
+  const hasDropOffs =
+    Boolean(drop_off_stages) && Object.values(drop_off_stages || {}).some((v) => v > 0);
 
   return (
     <div className="space-y-6">
@@ -129,7 +130,7 @@ export function CampaignJourneyCorrelationCard({
           <div className="text-2xl font-bold text-blue-900 mt-1">
             {open_journeys.toLocaleString()}
           </div>
-          <div className="text-[11px] text-blue-700 mt-1">In progress &lt; 30d</div>
+          <div className="text-[11px] text-blue-700 mt-1">Active within 7-day window</div>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
@@ -179,9 +180,9 @@ export function CampaignJourneyCorrelationCard({
 
             <div className="space-y-3 text-xs text-gray-600">
               <div className="p-3 bg-gray-50 rounded-lg">
-                <span className="font-semibold text-gray-900">Deterministic Inactivity Boundary:</span>
-                <p className="mt-1 text-gray-500 text-[11px]">
-                  Shopper Journeys group customer sessions across storefront and marketing touchpoints until 30 days of continuous inactivity elapse or a purchase completion occurs.
+                <span className="font-semibold text-gray-900">Deterministic 7-Day Window Boundary:</span>
+                <p className="mt-1 text-gray-500 text-[11px] leading-relaxed">
+                  Shopper Journeys connect multi-session customer touchpoints across storefront and marketing interactions for up to 7 days from initial session. Completed orders close the journey as Converted; reaching the 7-day boundary without conversion marks it Non-Converting.
                 </p>
               </div>
 

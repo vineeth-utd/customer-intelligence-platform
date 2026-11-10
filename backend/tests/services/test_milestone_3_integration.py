@@ -411,7 +411,8 @@ async def test_milestone_3_primary_business_intelligence_questions(session: Asyn
     )
     session.add(c_daily)
 
-    # Seed campaign events for audience analysis & attribution
+    # Seed campaign events for audience analysis & attribution on base_date
+    base_dt = datetime.combine(base_date, datetime.min.time(), tzinfo=timezone.utc)
     sess_camp = uuid.uuid4()
     ce_click = CampaignEvent(
         event_id=uuid.uuid4(),
@@ -421,7 +422,7 @@ async def test_milestone_3_primary_business_intelligence_questions(session: Asyn
         session_id=sess_camp,
         event_type="EMAIL_CLICKED",
         event_version=1,
-        event_timestamp=now - timedelta(hours=3),
+        event_timestamp=base_dt + timedelta(hours=10),
         payload={"url": "https://example.com/vip"},
         source="email",
         processed=True,
@@ -434,8 +435,8 @@ async def test_milestone_3_primary_business_intelligence_questions(session: Asyn
         order_status="completed",
         currency="USD",
         total_amount=200.0,
-        placed_at=now - timedelta(hours=2),
-        completed_at=now - timedelta(hours=2),
+        placed_at=base_dt + timedelta(hours=11),
+        completed_at=base_dt + timedelta(hours=11),
     )
     ev_active = ShopperEvent(
         event_id=uuid.uuid4(),
@@ -444,7 +445,7 @@ async def test_milestone_3_primary_business_intelligence_questions(session: Asyn
         session_id=sess_camp,
         event_type="SESSION_STARTED",
         event_version=1,
-        event_timestamp=now - timedelta(hours=3),
+        event_timestamp=base_dt + timedelta(hours=10),
         payload={"url": "https://example.com/vip"},
         source="storefront",
         processed=True,

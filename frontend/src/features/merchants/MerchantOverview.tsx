@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMerchantDashboard } from '../../hooks/queries';
 import { DateRangePicker } from '../../components/common/DateRangePicker';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -22,7 +23,14 @@ import { MerchantCampaigns } from './MerchantCampaigns';
 import { MerchantShoppers } from './MerchantShoppers';
 import { MerchantOrders } from './MerchantOrders';
 
-type TabKey = 'overview' | 'campaigns' | 'health' | 'journey' | 'profile' | 'activity';
+type TabKey =
+  | 'overview'
+  | 'shoppers'
+  | 'campaigns'
+  | 'health'
+  | 'journey'
+  | 'profile'
+  | 'activity';
 
 interface MerchantOverviewProps {
   merchantId: string;
@@ -40,7 +48,71 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
   }, []);
 
   const [dateRange, setDateRange] = useState(initialDates);
-  const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs: TabKey[] = [
+    'overview',
+    'shoppers',
+    'campaigns',
+    'health',
+    'journey',
+    'profile',
+    'activity',
+  ];
+  const tabParam = searchParams.get('tab') as TabKey | null;
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
+
+  const handleTabChange = (key: TabKey) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === 'overview') {
+          next.delete('tab');
+        } else {
+          next.set('tab', key);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  const navRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll]);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const activeBtn = el.querySelector<HTMLElement>('[data-active="true"]');
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+    checkScroll();
+  }, [activeTab, checkScroll]);
+
+  const scrollNav = (delta: number) => {
+    navRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
+  };
 
   const { data, isLoading, isError, error, refetch } = useMerchantDashboard(
     merchantId,
@@ -69,6 +141,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
   const tabs: { key: TabKey; label: string; badge?: string }[] = [
     { key: 'overview', label: 'Overview & Intelligence' },
+    { key: 'shoppers', label: 'Shoppers & Customers' },
     { key: 'campaigns', label: 'Campaigns & Marketing' },
     {
       key: 'health',
@@ -109,18 +182,36 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 bg-white px-4 rounded-t-lg shadow-xs">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+      <div className="relative border-b border-gray-200 bg-white px-2 sm:px-4 rounded-t-lg shadow-xs">
+        {canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => scrollNav(-200)}
+            aria-label="Scroll tabs left"
+            className="absolute left-0 top-0 bottom-0 z-10 px-2 bg-gradient-to-r from-white via-white/95 to-transparent flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors"
+          >
+            <span className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-xs text-xs font-bold">
+              ‹
+            </span>
+          </button>
+        )}
+
+        <nav
+          ref={navRef}
+          className="-mb-px flex space-x-6 overflow-x-auto scroll-smooth py-0.5"
+          aria-label="Tabs"
+        >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none ${
+                data-active={isActive ? 'true' : 'false'}
+                onClick={() => handleTabChange(tab.key)}
+                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-t ${
                   isActive
-                    ? 'border-indigo-600 text-indigo-600'
+                    ? 'border-indigo-600 text-indigo-600 font-semibold'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -142,6 +233,19 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
             );
           })}
         </nav>
+
+        {canScrollRight && (
+          <button
+            type="button"
+            onClick={() => scrollNav(200)}
+            aria-label="Scroll tabs right"
+            className="absolute right-0 top-0 bottom-0 z-10 px-2 bg-gradient-to-l from-white via-white/95 to-transparent flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors"
+          >
+            <span className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-xs text-xs font-bold">
+              ›
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Tab Contents */}
@@ -241,6 +345,12 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
         </div>
       )}
 
+      {activeTab === 'shoppers' && (
+        <div className="space-y-6">
+          <MerchantShoppers merchantId={merchantId} />
+        </div>
+      )}
+
       {activeTab === 'campaigns' && (
         <div className="space-y-6">
           <MerchantCampaigns merchantId={merchantId} />
@@ -249,10 +359,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
       {activeTab === 'activity' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MerchantOrders merchantId={merchantId} />
-            <MerchantShoppers merchantId={merchantId} />
-          </div>
+          <MerchantOrders merchantId={merchantId} />
         </div>
       )}
     </div>

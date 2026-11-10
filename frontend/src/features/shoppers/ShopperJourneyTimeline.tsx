@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useShopperJourneys, useShopperJourneyDetail } from '../../hooks/queries';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -39,7 +40,7 @@ const AUTHORITATIVE_EVENT_CONFIG: Record<
 };
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
-  if (!endedAt) return 'In Progress (Active Journey)';
+  if (!endedAt) return 'Active (Open 7-Day Window)';
   const diffMs = Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime());
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
@@ -53,6 +54,7 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
 }
 
 export function ShopperJourneyTimeline({ merchantId, shopperId }: ShopperJourneyTimelineProps) {
+  const [, setSearchParams] = useSearchParams();
   const {
     data: journeys,
     isLoading: loadingJourneys,
@@ -200,19 +202,37 @@ export function ShopperJourneyTimeline({ merchantId, shopperId }: ShopperJourney
 
         {/* Conversion Banner if Converted */}
         {currentJourney.converted && currentJourney.order_id && (
-          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800">
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-800">
             <div className="flex items-center gap-2">
               <span className="text-base">🎉</span>
               <span>
                 <strong>Journey Converted:</strong> This journey resulted in completed Order{' '}
-                <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono text-[11px] text-emerald-900">
+                <code
+                  title={String(currentJourney.order_id)}
+                  className="bg-emerald-100 px-1 py-0.5 rounded font-mono text-[11px] text-emerald-900"
+                >
                   {currentJourney.order_id}
                 </code>
               </span>
             </div>
-            <span className="font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded">
-              Conversion Closes Journey
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('tab', 'orders');
+                    return next;
+                  });
+                }}
+                className="font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded transition-colors text-xs"
+              >
+                View in Purchase History &rarr;
+              </button>
+              <span className="font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded text-[11px]">
+                Closes Journey
+              </span>
+            </div>
           </div>
         )}
 

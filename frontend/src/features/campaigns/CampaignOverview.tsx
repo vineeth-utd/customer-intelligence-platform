@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   useCampaign,
   useCampaignPerformance,
@@ -8,6 +8,7 @@ import {
   useCampaignAudience,
 } from '../../hooks/queries/useCampaignQueries';
 import { useMerchant } from '../../hooks/queries/useMerchantQueries';
+import { useAuth } from '../../context';
 import { DateRangePicker } from '../../components/common/DateRangePicker';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -36,8 +37,27 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
     };
   }, []);
 
+  const { isInternal } = useAuth();
   const [dateRange, setDateRange] = useState(initialDates);
-  const [activeTab, setActiveTab] = useState<CampaignTabKey>('performance');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs: CampaignTabKey[] = ['performance', 'attribution', 'journey', 'audience'];
+  const tabParam = searchParams.get('tab') as CampaignTabKey | null;
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'performance';
+
+  const handleTabChange = (key: CampaignTabKey) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === 'performance') {
+          next.delete('tab');
+        } else {
+          next.set('tab', key);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   const {
     data: campaign,
@@ -129,19 +149,35 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
   return (
     <div className="space-y-6">
       {/* Breadcrumb Navigation Bar */}
-      <nav className="flex items-center text-xs text-gray-500 gap-2 mb-2">
-        <Link to="/merchants" className="hover:text-indigo-600 transition-colors">
-          Merchants
-        </Link>
+      <nav className="flex flex-wrap items-center text-xs text-gray-500 gap-2 mb-2">
+        {isInternal ? (
+          <>
+            <Link to="/merchants" className="hover:text-indigo-600 transition-colors">
+              Merchants
+            </Link>
+            <span>&rsaquo;</span>
+            <Link
+              to={`/merchants/${merchantId}`}
+              className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+            >
+              {merchant?.merchant_name || 'Store Overview'}
+            </Link>
+          </>
+        ) : (
+          <Link
+            to={`/merchants/${merchantId}`}
+            className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+          >
+            {merchant?.merchant_name || 'Store Intelligence'}
+          </Link>
+        )}
         <span>&rsaquo;</span>
         <Link
-          to={`/merchants/${merchantId}`}
-          className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+          to={`/merchants/${merchantId}?tab=campaigns`}
+          className="hover:text-indigo-600 transition-colors text-gray-600"
         >
-          {merchant?.merchant_name || 'Store Overview'}
+          Campaigns
         </Link>
-        <span>&rsaquo;</span>
-        <span className="text-gray-400">Campaigns</span>
         <span>&rsaquo;</span>
         <span className="font-semibold text-gray-900 truncate max-w-xs">
           {campaign.campaign_name}
@@ -169,18 +205,26 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
               Lifetime: <strong className="text-gray-700">{formatLifetime()}</strong>
             </span>
             <span>
-              Campaign ID: <strong className="font-mono text-gray-700">{campaign.campaign_id}</strong>
+              Campaign ID: <strong title={campaign.campaign_id} className="font-mono text-gray-700">{campaign.campaign_id}</strong>
             </span>
           </p>
         </div>
 
-        <div>
-          <div className="text-right text-[11px] text-gray-400 mb-1">Analytical Horizon:</div>
-          <DateRangePicker
-            startDate={dateRange.startDate}
-            endDate={dateRange.endDate}
-            onChange={setDateRange}
-          />
+        <div className="flex flex-wrap items-end gap-4">
+          <Link
+            to={`/merchants/${merchantId}?tab=campaigns`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md border border-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            &larr; Back to Store Overview
+          </Link>
+          <div>
+            <div className="text-right text-[11px] text-gray-400 mb-1">Analytical Horizon:</div>
+            <DateRangePicker
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onChange={setDateRange}
+            />
+          </div>
         </div>
       </div>
 
@@ -193,8 +237,8 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none ${
+                onClick={() => handleTabChange(tab.key)}
+                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
                   isActive
                     ? 'border-indigo-600 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

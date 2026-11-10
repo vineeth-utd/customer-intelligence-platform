@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context';
 import { authApi } from '../../api/auth';
 import type { DevMerchantOption } from '../../types';
@@ -10,6 +11,7 @@ interface DevAuthModalProps {
 }
 
 export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModalProps) {
+  const navigate = useNavigate();
   const { loginWithDevPrincipal, setManualToken } = useAuth();
   const [merchants, setMerchants] = useState<DevMerchantOption[]>([]);
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>('');
@@ -41,6 +43,7 @@ export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModa
     try {
       await loginWithDevPrincipal({ scope: 'INTERNAL' });
       onClose?.();
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to obtain INTERNAL token');
     } finally {
@@ -61,6 +64,7 @@ export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModa
         merchant_id: selectedMerchantId,
       });
       onClose?.();
+      navigate(`/merchants/${selectedMerchantId}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to obtain MERCHANT token');
     } finally {
@@ -76,6 +80,19 @@ export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModa
     try {
       setManualToken(customToken.trim());
       onClose?.();
+      try {
+        const parts = customToken.trim().split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload.scope === 'MERCHANT' && payload.merchant_id) {
+            navigate(`/merchants/${payload.merchant_id}`, { replace: true });
+            return;
+          }
+        }
+      } catch {
+        // Fallback to home
+      }
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid token format');
     }
@@ -96,7 +113,7 @@ export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModa
           </button>
         )}
 
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-3">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -111,6 +128,21 @@ export function DevAuthModal({ isOpen, onClose, canDismiss = true }: DevAuthModa
           <p className="mt-1 text-sm text-gray-500">
             Select a principal to sign in for this local development session.
           </p>
+        </div>
+
+        {/* Development Environment Callout */}
+        <div className="mb-5 p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2.5">
+          <span className="text-base leading-none mt-0.5">⚠️</span>
+          <div>
+            <strong className="font-semibold text-amber-900">Development Tooling Only:</strong>
+            <p className="mt-0.5 text-amber-700 leading-relaxed">
+              This identity selector is backed by local mock token endpoints registered only when{' '}
+              <code className="bg-amber-100 px-1 py-0.2 rounded font-mono text-[11px] text-amber-900">
+                settings.environment == &apos;development&apos;
+              </code>
+              . These endpoints return 404 in staging and production environments.
+            </p>
+          </div>
         </div>
 
         {error && (

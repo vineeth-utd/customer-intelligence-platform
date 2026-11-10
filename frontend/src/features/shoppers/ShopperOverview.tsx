@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useShopper, useMerchant } from '../../hooks/queries';
+import { useAuth } from '../../context';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 
@@ -18,7 +18,26 @@ interface ShopperOverviewProps {
 }
 
 export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps) {
-  const [activeTab, setActiveTab] = useState<ShopperTabKey>('overview');
+  const { isInternal } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs: ShopperTabKey[] = ['overview', 'journeys', 'orders', 'activity'];
+  const tabParam = searchParams.get('tab') as ShopperTabKey | null;
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
+
+  const handleTabChange = (key: ShopperTabKey) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === 'overview') {
+          next.delete('tab');
+        } else {
+          next.set('tab', key);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   const {
     data: shopper,
@@ -67,19 +86,35 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
   return (
     <div className="space-y-6">
       {/* Breadcrumb Navigation Bar */}
-      <nav className="flex items-center text-xs text-gray-500 gap-2 mb-2">
-        <Link to="/merchants" className="hover:text-indigo-600 transition-colors">
-          Merchants
-        </Link>
+      <nav className="flex flex-wrap items-center text-xs text-gray-500 gap-2 mb-2">
+        {isInternal ? (
+          <>
+            <Link to="/merchants" className="hover:text-indigo-600 transition-colors">
+              Merchants
+            </Link>
+            <span>&rsaquo;</span>
+            <Link
+              to={`/merchants/${merchantId}`}
+              className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+            >
+              {merchant?.merchant_name || 'Store Overview'}
+            </Link>
+          </>
+        ) : (
+          <Link
+            to={`/merchants/${merchantId}`}
+            className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+          >
+            {merchant?.merchant_name || 'Store Intelligence'}
+          </Link>
+        )}
         <span>&rsaquo;</span>
         <Link
-          to={`/merchants/${merchantId}`}
-          className="hover:text-indigo-600 transition-colors font-medium text-gray-700"
+          to={`/merchants/${merchantId}?tab=shoppers`}
+          className="hover:text-indigo-600 transition-colors text-gray-600"
         >
-          {merchant?.merchant_name || 'Store Overview'}
+          Shoppers
         </Link>
-        <span>&rsaquo;</span>
-        <span className="text-gray-400">Shoppers</span>
         <span>&rsaquo;</span>
         <span className="font-semibold text-gray-900 truncate max-w-xs">{displayName}</span>
       </nav>
@@ -89,7 +124,10 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
-            <span className="text-xs font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200">
+            <span
+              title={shopper.shopper_id}
+              className="text-xs font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200"
+            >
               ID: {shopper.shopper_id}
             </span>
           </div>
@@ -125,8 +163,8 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
 
         <div>
           <Link
-            to={`/merchants/${merchantId}`}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md border border-gray-200 transition-colors"
+            to={`/merchants/${merchantId}?tab=shoppers`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-md border border-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             &larr; Back to Store Overview
           </Link>
@@ -140,8 +178,8 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              onClick={() => handleTabChange(tab.key)}
+              className={`whitespace-nowrap shrink-0 py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
                 activeTab === tab.key
                   ? 'border-indigo-500 text-indigo-600 font-semibold'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

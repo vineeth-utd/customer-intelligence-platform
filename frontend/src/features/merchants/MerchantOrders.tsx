@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useMerchantOrders } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
@@ -41,6 +42,7 @@ export function MerchantOrders({ merchantId }: { merchantId: string }) {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shopper</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placed At</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
@@ -49,8 +51,18 @@ export function MerchantOrders({ merchantId }: { merchantId: string }) {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.items.map((order) => (
               <tr key={order.order_id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                <td title={order.order_id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                   {order.order_id.substring(0, 8)}...
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-xs">
+                  <Link
+                    to={`/merchants/${merchantId}/shoppers/${order.shopper_id}`}
+                    title={`View shopper: ${order.shopper_id}`}
+                    className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-900 font-medium hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded font-mono"
+                  >
+                    <span>{order.shopper_id.substring(0, 8)}...</span>
+                    <span>&rarr;</span>
+                  </Link>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(order.placed_at).toLocaleString()}

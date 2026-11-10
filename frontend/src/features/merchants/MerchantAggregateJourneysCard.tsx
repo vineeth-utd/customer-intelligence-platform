@@ -53,7 +53,7 @@ export function MerchantAggregateJourneysCard({ journeys }: MerchantAggregateJou
         </div>
 
         {/* By entry source breakdown table */}
-        {journeys.by_entry_source && journeys.by_entry_source.length > 0 && (
+        {journeys.by_entry_source && journeys.by_entry_source.length > 0 ? (
           <div>
             <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
               Performance by Entry Source
@@ -88,6 +88,10 @@ export function MerchantAggregateJourneysCard({ journeys }: MerchantAggregateJou
                 </tbody>
               </table>
             </div>
+          </div>
+        ) : (
+          <div className="pt-3 border-t border-gray-100 text-center text-xs text-gray-400">
+            No entry source breakdown recorded in the selected period.
           </div>
         )}
       </div>

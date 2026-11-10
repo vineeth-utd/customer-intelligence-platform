@@ -189,6 +189,10 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
     };
   }, [directCount, crossCount]);
 
+  const hasAttributionData = perspectives.some(
+    (p) => p.metric.conversions_count > 0 || p.metric.attributed_revenue > 0
+  );
+
   return (
     <div className="space-y-6">
       {/* Notice Banner explaining alternative lenses */}
@@ -272,7 +276,19 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
           <p className="text-xs text-gray-500 mb-4">
             Side-by-side comparison of conversions and revenue under each model
           </p>
-          <BaseChart option={comparisonChartOption} height={290} />
+          {hasAttributionData ? (
+            <BaseChart option={comparisonChartOption} height={290} />
+          ) : (
+            <div className="py-16 text-center text-gray-500 text-xs flex flex-col items-center justify-center">
+              <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="font-medium text-gray-700">No Attributed Conversions in Selected Period</p>
+              <p className="text-gray-400 mt-1 max-w-sm">
+                No completed purchases intersected with active campaign touchpoints within the 7-day journey window for this date range.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Dedicated Assisted Attribution Explainer */}
@@ -394,7 +410,7 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
               <li className="flex items-start gap-2">
                 <span className="text-indigo-600 font-bold">•</span>
                 <span>
-                  <strong>Journey-Based Horizon:</strong> Multi-touch models respect the 30-day inactivity Shopper Journey boundaries rather than unbounded historical lookbacks.
+                  <strong>Journey-Based Horizon:</strong> Multi-touch models respect the authoritative 7-day Shopper Journey window boundaries rather than unbounded historical lookbacks.
                 </span>
               </li>
               <li className="flex items-start gap-2">
