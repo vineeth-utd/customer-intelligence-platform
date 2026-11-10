@@ -22,10 +22,22 @@ export function StatusBadge({ status, type = 'general' }: StatusBadgeProps) {
       default:
         colorClasses = 'bg-gray-100 text-gray-700 border-gray-200';
     }
-  } else if (type === 'journey' || normalized === 'OPEN' || normalized === 'COMPLETED') {
+  } else if (
+    type === 'journey' ||
+    normalized === 'OPEN' ||
+    normalized === 'CONVERTED' ||
+    normalized === 'NON_CONVERTING' ||
+    normalized === 'COMPLETED'
+  ) {
     switch (normalized) {
       case 'OPEN':
         colorClasses = 'bg-blue-50 text-blue-700 border-blue-200';
+        break;
+      case 'CONVERTED':
+        colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        break;
+      case 'NON_CONVERTING':
+        colorClasses = 'bg-slate-100 text-slate-700 border-slate-200';
         break;
       case 'COMPLETED':
         colorClasses = 'bg-purple-50 text-purple-700 border-purple-200';

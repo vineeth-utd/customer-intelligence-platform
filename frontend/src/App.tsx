@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context';
 import { DevAuthModal } from './components/common/DevAuthModal';
 import { Dashboard } from './pages/Dashboard';
 import { Merchants } from './pages/Merchants';
+import { ShopperIntelligence } from './pages/ShopperIntelligence';
 
 function Navigation() {
   const location = useLocation();
@@ -170,6 +171,10 @@ function AppRoutes() {
         }
       />
       <Route path="/merchants/:merchantId" element={<Merchants />} />
+      <Route
+        path="/merchants/:merchantId/shoppers/:shopperId"
+        element={<ShopperIntelligence />}
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
