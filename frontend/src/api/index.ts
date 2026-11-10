@@ -4,4 +4,5 @@ export * from './dashboard';
 export * from './analytics';
 export * from './merchants';
 export * from './shoppers';
+export * from './campaigns';
 

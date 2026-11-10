@@ -5,6 +5,7 @@ import { DevAuthModal } from './components/common/DevAuthModal';
 import { Dashboard } from './pages/Dashboard';
 import { Merchants } from './pages/Merchants';
 import { ShopperIntelligence } from './pages/ShopperIntelligence';
+import { CampaignIntelligence } from './pages/CampaignIntelligence';
 
 function Navigation() {
   const location = useLocation();
@@ -20,7 +21,7 @@ function Navigation() {
               <div className="flex-shrink-0 flex items-center">
                 <span className="text-xl font-black text-indigo-600 tracking-tight">CIP</span>
                 <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                  MVP 4.5
+                  MVP 4.7
                 </span>
               </div>
 
@@ -174,6 +175,10 @@ function AppRoutes() {
       <Route
         path="/merchants/:merchantId/shoppers/:shopperId"
         element={<ShopperIntelligence />}
+      />
+      <Route
+        path="/merchants/:merchantId/campaigns/:campaignId"
+        element={<CampaignIntelligence />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

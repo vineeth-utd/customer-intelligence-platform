@@ -22,7 +22,7 @@ import { MerchantCampaigns } from './MerchantCampaigns';
 import { MerchantShoppers } from './MerchantShoppers';
 import { MerchantOrders } from './MerchantOrders';
 
-type TabKey = 'overview' | 'health' | 'journey' | 'profile' | 'activity';
+type TabKey = 'overview' | 'campaigns' | 'health' | 'journey' | 'profile' | 'activity';
 
 interface MerchantOverviewProps {
   merchantId: string;
@@ -69,6 +69,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
   const tabs: { key: TabKey; label: string; badge?: string }[] = [
     { key: 'overview', label: 'Overview & Intelligence' },
+    { key: 'campaigns', label: 'Campaigns & Marketing' },
     {
       key: 'health',
       label: 'Health & Risk',
@@ -240,9 +241,14 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
         </div>
       )}
 
-      {activeTab === 'activity' && (
+      {activeTab === 'campaigns' && (
         <div className="space-y-6">
           <MerchantCampaigns merchantId={merchantId} />
+        </div>
+      )}
+
+      {activeTab === 'activity' && (
+        <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MerchantOrders merchantId={merchantId} />
             <MerchantShoppers merchantId={merchantId} />

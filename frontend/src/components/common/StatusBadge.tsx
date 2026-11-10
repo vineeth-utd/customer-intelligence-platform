@@ -1,6 +1,6 @@
 interface StatusBadgeProps {
   status: string;
-  type?: 'health' | 'journey' | 'install' | 'general';
+  type?: 'health' | 'journey' | 'install' | 'campaign' | 'general';
 }
 
 export function StatusBadge({ status, type = 'general' }: StatusBadgeProps) {
@@ -8,7 +8,21 @@ export function StatusBadge({ status, type = 'general' }: StatusBadgeProps) {
 
   let colorClasses = 'bg-gray-100 text-gray-800 border-gray-200';
 
-  if (type === 'health' || normalized === 'HEALTHY' || normalized === 'NEEDS_ATTENTION' || normalized === 'AT_RISK') {
+  if (type === 'campaign' || normalized === 'DRAFT' || normalized === 'ACTIVE') {
+    switch (normalized) {
+      case 'ACTIVE':
+        colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        break;
+      case 'DRAFT':
+        colorClasses = 'bg-slate-100 text-slate-700 border-slate-200';
+        break;
+      case 'COMPLETED':
+        colorClasses = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        break;
+      default:
+        colorClasses = 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  } else if (type === 'health' || normalized === 'HEALTHY' || normalized === 'NEEDS_ATTENTION' || normalized === 'AT_RISK') {
     switch (normalized) {
       case 'HEALTHY':
         colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
