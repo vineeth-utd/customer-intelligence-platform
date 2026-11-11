@@ -1,7 +1,8 @@
-import uuid
+import asyncio
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any
+import uuid
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,7 +58,13 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
 
     merchant = await get_merchant_by_id(session, envelope.merchant_id)
     if not merchant:
-        raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            merchant = await get_merchant_by_id(session, envelope.merchant_id)
+            if merchant:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
 
     # Using explicit lookup to prevent duplicate exception control flow
     existing_order = await get_order(session, payload.order_id)
@@ -83,7 +90,13 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
         # 1. Validate the complete ownership chain
         row = await get_product_variant_with_product(session, item.variant_id)
         if not row:
-            raise UnresolvedReferenceError(f"Variant {item.variant_id} does not exist.")
+            for _ in range(6):
+                await asyncio.sleep(0.5)
+                row = await get_product_variant_with_product(session, item.variant_id)
+                if row:
+                    break
+            else:
+                raise UnresolvedReferenceError(f"Variant {item.variant_id} does not exist.")
         variant, product = row
 
         if product.product_id != item.product_id:

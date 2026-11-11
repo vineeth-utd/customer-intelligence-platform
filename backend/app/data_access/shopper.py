@@ -18,10 +18,12 @@ async def upsert_shopper(
             merchant_id=merchant_id,
             first_seen_at=event_timestamp,
             last_seen_at=event_timestamp,
+            created_at=event_timestamp,
         )
         .on_conflict_do_update(
             index_elements=["shopper_id"],
             set_={
+                "first_seen_at": func.least(Shopper.first_seen_at, event_timestamp),
                 "last_seen_at": func.greatest(Shopper.last_seen_at, event_timestamp),
             },
         )

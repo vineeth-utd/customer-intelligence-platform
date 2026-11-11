@@ -23,18 +23,23 @@ async def create_campaign(
     status: str,
     start_at: Any | None = None,
     end_at: Any | None = None,
+    created_at: datetime | None = None,
 ) -> Campaign:
-    campaign = Campaign(
-        campaign_id=campaign_id,
-        merchant_id=merchant_id,
-        segment_id=segment_id,
-        campaign_name=campaign_name,
-        campaign_type=campaign_type,
-        campaign_medium=campaign_medium,
-        status=status,
-        start_at=start_at,
-        end_at=end_at,
-    )
+    kwargs: dict[str, Any] = {
+        "campaign_id": campaign_id,
+        "merchant_id": merchant_id,
+        "segment_id": segment_id,
+        "campaign_name": campaign_name,
+        "campaign_type": campaign_type,
+        "campaign_medium": campaign_medium,
+        "status": status,
+        "start_at": start_at,
+        "end_at": end_at,
+    }
+    if created_at is not None:
+        kwargs["created_at"] = created_at
+
+    campaign = Campaign(**kwargs)
     session.add(campaign)
     return campaign
 

@@ -50,7 +50,9 @@ async def upsert_merchant_segment(
     if segment:
         segment.segment_definition = entry.segment_definition
     else:
+        deterministic_segment_id = uuid.uuid5(merchant_id, entry.segment_name)
         segment = ShopperSegment(
+            segment_id=deterministic_segment_id,
             merchant_id=merchant_id,
             segment_name=entry.segment_name,
             segment_definition=entry.segment_definition,

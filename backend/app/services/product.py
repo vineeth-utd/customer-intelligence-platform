@@ -1,9 +1,12 @@
-import uuid
+import asyncio
 from collections.abc import Awaitable, Callable
 from decimal import Decimal, InvalidOperation
 from typing import Any
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.data_access.merchant import get_merchant_by_id
 
 from app.data_access.product import (
     apply_variant_field_changes,
@@ -12,6 +15,7 @@ from app.data_access.product import (
     archive_variant_row,
     create_product,
     create_product_variant,
+    get_product_by_id,
     get_product_variant_by_id,
     update_product_fields,
 )
@@ -67,6 +71,16 @@ def _coerce_variant_changed_values(changed_values: dict[str, Any]) -> dict[str, 
 
 async def _handle_product_created(session: AsyncSession, envelope: ProductEventEnvelope) -> None:
     payload = ProductCreatedPayload.model_validate(envelope.payload)
+    merchant = await get_merchant_by_id(session, envelope.merchant_id)
+    if merchant is None:
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            merchant = await get_merchant_by_id(session, envelope.merchant_id)
+            if merchant is not None:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} not found")
+
     await create_product(
         session,
         product_id=envelope.product_id,
@@ -75,6 +89,7 @@ async def _handle_product_created(session: AsyncSession, envelope: ProductEventE
         category=payload.category,
         vendor=payload.vendor,
         status=payload.status,
+        created_at=envelope.event_timestamp,
     )
 
 
@@ -94,6 +109,16 @@ async def _handle_product_archived(session: AsyncSession, envelope: ProductEvent
 
 async def _handle_product_variant_created(session: AsyncSession, envelope: ProductEventEnvelope) -> None:
     payload = ProductVariantCreatedPayload.model_validate(envelope.payload)
+    product = await get_product_by_id(session, envelope.product_id)
+    if product is None:
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            product = await get_product_by_id(session, envelope.product_id)
+            if product is not None:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Product {envelope.product_id} not found")
+
     await create_product_variant(
         session,
         variant_id=payload.variant_id,
@@ -105,6 +130,7 @@ async def _handle_product_variant_created(session: AsyncSession, envelope: Produ
         color=payload.color,
         inventory_quantity=payload.inventory_quantity,
         status=payload.status,
+        created_at=envelope.event_timestamp,
     )
 
 

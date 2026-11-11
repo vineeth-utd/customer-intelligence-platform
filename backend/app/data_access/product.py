@@ -1,5 +1,6 @@
-import uuid
+from datetime import datetime
 from decimal import Decimal
+import uuid
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -50,22 +51,27 @@ async def create_product(
     category: str | None,
     vendor: str | None,
     status: str,
+    created_at: datetime | None = None,
 ) -> None:
     """Insert a products row for this product_id if one doesn't exist yet.
 
     Idempotent (ON CONFLICT DO NOTHING on the product_id primary key) since
     PRODUCT_CREATED may be redelivered. Does not commit.
     """
+    values: dict[str, object] = {
+        "product_id": product_id,
+        "merchant_id": merchant_id,
+        "product_name": product_name,
+        "category": category,
+        "vendor": vendor,
+        "status": status,
+    }
+    if created_at is not None:
+        values["created_at"] = created_at
+
     stmt = (
         pg_insert(Product)
-        .values(
-            product_id=product_id,
-            merchant_id=merchant_id,
-            product_name=product_name,
-            category=category,
-            vendor=vendor,
-            status=status,
-        )
+        .values(**values)
         .on_conflict_do_nothing(index_elements=["product_id"])
     )
     await session.execute(stmt)
@@ -117,6 +123,7 @@ async def create_product_variant(
     color: str | None,
     inventory_quantity: int,
     status: str,
+    created_at: datetime | None = None,
 ) -> None:
     """Insert a product_variants row for this variant_id if one doesn't exist yet.
 
@@ -127,19 +134,23 @@ async def create_product_variant(
     PRODUCT_CREATED before its variant events (both share the same Kafka
     partition key) prevents that. Does not commit.
     """
+    values: dict[str, object] = {
+        "variant_id": variant_id,
+        "product_id": product_id,
+        "variant_name": variant_name,
+        "sku": sku,
+        "price": price,
+        "size": size,
+        "color": color,
+        "inventory_quantity": inventory_quantity,
+        "status": status,
+    }
+    if created_at is not None:
+        values["created_at"] = created_at
+
     stmt = (
         pg_insert(ProductVariant)
-        .values(
-            variant_id=variant_id,
-            product_id=product_id,
-            variant_name=variant_name,
-            sku=sku,
-            price=price,
-            size=size,
-            color=color,
-            inventory_quantity=inventory_quantity,
-            status=status,
-        )
+        .values(**values)
         .on_conflict_do_nothing(index_elements=["variant_id"])
     )
     await session.execute(stmt)

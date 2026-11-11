@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any, Optional
@@ -18,6 +19,7 @@ from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order
 from app.data_access.processing_state import record_domain_activity
 from app.data_access.segment import get_merchant_segments
+from app.services.segment import initialize_merchant_segments
 from app.models.campaign import Campaign
 from app.schemas.campaign import CampaignDetailResponse, CampaignSummaryResponse
 from app.schemas.events.envelope import CampaignEventEnvelope
@@ -44,11 +46,26 @@ async def _handle_campaign_created(session: AsyncSession, envelope: CampaignEven
     payload = CampaignCreatedPayload.model_validate(envelope.payload)
     merchant = await get_merchant_by_id(session, envelope.merchant_id)
     if merchant is None:
-        raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} not found")
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            merchant = await get_merchant_by_id(session, envelope.merchant_id)
+            if merchant is not None:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} not found")
 
     segments = await get_merchant_segments(session, envelope.merchant_id)
+    if not segments or payload.segment_id not in [s.segment_id for s in segments]:
+        await initialize_merchant_segments(session, envelope.merchant_id)
+        segments = await get_merchant_segments(session, envelope.merchant_id)
     if payload.segment_id not in [s.segment_id for s in segments]:
-        raise UnresolvedReferenceError(f"Segment {payload.segment_id} not found for Merchant {envelope.merchant_id}")
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            segments = await get_merchant_segments(session, envelope.merchant_id)
+            if payload.segment_id in [s.segment_id for s in segments]:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Segment {payload.segment_id} not found for Merchant {envelope.merchant_id}")
 
     await create_campaign(
         session,
@@ -61,6 +78,7 @@ async def _handle_campaign_created(session: AsyncSession, envelope: CampaignEven
         status=payload.status,
         start_at=payload.start_at,
         end_at=payload.end_at,
+        created_at=envelope.event_timestamp,
     )
 
 

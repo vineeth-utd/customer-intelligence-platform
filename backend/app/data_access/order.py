@@ -31,6 +31,7 @@ async def create_order(
         placed_at=placed_at,
         completed_at=completed_at,
         session_id=session_id,
+        created_at=placed_at,
     )
     session.add(order)
     return order

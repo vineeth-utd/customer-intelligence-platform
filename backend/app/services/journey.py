@@ -66,16 +66,23 @@ def _derive_entry_source(events: list[ShopperJourneyEvent], payload_map: dict[uu
     return "direct"
 
 
-async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_id: uuid.UUID) -> None:
+async def generate_shopper_journeys_for_shopper(
+    session: AsyncSession, shopper_id: uuid.UUID, as_of: datetime | None = None
+) -> None:
     """
     Deterministically regenerate all journeys for a shopper.
+    If as_of is provided, evaluate open journeys relative to as_of rather than current time.
     """
+    eval_time = as_of or datetime.now(timezone.utc)
+    if eval_time.tzinfo is None:
+        eval_time = eval_time.replace(tzinfo=timezone.utc)
+
     # 1. Fetch all chronological qualifying events
     raw_events = await get_qualifying_events_for_shopper(session, shopper_id)
     if not raw_events:
         # No eligible events, but we must ensure we delete existing journeys
         await delete_shopper_journeys(session, shopper_id)
-        await record_domain_activity(session, "shopper", shopper_id, "journey", datetime.now(timezone.utc))
+        await record_domain_activity(session, "shopper", shopper_id, "journey", eval_time)
         return
 
     # 2. Delete existing journeys for this shopper
@@ -91,7 +98,7 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
     current_journey_events = []
     current_payload_map = {}
 
-    generated_at = datetime.now(timezone.utc)
+    generated_at = eval_time
 
     for row in raw_events:
         source_category, source_id, merchant_id, event_type, event_timestamp, payload = row
@@ -162,9 +169,9 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
             current_journey_events = []
             current_payload_map = {}
 
-    # After loop, if there's an open journey, check if the current time exceeds its window
+    # After loop, if there's an open journey, check if the evaluation time exceeds its window
     if current_journey:
-        time_elapsed = generated_at - current_journey.started_at
+        time_elapsed = eval_time - current_journey.started_at
         if time_elapsed > max_window:
             current_journey.journey_status = "NON_CONVERTING"
             current_journey.ended_at = current_journey_events[-1].event_timestamp
@@ -181,7 +188,7 @@ async def generate_shopper_journeys_for_shopper(session: AsyncSession, shopper_i
     if events_to_insert:
         session.add_all(events_to_insert)
 
-    await record_domain_activity(session, "shopper", shopper_id, "journey", generated_at)
+    await record_domain_activity(session, "shopper", shopper_id, "journey", eval_time)
 
 
 async def get_shopper_journeys_for_shopper(

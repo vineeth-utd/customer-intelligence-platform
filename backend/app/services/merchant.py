@@ -33,6 +33,7 @@ from app.reference_data.features import FEATURE_CATALOG, FeatureKey
 from app.reference_data.plans import PLAN_CATALOG, PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
+from app.services.segment import initialize_merchant_segments
 from app.schemas.events.payloads.merchant import (
     AppInstalledPayload,
     AppUninstalledPayload,
@@ -99,12 +100,14 @@ async def _handle_merchant_created(session: AsyncSession, envelope: MerchantEven
         timezone=payload.timezone,
         store_currency=payload.store_currency,
         app_install_status="pending_install",
+        created_at=envelope.event_timestamp,
     )
 
 
 async def _handle_app_installed(session: AsyncSession, envelope: MerchantEventEnvelope) -> None:
     AppInstalledPayload.model_validate(envelope.payload)
     await update_merchant_install_status(session, envelope.merchant_id, "installed", envelope.event_timestamp)
+    await initialize_merchant_segments(session, envelope.merchant_id)
 
 
 async def _handle_app_uninstalled(session: AsyncSession, envelope: MerchantEventEnvelope) -> None:

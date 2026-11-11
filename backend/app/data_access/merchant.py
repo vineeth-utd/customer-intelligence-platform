@@ -161,24 +161,29 @@ async def create_merchant(
     timezone: str,
     store_currency: str,
     app_install_status: str,
+    created_at: datetime | None = None,
 ) -> None:
     """Insert a merchants row for this merchant_id if one doesn't exist yet.
 
     Idempotent (ON CONFLICT DO NOTHING on the merchant_id primary key) since
     MERCHANT_CREATED may be redelivered. Does not commit.
     """
+    values: dict[str, object] = {
+        "merchant_id": merchant_id,
+        "shopify_store_id": shopify_store_id,
+        "merchant_name": merchant_name,
+        "email": email,
+        "country": country,
+        "timezone": timezone,
+        "store_currency": store_currency,
+        "app_install_status": app_install_status,
+    }
+    if created_at is not None:
+        values["created_at"] = created_at
+
     stmt = (
         pg_insert(Merchant)
-        .values(
-            merchant_id=merchant_id,
-            shopify_store_id=shopify_store_id,
-            merchant_name=merchant_name,
-            email=email,
-            country=country,
-            timezone=timezone,
-            store_currency=store_currency,
-            app_install_status=app_install_status,
-        )
+        .values(**values)
         .on_conflict_do_nothing(index_elements=["merchant_id"])
     )
     await session.execute(stmt)

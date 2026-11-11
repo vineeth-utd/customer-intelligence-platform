@@ -33,23 +33,26 @@ async def initialize_merchant_segments(session: AsyncSession, merchant_id: uuid.
 
 
 async def refresh_shopper_segment_membership_callback(
-    session: AsyncSession, shopper_id: uuid.UUID
+    session: AsyncSession, shopper_id: uuid.UUID, as_of: datetime | None = None
 ) -> None:
     """
     Incremental processor callback for refreshing segment memberships for a single shopper.
     Evaluates all active segments for the shopper's merchant and atomically synchronizes
     the shopper's membership records.
     """
+    eval_time = as_of or datetime.now(timezone.utc)
+    if eval_time.tzinfo is None:
+        eval_time = eval_time.replace(tzinfo=timezone.utc)
+
     merchant_id = await get_shopper_merchant_id(session, shopper_id)
     if not merchant_id:
         return
 
     segments = await get_merchant_segments(session, merchant_id)
     if not segments:
-        await sync_shopper_segment_memberships(session, shopper_id, set(), datetime.now(timezone.utc))
+        await sync_shopper_segment_memberships(session, shopper_id, set(), eval_time)
         return
 
-    now = datetime.now(timezone.utc)
     matching_segment_ids: set[uuid.UUID] = set()
 
     for seg in segments:
@@ -57,12 +60,12 @@ async def refresh_shopper_segment_membership_callback(
             session=session,
             shopper_id=shopper_id,
             definition=seg.segment_definition,
-            evaluation_time=now,
+            evaluation_time=eval_time,
         )
         if matches:
             matching_segment_ids.add(seg.segment_id)
 
-    await sync_shopper_segment_memberships(session, shopper_id, matching_segment_ids, now)
+    await sync_shopper_segment_memberships(session, shopper_id, matching_segment_ids, eval_time)
 
 
 async def refresh_segment_memberships_for_segment(

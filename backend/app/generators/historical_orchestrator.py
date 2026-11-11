@@ -475,7 +475,7 @@ class HistoricalSimulationOrchestrator:
 
         for m in merchants:
             # Generate deterministic segment IDs per merchant
-            merchant_segment_ids = [uuid.uuid4() for _ in SEGMENT_CATALOG]
+            merchant_segment_ids = [uuid.uuid5(m.merchant_id, entry.segment_name) for entry in SEGMENT_CATALOG]
             merchant_window = (self._config.end_datetime - m.install_time).total_seconds()
             for c_idx in range(self._config.campaigns_per_merchant):
                 camp_id = uuid.uuid4()

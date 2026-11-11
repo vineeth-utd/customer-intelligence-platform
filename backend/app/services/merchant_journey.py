@@ -36,7 +36,7 @@ def _event_sort_key(
 
 
 async def generate_merchant_journeys_for_merchant(
-    session: AsyncSession, merchant_id: uuid.UUID
+    session: AsyncSession, merchant_id: uuid.UUID, as_of: datetime | None = None
 ) -> None:
     """
     Deterministically regenerate all journeys for a merchant.
@@ -46,10 +46,14 @@ async def generate_merchant_journeys_for_merchant(
     - APP_UNINSTALLED closes a journey (status = COMPLETED).
     - A subsequent APP_INSTALLED begins a new journey.
     """
+    eval_time = as_of or datetime.now(timezone.utc)
+    if eval_time.tzinfo is None:
+        eval_time = eval_time.replace(tzinfo=timezone.utc)
+
     raw_events = await get_qualifying_events_for_merchant(session, merchant_id)
     if not raw_events:
         await delete_merchant_journeys(session, merchant_id)
-        await record_domain_activity(session, "merchant", merchant_id, "journey", datetime.now(timezone.utc))
+        await record_domain_activity(session, "merchant", merchant_id, "journey", eval_time)
         return
 
     # Delete existing journeys for this merchant to ensure idempotent full regeneration
@@ -62,7 +66,7 @@ async def generate_merchant_journeys_for_merchant(
 
     current_journey: MerchantJourney | None = None
     current_journey_events: list[MerchantJourneyEvent] = []
-    generated_at = datetime.now(timezone.utc)
+    generated_at = eval_time
 
     for row in sorted_events:
         source_category, source_id, _m_id, event_type, event_timestamp, _payload = row
