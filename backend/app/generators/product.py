@@ -23,6 +23,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import NamedTuple
 
+from app.generators.context import SimulationContext, SimulationMode
 from app.schemas.events.envelope import ProductEventEnvelope
 from app.schemas.events.event_types import ProductEventType
 from app.schemas.events.payloads.product import (
@@ -140,10 +141,12 @@ class ProductCatalogGenerator:
         products_per_merchant: int = 5,
         variants_per_product: int = 3,
         seed: int | None = None,
+        sim_context: SimulationContext | None = None,
     ) -> None:
         if not merchant_contexts:
             raise ValueError("merchant_contexts must not be empty")
-        self._rng = random.Random(seed)
+        self._sim_context = sim_context or SimulationContext(mode=SimulationMode.LIVE, seed=seed)
+        self._rng = self._sim_context.rng if sim_context is not None else random.Random(seed)
         self._merchant_contexts = merchant_contexts
         self._products_per_merchant = products_per_merchant
         self._variants_per_product = variants_per_product
@@ -412,12 +415,14 @@ class ProductCatalogGenerator:
         product: _ProductState,
         event_type: ProductEventType,
         payload: object,
+        event_timestamp: datetime | None = None,
     ) -> ProductEventEnvelope:
+        ts = event_timestamp or self._sim_context.current_time
         return ProductEventEnvelope(
             event_id=uuid.uuid4(),
             event_type=event_type,
             event_version=1,
-            event_timestamp=datetime.now(timezone.utc),
+            event_timestamp=ts,
             merchant_id=product.merchant_id,
             product_id=product.product_id,
             payload=payload.model_dump(mode="json"),  # type: ignore[attr-defined]

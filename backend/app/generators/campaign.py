@@ -3,6 +3,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from app.generators.context import SimulationContext, SimulationMode
 from app.schemas.events.envelope import CampaignEventEnvelope
 from app.schemas.events.event_types import CampaignEventType
 from app.schemas.events.payloads.campaign import (
@@ -67,8 +68,14 @@ class CampaignState:
 class CampaignLifecycleGenerator:
     """Deterministic, in-memory campaign lifecycle simulator."""
 
-    def __init__(self, concurrency_per_merchant: int = 2, seed: int | None = None) -> None:
-        self._rng = random.Random(seed)
+    def __init__(
+        self,
+        concurrency_per_merchant: int = 2,
+        seed: int | None = None,
+        sim_context: SimulationContext | None = None,
+    ) -> None:
+        self._sim_context = sim_context or SimulationContext(mode=SimulationMode.LIVE, seed=seed)
+        self._rng = self._sim_context.rng if sim_context is not None else random.Random(seed)
         self._concurrency_per_merchant = concurrency_per_merchant
         self._contexts: dict[uuid.UUID, MerchantContext] = {}
         self._active_campaigns: list[CampaignState] = []
@@ -162,7 +169,7 @@ class CampaignLifecycleGenerator:
         
         if state.status == "draft":
             state.status = "active"
-            state.start_at = datetime.now(timezone.utc)
+            state.start_at = self._sim_context.current_time
             envelopes.append(self._build_envelope(
                 state, None, CampaignEventType.CAMPAIGN_UPDATED, CampaignUpdatedPayload(
                     changed_values={"status": "active", "start_at": state.start_at.isoformat()}
@@ -219,7 +226,7 @@ class CampaignLifecycleGenerator:
                             
             if state.ticks_active >= state.max_active_ticks:
                 state.status = "completed"
-                state.end_at = datetime.now(timezone.utc)
+                state.end_at = self._sim_context.current_time
                 envelopes.append(self._build_envelope(
                     state, None, CampaignEventType.CAMPAIGN_UPDATED, CampaignUpdatedPayload(
                         changed_values={"status": "completed", "end_at": state.end_at.isoformat()}
@@ -275,15 +282,25 @@ class CampaignLifecycleGenerator:
                     
         return None
 
-    def _build_envelope(self, state: CampaignState, shopper_id: uuid.UUID | None, event_type: CampaignEventType, payload) -> CampaignEventEnvelope:
+    def _build_envelope(
+        self,
+        state: CampaignState,
+        shopper_id: uuid.UUID | None,
+        event_type: CampaignEventType,
+        payload,
+        session_id: uuid.UUID | None = None,
+        event_timestamp: datetime | None = None,
+    ) -> CampaignEventEnvelope:
+        ts = event_timestamp or self._sim_context.current_time
         return CampaignEventEnvelope(
             event_id=uuid.uuid4(),
             event_type=event_type,
             event_version=1,
-            event_timestamp=datetime.now(timezone.utc),
+            event_timestamp=ts,
             merchant_id=state.merchant_id,
             campaign_id=state.campaign_id,
             shopper_id=shopper_id,
+            session_id=session_id,
             payload=payload.model_dump(mode="json"),
             source="campaign-generator",
         )

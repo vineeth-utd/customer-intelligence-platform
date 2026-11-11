@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 
+from app.generators.context import SimulationContext, SimulationMode
 from app.reference_data.features import FeatureKey
 from app.reference_data.plans import PLAN_CATALOG, BillingCycle, PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
@@ -70,8 +71,15 @@ class MerchantLifecycleGenerator:
     produces the same sequence of event types.
     """
 
-    def __init__(self, population_size: int, seed: int | None = None, start_index: int = 0) -> None:
-        self._rng = random.Random(seed)
+    def __init__(
+        self,
+        population_size: int,
+        seed: int | None = None,
+        start_index: int = 0,
+        sim_context: SimulationContext | None = None,
+    ) -> None:
+        self._sim_context = sim_context or SimulationContext(mode=SimulationMode.LIVE, seed=seed)
+        self._rng = self._sim_context.rng if sim_context is not None else random.Random(seed)
         self._merchants: list[MerchantState] = []
         self._population_size = population_size
         self._start_index = start_index
@@ -208,6 +216,7 @@ class MerchantLifecycleGenerator:
             ]
 
         if action == "renew":
+            renewal_at = self._sim_context.current_time
             return [
                 self._build_envelope(
                     state,
@@ -216,8 +225,9 @@ class MerchantLifecycleGenerator:
                         plan_key=state.plan_key,
                         billing_cycle=state.billing_cycle,
                         amount_paid=self._amount_for(state.plan_key, state.billing_cycle),
-                        renewal_at=datetime.now(timezone.utc),
+                        renewal_at=renewal_at,
                     ),
+                    event_timestamp=renewal_at,
                 )
             ]
 
@@ -284,12 +294,19 @@ class MerchantLifecycleGenerator:
             return self._rng.choice([c for c in _CURRENCIES if c != state.store_currency] or list(_CURRENCIES))
         return self._rng.choice([country for country in _COUNTRIES if country != state.country] or list(_COUNTRIES))
 
-    def _build_envelope(self, state: MerchantState, event_type: MerchantEventType, payload) -> MerchantEventEnvelope:
+    def _build_envelope(
+        self,
+        state: MerchantState,
+        event_type: MerchantEventType,
+        payload,
+        event_timestamp: datetime | None = None,
+    ) -> MerchantEventEnvelope:
+        ts = event_timestamp or self._sim_context.current_time
         return MerchantEventEnvelope(
             event_id=uuid.uuid4(),
             event_type=event_type,
             event_version=1,
-            event_timestamp=datetime.now(timezone.utc),
+            event_timestamp=ts,
             merchant_id=state.merchant_id,
             payload=payload.model_dump(mode="json"),
             source="merchant-generator",

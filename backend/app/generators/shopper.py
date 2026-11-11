@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 
+from app.generators.context import SimulationContext, SimulationMode
 from app.schemas.events.envelope import ShopperEventEnvelope
 from app.schemas.events.event_types import ShopperEventType
 from app.schemas.events.payloads.shopper import (
@@ -88,8 +89,10 @@ class ShopperBehaviorGenerator:
         self,
         shoppers_per_merchant: int = 50,
         seed: int | None = None,
+        sim_context: SimulationContext | None = None,
     ) -> None:
-        self._rng = random.Random(seed)
+        self._sim_context = sim_context or SimulationContext(mode=SimulationMode.LIVE, seed=seed)
+        self._rng = self._sim_context.rng if sim_context is not None else random.Random(seed)
         self._shoppers_per_merchant = shoppers_per_merchant
         self._shoppers: list[ShopperState] = []
         
@@ -495,12 +498,19 @@ class ShopperBehaviorGenerator:
         for var_id in invalid_vars:
             del shopper.cart[var_id]
 
-    def _build_envelope(self, shopper: ShopperState, event_type: ShopperEventType, payload: object) -> ShopperEventEnvelope:
+    def _build_envelope(
+        self,
+        shopper: ShopperState,
+        event_type: ShopperEventType,
+        payload: object,
+        event_timestamp: datetime | None = None,
+    ) -> ShopperEventEnvelope:
+        ts = event_timestamp or self._sim_context.current_time
         return ShopperEventEnvelope(
             event_id=uuid.uuid4(),
             event_type=event_type,
             event_version=1,
-            event_timestamp=datetime.now(timezone.utc),
+            event_timestamp=ts,
             merchant_id=shopper.merchant_id,
             shopper_id=shopper.shopper_id,
             session_id=shopper.current_session_id, # Validated non-null by caller state (except if misconfigured)
