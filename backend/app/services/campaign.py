@@ -19,6 +19,7 @@ from app.data_access.merchant import get_merchant_by_id
 from app.data_access.order import get_order
 from app.data_access.processing_state import record_domain_activity
 from app.data_access.segment import get_merchant_segments
+from app.services.reference_resolver import resolve_reference
 from app.services.segment import initialize_merchant_segments
 from app.models.campaign import Campaign
 from app.schemas.campaign import CampaignDetailResponse, CampaignSummaryResponse
@@ -44,27 +45,20 @@ class AttributionError(ValueError):
 
 async def _handle_campaign_created(session: AsyncSession, envelope: CampaignEventEnvelope) -> None:
     payload = CampaignCreatedPayload.model_validate(envelope.payload)
-    merchant = await get_merchant_by_id(session, envelope.merchant_id)
+    merchant = await resolve_reference(lambda: get_merchant_by_id(session, envelope.merchant_id))
     if merchant is None:
-        for _ in range(6):
-            await asyncio.sleep(0.5)
-            merchant = await get_merchant_by_id(session, envelope.merchant_id)
-            if merchant is not None:
-                break
-        else:
-            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} not found")
+        raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} not found")
 
     segments = await get_merchant_segments(session, envelope.merchant_id)
     if not segments or payload.segment_id not in [s.segment_id for s in segments]:
         await initialize_merchant_segments(session, envelope.merchant_id)
         segments = await get_merchant_segments(session, envelope.merchant_id)
     if payload.segment_id not in [s.segment_id for s in segments]:
-        for _ in range(6):
-            await asyncio.sleep(0.5)
-            segments = await get_merchant_segments(session, envelope.merchant_id)
-            if payload.segment_id in [s.segment_id for s in segments]:
-                break
-        else:
+        matched = await resolve_reference(
+            lambda: get_merchant_segments(session, envelope.merchant_id),
+            predicate=lambda segs: payload.segment_id in [s.segment_id for s in segs],
+        )
+        if matched is None:
             raise UnresolvedReferenceError(f"Segment {payload.segment_id} not found for Merchant {envelope.merchant_id}")
 
     await create_campaign(
@@ -162,7 +156,7 @@ async def _handle_campaign_converted(session: AsyncSession, envelope: CampaignEv
     if campaign.start_at is None:
         raise AttributionError(f"Cannot attribute conversion: Campaign {campaign.campaign_id} has not started")
 
-    order = await get_order(session, payload.order_id)
+    order = await resolve_reference(lambda: get_order(session, payload.order_id))
     if order is None:
         raise UnresolvedReferenceError(f"Order {payload.order_id} not found")
 

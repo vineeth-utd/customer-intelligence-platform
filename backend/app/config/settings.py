@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     kafka_shopper_consumer_group_id: str = "cip-shopper-event-consumer"
     kafka_campaign_consumer_group_id: str = "cip-campaign-event-consumer"
 
+    reference_resolution_timeout_seconds: float = 30.0
+    reference_resolution_interval_seconds: float = 0.5
+
     merchant_generator_population_size: int = 50
     merchant_generator_tick_interval_seconds: float = 5.0
     merchant_generator_seed: int | None = None

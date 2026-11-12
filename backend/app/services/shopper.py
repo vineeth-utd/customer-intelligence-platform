@@ -19,6 +19,7 @@ from app.data_access.shopper import (
 )
 from app.data_access.shopper_events import list_shopper_events_paginated
 from app.models.shopper import Shopper
+from app.services.reference_resolver import resolve_reference
 from app.schemas.events.envelope import ShopperEventEnvelope
 from app.schemas.events.event_types import ShopperEventType
 from app.schemas.events.payloads.shopper import (
@@ -56,15 +57,9 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
     
     await _handle_identity_enrichment(session, envelope, payload.email)
 
-    merchant = await get_merchant_by_id(session, envelope.merchant_id)
-    if not merchant:
-        for _ in range(6):
-            await asyncio.sleep(0.5)
-            merchant = await get_merchant_by_id(session, envelope.merchant_id)
-            if merchant:
-                break
-        else:
-            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
+    merchant = await resolve_reference(lambda: get_merchant_by_id(session, envelope.merchant_id), max_attempts=7)
+    if merchant is None:
+        raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
 
     # Using explicit lookup to prevent duplicate exception control flow
     existing_order = await get_order(session, payload.order_id)
@@ -131,15 +126,9 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
 async def process_shopper_event(session: AsyncSession, envelope: ShopperEventEnvelope) -> None:
     """Route a validated Shopper event to its operational mutation."""
     # Ensure referenced merchant exists before creating shopper
-    merchant = await get_merchant_by_id(session, envelope.merchant_id)
+    merchant = await resolve_reference(lambda: get_merchant_by_id(session, envelope.merchant_id), max_attempts=7)
     if merchant is None:
-        for _ in range(6):
-            await asyncio.sleep(0.5)
-            merchant = await get_merchant_by_id(session, envelope.merchant_id)
-            if merchant is not None:
-                break
-        else:
-            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
+        raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
 
     # All events upsert the shopper and update last_seen_at
     await upsert_shopper(session, envelope.merchant_id, envelope.shopper_id, envelope.event_timestamp)

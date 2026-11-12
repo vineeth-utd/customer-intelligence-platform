@@ -35,8 +35,8 @@ async def test_run_analytics_job_success(
     # Verify calls
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     expected_dates = [
+        (now_utc - datetime.timedelta(days=1)).date(),
         now_utc.date(),
-        (now_utc - datetime.timedelta(days=1)).date()
     ]
     
     # generation called once per selected date
