@@ -1,6 +1,7 @@
 import logging
 
 from app.scheduler.incremental import process_incremental_target
+from app.services.processing_state import TARGET_SEGMENT_MEMBERSHIP
 from app.services.segment import refresh_shopper_segment_membership_callback
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ async def run_shopper_segment_membership_job() -> None:
     try:
         await process_incremental_target(
             entity_type="shopper",
-            target_type="segment_membership",
+            target_type=TARGET_SEGMENT_MEMBERSHIP,
             generator=refresh_shopper_segment_membership_callback,
             batch_size=100,
         )

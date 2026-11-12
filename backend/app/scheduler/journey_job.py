@@ -2,6 +2,7 @@ import logging
 
 from app.scheduler.incremental import process_incremental_target
 from app.services.journey import generate_shopper_journeys_for_shopper
+from app.services.processing_state import TARGET_SHOPPER_JOURNEY
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ async def run_shopper_journey_job() -> None:
     try:
         await process_incremental_target(
             entity_type="shopper",
-            target_type="shopper_journey",
+            target_type=TARGET_SHOPPER_JOURNEY,
             generator=generate_shopper_journeys_for_shopper,
             batch_size=100,
         )

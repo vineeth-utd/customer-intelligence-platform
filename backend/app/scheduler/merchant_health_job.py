@@ -2,6 +2,7 @@ import logging
 
 from app.scheduler.incremental import process_incremental_target
 from app.services.merchant_health import generate_merchant_health_callback
+from app.services.processing_state import TARGET_MERCHANT_HEALTH
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ async def run_merchant_health_job() -> None:
     try:
         await process_incremental_target(
             entity_type="merchant",
-            target_type="merchant_health",
+            target_type=TARGET_MERCHANT_HEALTH,
             generator=generate_merchant_health_callback,
             batch_size=100,
         )

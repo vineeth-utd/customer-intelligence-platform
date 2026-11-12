@@ -1,8 +1,10 @@
 import logging
+
 from app.scheduler.incremental import process_incremental_target
+from app.services.processing_state import TARGET_MERCHANT_PROFILE, TARGET_SHOPPER_PROFILE
 from app.services.profile import (
     generate_merchant_profile_callback,
-    generate_shopper_profile_callback
+    generate_shopper_profile_callback,
 )
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ async def run_merchant_profile_job() -> None:
     try:
         await process_incremental_target(
             entity_type="merchant",
-            target_type="merchant_profile",
+            target_type=TARGET_MERCHANT_PROFILE,
             generator=generate_merchant_profile_callback,
             batch_size=100
         )
@@ -36,7 +38,7 @@ async def run_shopper_profile_job() -> None:
     try:
         await process_incremental_target(
             entity_type="shopper",
-            target_type="shopper_profile",
+            target_type=TARGET_SHOPPER_PROFILE,
             generator=generate_shopper_profile_callback,
             batch_size=100
         )

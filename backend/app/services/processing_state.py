@@ -4,10 +4,19 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.processing_state import (
+    get_eligible_entities,
     mark_processing_success,
     upsert_processing_state,
-    get_eligible_entities
 )
+
+# Canonical processing target identifiers
+TARGET_MERCHANT_PROFILE = "merchant_profile"
+TARGET_SHOPPER_PROFILE = "shopper_profile"
+TARGET_CAMPAIGN_ANALYTICS = "campaign_analytics"
+TARGET_SHOPPER_JOURNEY = "shopper_journey"
+TARGET_MERCHANT_JOURNEY = "merchant_journey"
+TARGET_SEGMENT_MEMBERSHIP = "segment_membership"
+TARGET_MERCHANT_HEALTH = "merchant_health"
 async def record_processing_failure(
     session: AsyncSession,
     entity_type: str,
@@ -56,13 +65,13 @@ async def record_processing_success(
 TARGET_DEPENDENCIES: dict[str, list[str]] = {
     # These are currently established minimal mappings for initial generation testing.
     # Complete dependencies should be finalized alongside each actual derived-product implementation.
-    "merchant_profile": ["merchant", "shopper", "product", "order", "campaign", "analytics"],
-    "shopper_profile": ["shopper", "order", "campaign"],
-    "campaign_analytics": ["campaign", "shopper"],
-    "shopper_journey": ["shopper", "campaign"],
-    "merchant_journey": ["merchant", "campaign"],
-    "segment_membership": ["profile", "journey", "shopper"],
-    "merchant_health": ["merchant", "profile", "journey", "analytics"],
+    TARGET_MERCHANT_PROFILE: ["merchant", "shopper", "product", "order", "campaign", "analytics"],
+    TARGET_SHOPPER_PROFILE: ["shopper", "order", "campaign"],
+    TARGET_CAMPAIGN_ANALYTICS: ["campaign", "shopper"],
+    TARGET_SHOPPER_JOURNEY: ["shopper", "campaign"],
+    TARGET_MERCHANT_JOURNEY: ["merchant", "campaign"],
+    TARGET_SEGMENT_MEMBERSHIP: ["profile", "journey", "shopper"],
+    TARGET_MERCHANT_HEALTH: ["merchant", "profile", "journey", "analytics"],
 }
 
 async def get_eligible_entities_for_target(

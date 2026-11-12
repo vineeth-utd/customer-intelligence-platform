@@ -12,7 +12,15 @@ from app.scheduler.analytics_job import run_analytics_job
 from app.services.journey import generate_shopper_journeys_for_shopper
 from app.services.merchant_health import generate_merchant_health_callback
 from app.services.merchant_journey import generate_merchant_journeys_for_merchant
-from app.services.processing_state import record_processing_success
+from app.services.processing_state import (
+    TARGET_MERCHANT_HEALTH,
+    TARGET_MERCHANT_JOURNEY,
+    TARGET_MERCHANT_PROFILE,
+    TARGET_SEGMENT_MEMBERSHIP,
+    TARGET_SHOPPER_JOURNEY,
+    TARGET_SHOPPER_PROFILE,
+    record_processing_success,
+)
 from app.services.profile import (
     generate_merchant_profile_callback,
     generate_shopper_profile_callback,
@@ -94,22 +102,22 @@ async def run_historical_bootstrap(
     async with AsyncSessionLocal() as session:
         for shopper_id, _m_id in all_shopper_ids:
             await generate_shopper_journeys_for_shopper(session, shopper_id, as_of=as_of)
-            await record_processing_success(session, "shopper", shopper_id, "journey", as_of)
+            await record_processing_success(session, "shopper", shopper_id, TARGET_SHOPPER_JOURNEY, as_of)
 
         for m in merchants:
             await generate_merchant_journeys_for_merchant(session, m.merchant_id, as_of=as_of)
-            await record_processing_success(session, "merchant", m.merchant_id, "journey", as_of)
+            await record_processing_success(session, "merchant", m.merchant_id, TARGET_MERCHANT_JOURNEY, as_of)
         await session.commit()
 
     logger.info("Generating Shopper & Merchant Profiles...")
     async with AsyncSessionLocal() as session:
         for shopper_id, _m_id in all_shopper_ids:
             await generate_shopper_profile_callback(session, shopper_id)
-            await record_processing_success(session, "shopper", shopper_id, "profile", as_of)
+            await record_processing_success(session, "shopper", shopper_id, TARGET_SHOPPER_PROFILE, as_of)
 
         for m in merchants:
             await generate_merchant_profile_callback(session, m.merchant_id)
-            await record_processing_success(session, "merchant", m.merchant_id, "profile", as_of)
+            await record_processing_success(session, "merchant", m.merchant_id, TARGET_MERCHANT_PROFILE, as_of)
         await session.commit()
 
     # 5. Shopper Segment Membership (depends on Shopper Profiles + Shopper Journeys)
@@ -117,7 +125,7 @@ async def run_historical_bootstrap(
     async with AsyncSessionLocal() as session:
         for shopper_id, _m_id in all_shopper_ids:
             await refresh_shopper_segment_membership_callback(session, shopper_id, as_of=as_of)
-            await record_processing_success(session, "shopper", shopper_id, "segment", as_of)
+            await record_processing_success(session, "shopper", shopper_id, TARGET_SEGMENT_MEMBERSHIP, as_of)
         await session.commit()
 
     # 6. Merchant Health (depends on Analytics + Merchant Profiles + Merchant Journeys)
@@ -125,7 +133,7 @@ async def run_historical_bootstrap(
     async with AsyncSessionLocal() as session:
         for m in merchants:
             await generate_merchant_health_callback(session, m.merchant_id, evaluation_time=as_of)
-            await record_processing_success(session, "merchant", m.merchant_id, "merchant_health", as_of)
+            await record_processing_success(session, "merchant", m.merchant_id, TARGET_MERCHANT_HEALTH, as_of)
         await session.commit()
 
     logger.info("Historical bootstrap completed successfully as of %s.", as_of.isoformat())

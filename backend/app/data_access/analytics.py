@@ -46,7 +46,7 @@ async def generate_merchant_metrics_daily(session: AsyncSession, metric_date: da
                 COUNT(DISTINCT s.shopper_id) AS new_shoppers
             FROM shoppers s
             CROSS JOIN date_bounds db
-            WHERE s.created_at >= db.start_ts AND s.created_at < db.end_ts
+            WHERE s.first_seen_at >= db.start_ts AND s.first_seen_at < db.end_ts
             GROUP BY s.merchant_id
         ),
         event_stats AS (
