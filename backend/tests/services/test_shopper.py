@@ -168,3 +168,44 @@ async def test_purchase_wrong_product_ownership(db_session, setup_data):
         await process_shopper_event(db_session, env_purchase)
 
 
+@pytest.mark.asyncio
+async def test_process_shopper_event_missing_merchant_raises_unresolved_reference():
+    from unittest.mock import AsyncMock, patch
+    session = AsyncMock()
+    m_id = uuid.uuid4()
+    s_id = uuid.uuid4()
+    envelope = _envelope(
+        ShopperEventType.SESSION_STARTED, m_id, s_id, {"referrer": None, "email": None}
+    )
+    with patch("app.services.shopper.get_merchant_by_id", new_callable=AsyncMock) as mock_get_m:
+        mock_get_m.return_value = None
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            with pytest.raises(UnresolvedReferenceError, match=f"Merchant {m_id} does not exist"):
+                await process_shopper_event(session, envelope)
+        assert mock_get_m.call_count == 7  # Initial check + 6 retries
+
+
+@pytest.mark.asyncio
+async def test_process_shopper_event_resolves_merchant_on_retry():
+    from unittest.mock import AsyncMock, MagicMock, patch
+    session = AsyncMock()
+    m_id = uuid.uuid4()
+    s_id = uuid.uuid4()
+    envelope = _envelope(
+        ShopperEventType.SESSION_STARTED, m_id, s_id, {"referrer": None, "email": None}
+    )
+    mock_merchant = MagicMock()
+    with (
+        patch("app.services.shopper.get_merchant_by_id", new_callable=AsyncMock) as mock_get_m,
+        patch("app.services.shopper.upsert_shopper", new_callable=AsyncMock) as mock_upsert,
+        patch("app.services.shopper.record_domain_activity", new_callable=AsyncMock),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        mock_get_m.side_effect = [None, None, mock_merchant]
+        await process_shopper_event(session, envelope)
+        assert mock_get_m.call_count == 3
+        mock_upsert.assert_called_once()
+
+
+
+

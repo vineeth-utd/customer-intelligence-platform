@@ -130,6 +130,17 @@ async def _handle_purchase_completed(session: AsyncSession, envelope: ShopperEve
 
 async def process_shopper_event(session: AsyncSession, envelope: ShopperEventEnvelope) -> None:
     """Route a validated Shopper event to its operational mutation."""
+    # Ensure referenced merchant exists before creating shopper
+    merchant = await get_merchant_by_id(session, envelope.merchant_id)
+    if merchant is None:
+        for _ in range(6):
+            await asyncio.sleep(0.5)
+            merchant = await get_merchant_by_id(session, envelope.merchant_id)
+            if merchant is not None:
+                break
+        else:
+            raise UnresolvedReferenceError(f"Merchant {envelope.merchant_id} does not exist.")
+
     # All events upsert the shopper and update last_seen_at
     await upsert_shopper(session, envelope.merchant_id, envelope.shopper_id, envelope.event_timestamp)
 

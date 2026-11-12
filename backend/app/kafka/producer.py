@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiokafka import AIOKafkaProducer
@@ -86,3 +87,26 @@ class EventProducer:
 
 
 event_producer = EventProducer()
+
+
+async def reset_kafka_topics(bootstrap_servers: str | None = None) -> None:
+    """Delete and recreate all platform event topics and DLQs to ensure a clean Kafka state."""
+    servers = bootstrap_servers or settings.kafka_bootstrap_servers
+    admin = AIOKafkaAdminClient(bootstrap_servers=servers)
+    await admin.start()
+    try:
+        try:
+            await admin.delete_topics(list(EVENT_TOPICS))
+            logger.info("Deleted Kafka event topics: %s", EVENT_TOPICS)
+        except Exception as e:
+            logger.debug("Could not delete some Kafka topics: %s", e)
+
+        # Allow broker time to finalize topic deletion
+        await asyncio.sleep(1.0)
+
+        new_topics = [NewTopic(name=topic, num_partitions=1, replication_factor=1) for topic in EVENT_TOPICS]
+        await admin.create_topics(new_topics)
+        logger.info("Recreated clean Kafka event topics.")
+    finally:
+        await admin.close()
+
