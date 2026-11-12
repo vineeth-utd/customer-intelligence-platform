@@ -5,7 +5,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Generic, Literal, TypeVar
 
-from aiokafka import AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, ConsumerRebalanceListener
+from aiokafka.errors import CommitFailedError, IllegalStateError
 from aiokafka.structs import ConsumerRecord, OffsetAndMetadata, TopicPartition
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +36,22 @@ from app.services import campaign as campaign_svc
 logger = logging.getLogger(__name__)
 
 EnvelopeT = TypeVar("EnvelopeT", bound=BaseModel)
+
+class LoggingRebalanceListener(ConsumerRebalanceListener):
+    """Observability listener logging partition assignments and revocations during consumer rebalances."""
+
+    def __init__(self, domain_name: str, group_id: str) -> None:
+        self._domain_name = domain_name
+        self._group_id = group_id
+
+    def on_partitions_revoked(self, revoked: list[TopicPartition]) -> None:
+        revoked_str = ", ".join(f"{tp.topic}[{tp.partition}]" for tp in revoked) if revoked else "none"
+        logger.info("[%s:%s] Partitions revoked: %s", self._domain_name, self._group_id, revoked_str)
+
+    def on_partitions_assigned(self, assigned: list[TopicPartition]) -> None:
+        assigned_str = ", ".join(f"{tp.topic}[{tp.partition}]" for tp in assigned) if assigned else "none"
+        logger.info("[%s:%s] Partitions assigned: %s", self._domain_name, self._group_id, assigned_str)
+
 
 class BaseEventConsumer(Generic[EnvelopeT]):
     """Base Kafka consumer for event topics.
@@ -87,12 +104,17 @@ class BaseEventConsumer(Generic[EnvelopeT]):
 
     async def start(self) -> None:
         consumer = AIOKafkaConsumer(
-            self._topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             group_id=self._group_id,
             enable_auto_commit=False,
             auto_offset_reset="earliest",
+            max_poll_interval_ms=settings.kafka_consumer_max_poll_interval_ms,
+            session_timeout_ms=settings.kafka_consumer_session_timeout_ms,
+            heartbeat_interval_ms=settings.kafka_consumer_heartbeat_interval_ms,
+            max_poll_records=settings.kafka_consumer_max_poll_records,
         )
+        listener = LoggingRebalanceListener(self._domain_name, self._group_id)
+        consumer.subscribe([self._topic], listener=listener)
         try:
             await consumer.start()
         except Exception:
@@ -231,11 +253,28 @@ class BaseEventConsumer(Generic[EnvelopeT]):
 
         await event_producer.publish_record(self._dlq_topic, record)
 
-    async def _commit_message(self, message: ConsumerRecord) -> None:
+    async def _commit_message(self, message: ConsumerRecord) -> bool:
+        """Commit message offset to Kafka.
+
+        Returns True if committed successfully, False if a CommitFailedError occurred
+        during a legitimate consumer group rebalance. Handled gracefully without crashing
+        to preserve at-least-once replay on the reassigned partition.
+        """
         if self._consumer is None:
             raise RuntimeError(f"{self.__class__.__name__} is not started; cannot commit offsets")
         topic_partition = TopicPartition(message.topic, message.partition)
-        await self._consumer.commit({topic_partition: OffsetAndMetadata(message.offset + 1, "")})
+        try:
+            await self._consumer.commit({topic_partition: OffsetAndMetadata(message.offset + 1, "")})
+            return True
+        except (CommitFailedError, IllegalStateError) as e:
+            logger.warning(
+                "Offset commit failed for %s[%s]@%s due to consumer group rebalance (partition revoked or reassigned): %s",
+                message.topic,
+                message.partition,
+                message.offset,
+                e,
+            )
+            return False
 
     def _validate(self, message: ConsumerRecord) -> EnvelopeT | None:
         try:
