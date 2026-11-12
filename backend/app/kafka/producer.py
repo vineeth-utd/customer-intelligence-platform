@@ -69,7 +69,14 @@ class EventProducer:
         admin = AIOKafkaAdminClient(bootstrap_servers=settings.kafka_bootstrap_servers)
         await admin.start()
         try:
-            new_topics = [NewTopic(name=topic, num_partitions=1, replication_factor=1) for topic in EVENT_TOPICS]
+            new_topics = [
+                NewTopic(
+                    name=topic,
+                    num_partitions=settings.kafka_default_partitions,
+                    replication_factor=settings.kafka_default_replication_factor,
+                )
+                for topic in EVENT_TOPICS
+            ]
             try:
                 response = await admin.create_topics(new_topics)
             except TopicAlreadyExistsError:
@@ -89,9 +96,16 @@ class EventProducer:
 event_producer = EventProducer()
 
 
-async def reset_kafka_topics(bootstrap_servers: str | None = None) -> None:
+async def reset_kafka_topics(
+    bootstrap_servers: str | None = None,
+    num_partitions: int | None = None,
+    replication_factor: int | None = None,
+) -> None:
     """Delete and recreate all platform event topics and DLQs to ensure a clean Kafka state."""
     servers = bootstrap_servers or settings.kafka_bootstrap_servers
+    partitions = num_partitions if num_partitions is not None else settings.kafka_default_partitions
+    replicas = replication_factor if replication_factor is not None else settings.kafka_default_replication_factor
+
     admin = AIOKafkaAdminClient(bootstrap_servers=servers)
     await admin.start()
     try:
@@ -104,9 +118,16 @@ async def reset_kafka_topics(bootstrap_servers: str | None = None) -> None:
         # Allow broker time to finalize topic deletion
         await asyncio.sleep(1.0)
 
-        new_topics = [NewTopic(name=topic, num_partitions=1, replication_factor=1) for topic in EVENT_TOPICS]
+        new_topics = [
+            NewTopic(name=topic, num_partitions=partitions, replication_factor=replicas)
+            for topic in EVENT_TOPICS
+        ]
         await admin.create_topics(new_topics)
-        logger.info("Recreated clean Kafka event topics.")
+        logger.info(
+            "Recreated clean Kafka event topics (partitions=%d, replication_factor=%d).",
+            partitions,
+            replicas,
+        )
     finally:
         await admin.close()
 

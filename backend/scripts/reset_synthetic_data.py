@@ -17,14 +17,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def _run(reset_kafka: bool = True) -> None:
+async def _run(
+    reset_kafka: bool = True,
+    partitions: int | None = None,
+    replication_factor: int | None = None,
+) -> None:
     async with AsyncSessionLocal() as session:
         await reset_synthetic_data(session)
 
     if reset_kafka:
         try:
             logger.info("Purging and recreating Kafka event topics...")
-            await reset_kafka_topics()
+            await reset_kafka_topics(
+                num_partitions=partitions,
+                replication_factor=replication_factor,
+            )
             logger.info("Kafka event topics reset successfully.")
         except Exception as e:
             logger.warning("Could not reset Kafka topics (is Kafka running?): %s", e)
@@ -52,6 +59,18 @@ def main() -> None:
         action="store_false",
         help="Skip Kafka topic reset.",
     )
+    parser.add_argument(
+        "--partitions",
+        type=int,
+        default=None,
+        help="Number of partitions for recreated Kafka topics (defaults to settings.kafka_default_partitions).",
+    )
+    parser.add_argument(
+        "--replication-factor",
+        type=int,
+        default=None,
+        help="Replication factor for recreated Kafka topics (defaults to settings.kafka_default_replication_factor).",
+    )
     args = parser.parse_args()
 
     if not args.yes:
@@ -64,7 +83,13 @@ def main() -> None:
             sys.exit(0)
 
     try:
-        asyncio.run(_run(reset_kafka=args.reset_kafka))
+        asyncio.run(
+            _run(
+                reset_kafka=args.reset_kafka,
+                partitions=args.partitions,
+                replication_factor=args.replication_factor,
+            )
+        )
         logger.info("Synthetic data reset completed successfully.")
     except Exception as e:
         logger.error("Reset failed.", exc_info=e)

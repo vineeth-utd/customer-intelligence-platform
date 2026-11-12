@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     kafka_campaign_dlq_topic: str = "cip.campaign.events.dlq"
     kafka_product_events_topic: str = "cip.product.events"
     kafka_product_dlq_topic: str = "cip.product.events.dlq"
+    kafka_default_partitions: int = 1
+    kafka_default_replication_factor: int = 1
     kafka_merchant_consumer_group_id: str = "cip-merchant-event-consumer"
     kafka_product_consumer_group_id: str = "cip-product-event-consumer"
     kafka_shopper_consumer_group_id: str = "cip-shopper-event-consumer"
