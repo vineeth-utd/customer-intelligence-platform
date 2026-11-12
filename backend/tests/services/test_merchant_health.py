@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy import select, text, delete
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import Merchant, MerchantFeature, SubscriptionPlan, Subscription, PlatformFeature
 from app.models.merchant_health import MerchantHealth
 from app.models.profile import MerchantProfile
@@ -26,18 +25,8 @@ from app.services.processing_state import get_eligible_entities_for_target
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    s = AsyncSessionLocal()
-    try:
-        await s.execute(text("SELECT 1"))
-    except Exception as exc:
-        pytest.skip(f"Database unavailable: {exc}")
-
-    yield s
-    await s.rollback()
-    await s.close()
-    await engine.dispose()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.fixture

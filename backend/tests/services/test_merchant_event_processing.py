@@ -12,9 +12,9 @@ from sqlalchemy import delete, select, text
 
 from app.config.settings import settings
 from app.data_access.merchant import get_active_subscription, get_merchant_by_id
-from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import Merchant, MerchantFeature, PlatformFeature, Subscription, SubscriptionPlan, PlanFeature, FeatureEventMapping
 from app.models.metrics import FeatureMetricsDaily
+from app.models.shopper import ShopperSegment
 from app.reference_data.plans import PlanKey
 from app.schemas.events.envelope import MerchantEventEnvelope
 from app.schemas.events.event_types import MerchantEventType
@@ -28,42 +28,10 @@ from app.services.merchant import (
 )
 
 
-@pytest.fixture
-async def db_session():
-    # Each async test runs on its own event loop, but the engine's connection
-    # pool is a module-level singleton - dispose it first so a stale
-    # connection bound to a previous test's loop is never reused here.
-    await engine.dispose()
-
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
-
-    await session.execute(delete(PlanFeature))
-    await session.execute(delete(FeatureEventMapping))
-    await session.execute(delete(SubscriptionPlan))
-    await session.execute(delete(FeatureMetricsDaily))
-    await session.execute(delete(PlatformFeature))
-    await session.commit()
-    await initialize_reference_data(session)
-
-    yield session
-
-    await session.execute(delete(PlanFeature))
-    await session.execute(delete(FeatureEventMapping))
-    await session.execute(delete(SubscriptionPlan))
-    await session.execute(delete(FeatureMetricsDaily))
-    await session.execute(delete(PlatformFeature))
-    await session.commit()
-    await session.close()
-
-
 async def _cleanup_merchant(session, merchant_id: uuid.UUID) -> None:
     await session.execute(delete(MerchantFeature).where(MerchantFeature.merchant_id == merchant_id))
     await session.execute(delete(Subscription).where(Subscription.merchant_id == merchant_id))
+    await session.execute(delete(ShopperSegment).where(ShopperSegment.merchant_id == merchant_id))
     await session.execute(delete(Merchant).where(Merchant.merchant_id == merchant_id))
     await session.commit()
 
@@ -321,6 +289,7 @@ async def test_unresolved_feature_key_raises(db_session):
     # Delete 'wishlist' feature and its mappings to test DB resolution failure
     feature_id = await db_session.scalar(select(PlatformFeature.feature_id).where(PlatformFeature.feature_key == "wishlist"))
     if feature_id:
+        await db_session.execute(delete(MerchantFeature).where(MerchantFeature.feature_id == feature_id))
         await db_session.execute(delete(PlanFeature).where(PlanFeature.feature_id == feature_id))
         await db_session.execute(delete(FeatureEventMapping).where(FeatureEventMapping.feature_id == feature_id))
         await db_session.execute(delete(PlatformFeature).where(PlatformFeature.feature_id == feature_id))

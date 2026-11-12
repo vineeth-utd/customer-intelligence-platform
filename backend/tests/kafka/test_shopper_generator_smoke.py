@@ -4,15 +4,12 @@ import sys
 from aiokafka.errors import KafkaConnectionError
 
 from app.config.settings import settings
-from app.db.session import engine
 from app.kafka.producer import event_producer
 from scripts.run_shopper_generator import _run
 
 @pytest.mark.asyncio
 async def test_shopper_generator_smoke():
     """Smoke test to ensure the shopper generator can run."""
-    await engine.dispose()
-    
     # Ensure Kafka is available before trying to run the producer
     try:
         await event_producer.start()

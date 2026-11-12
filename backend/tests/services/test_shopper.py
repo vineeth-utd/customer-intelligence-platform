@@ -17,20 +17,6 @@ from app.services.shopper import (
     UnresolvedReferenceError,
     InsufficientInventoryError,
 )
-from app.db.session import AsyncSessionLocal, engine
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-    yield session
-    await session.rollback()
-    await session.close()
 
 @pytest.fixture
 async def setup_data(db_session):

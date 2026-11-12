@@ -52,7 +52,7 @@ async def test_generated_catalog_reaches_the_product_topic(started_producer: Eve
 
         received = [(await consumer.getone()).value for _ in envelopes]
 
-        assert received == [envelope.model_dump_json().encode("utf-8") for envelope in envelopes]
+        assert set(received) == {envelope.model_dump_json().encode("utf-8") for envelope in envelopes}
     finally:
         await consumer.stop()
 

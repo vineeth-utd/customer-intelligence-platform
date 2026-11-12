@@ -6,7 +6,6 @@ from sqlalchemy import select, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.models.campaign import Campaign
 from app.models.metrics import CampaignAnalyticsDaily
 from app.models.event import CampaignEvent
@@ -26,21 +25,6 @@ from app.data_access.segment import upsert_merchant_segment
 from app.data_access.shopper import upsert_shopper
 from app.data_access.order import create_order
 from app.reference_data.segments import SegmentCatalogEntry
-
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
-
-    yield session
-
-    await session.close()
 
 
 @pytest.fixture

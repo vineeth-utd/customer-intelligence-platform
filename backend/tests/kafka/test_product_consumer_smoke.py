@@ -13,7 +13,6 @@ from aiokafka.structs import TopicPartition
 from sqlalchemy import delete, select, text
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.kafka.consumer import ProductEventConsumer
 from app.kafka.producer import EventProducer
 from app.models.event import ProductEvent
@@ -22,6 +21,7 @@ from app.models.product import Product, ProductVariant
 from app.schemas.events.envelope import ProductEventEnvelope
 from app.schemas.events.event_types import ProductEventType
 from app.services.product import UnresolvedReferenceError
+from tests.database import TestAsyncSessionLocal
 
 
 @pytest.fixture
@@ -52,19 +52,7 @@ async def consumer():
 
 
 @pytest.fixture
-async def merchant():
-    # Each async test runs on its own event loop, but the engine's connection
-    # pool is a module-level singleton - dispose it first so a stale
-    # connection bound to a previous test's loop is never reused here.
-    await engine.dispose()
-
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-
+async def merchant(db_session):
     merchant_row = Merchant(
         merchant_id=uuid.uuid4(),
         shopify_store_id=f"store-{uuid.uuid4().hex[:8]}",
@@ -75,13 +63,16 @@ async def merchant():
         store_currency="USD",
         app_install_status="installed",
     )
-    session.add(merchant_row)
-    await session.commit()
+    db_session.add(merchant_row)
+    await db_session.commit()
     yield merchant_row
-    await session.execute(delete(ProductEvent).where(ProductEvent.merchant_id == merchant_row.merchant_id))
-    await session.execute(delete(Merchant).where(Merchant.merchant_id == merchant_row.merchant_id))
-    await session.commit()
-    await session.close()
+    await db_session.execute(delete(ProductEvent).where(ProductEvent.merchant_id == merchant_row.merchant_id))
+    await db_session.execute(delete(ProductVariant).where(ProductVariant.product_id.in_(
+        select(Product.product_id).where(Product.merchant_id == merchant_row.merchant_id)
+    )))
+    await db_session.execute(delete(Product).where(Product.merchant_id == merchant_row.merchant_id))
+    await db_session.execute(delete(Merchant).where(Merchant.merchant_id == merchant_row.merchant_id))
+    await db_session.commit()
 
 
 async def _drain_until_event(consumer: ProductEventConsumer, event_id: uuid.UUID, max_messages: int = 5000):
@@ -117,7 +108,7 @@ def _created_envelope(
 
 
 async def _cleanup_product(product_id: uuid.UUID) -> None:
-    async with AsyncSessionLocal() as session:
+    async with TestAsyncSessionLocal() as session:
         await session.execute(delete(ProductVariant).where(ProductVariant.product_id == product_id))
         await session.execute(delete(Product).where(Product.product_id == product_id))
         await session.execute(delete(ProductEvent).where(ProductEvent.product_id == product_id))
@@ -148,12 +139,12 @@ async def test_successful_event_is_processed_and_offset_committed(
         message = await _drain_until_event(consumer, envelope.event_id)
         await consumer._handle_message(message)
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             row = await session.get(ProductEvent, envelope.event_id)
         assert row.processed is True
         assert row.processed_at is not None
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             product = await session.get(Product, product_id)
         assert product is not None
         assert product.product_name == "Smoke Test Product"
@@ -182,7 +173,7 @@ async def test_duplicate_delivery_after_processing_is_skipped_and_offset_still_c
         second_message = await consumer._consumer.getone()
         await consumer._handle_message(second_message)
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             rows = (
                 (await session.execute(select(ProductEvent).where(ProductEvent.event_id == envelope.event_id)))
                 .scalars()
@@ -191,7 +182,7 @@ async def test_duplicate_delivery_after_processing_is_skipped_and_offset_still_c
         assert len(rows) == 1
         assert rows[0].processed is True
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             products = (await session.execute(select(Product).where(Product.product_id == product_id))).scalars().all()
         assert len(products) == 1
 
@@ -229,12 +220,12 @@ async def test_processing_failure_commits_offset_after_dlq(
 
         await consumer._handle_message(message)
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             row = await session.get(ProductEvent, envelope.event_id)
         assert row is not None
         assert row.processed is False
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             variant = await session.get(ProductVariant, missing_variant_id)
         assert variant is None
 

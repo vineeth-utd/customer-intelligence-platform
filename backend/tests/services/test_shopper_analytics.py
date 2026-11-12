@@ -5,7 +5,6 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import delete, select, text
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.event import ShopperEvent
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
 from app.models.merchant import Merchant
@@ -21,18 +20,8 @@ from app.services.analytics import (
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    s = AsyncSessionLocal()
-    try:
-        await s.execute(text("SELECT 1"))
-    except Exception as exc:
-        pytest.skip(f"Database unavailable: {exc}")
-
-    yield s
-    await s.rollback()
-    await s.close()
-    await engine.dispose()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.fixture

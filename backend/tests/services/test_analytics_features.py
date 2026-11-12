@@ -5,19 +5,12 @@ import pytest
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.event import MerchantEvent, ShopperEvent
 from app.models.metrics import FeatureMetricsDaily
 from app.data_access.merchant import create_merchant
 from app.services.merchant import initialize_reference_data
 from app.services.analytics import generate_daily_metrics
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    yield session
-    await session.close()
+from tests.database import safe_truncate_test_tables
 
 @pytest.mark.asyncio
 async def test_feature_metrics_daily_with_subscription_changes(db_session: AsyncSession):
@@ -25,11 +18,10 @@ async def test_feature_metrics_daily_with_subscription_changes(db_session: Async
     merchant_id = uuid.uuid4()
     shopper_id = uuid.uuid4()
     
-    await db_session.execute(text("TRUNCATE TABLE merchants CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE merchant_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE shopper_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE feature_metrics_daily CASCADE"))
-    await db_session.commit()
+    await safe_truncate_test_tables(
+        db_session,
+        ["merchants", "merchant_events", "shopper_events", "feature_metrics_daily"],
+    )
     
     await initialize_reference_data(db_session)
     await db_session.commit()
@@ -108,11 +100,10 @@ async def test_feature_metrics_daily_with_subscription_downgrade(db_session: Asy
     merchant_id = uuid.uuid4()
     shopper_id = uuid.uuid4()
     
-    await db_session.execute(text("TRUNCATE TABLE merchants CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE merchant_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE shopper_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE feature_metrics_daily CASCADE"))
-    await db_session.commit()
+    await safe_truncate_test_tables(
+        db_session,
+        ["merchants", "merchant_events", "shopper_events", "feature_metrics_daily"],
+    )
     
     await initialize_reference_data(db_session)
     await db_session.commit()

@@ -13,24 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
 from app.data_access.campaign_events import get_campaign_event, insert_campaign_event, mark_campaign_event_processed
-from app.db.session import AsyncSessionLocal, engine
 from app.models.event import CampaignEvent
 from app.schemas.events.envelope import CampaignEventEnvelope
 from app.schemas.events.event_types import CampaignEventType
-
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
-    yield session
-    await session.close()
 
 
 @pytest.fixture

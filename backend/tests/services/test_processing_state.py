@@ -6,28 +6,16 @@ from sqlalchemy import select
 from app.models.processing_state import EntityProcessingState
 from app.services.processing_state import record_processing_success, record_processing_failure
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from sqlalchemy import delete, text
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-
-    await session.execute(delete(EntityProcessingState))
-    await session.commit()
-
-    yield session
-
-    await session.execute(delete(EntityProcessingState))
-    await session.commit()
-    await session.close()
+async def session(db_session):
+    await db_session.execute(delete(EntityProcessingState))
+    await db_session.commit()
+    yield db_session
+    await db_session.execute(delete(EntityProcessingState))
+    await db_session.commit()
 
 
 @pytest.mark.asyncio

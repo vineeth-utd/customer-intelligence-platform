@@ -6,7 +6,6 @@ from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.models.metrics import (
     MerchantMetricsDaily,
     PlatformMetricsDaily,
@@ -23,20 +22,7 @@ from app.data_access.merchant import create_merchant
 from app.data_access.shopper import upsert_shopper
 from app.data_access.segment import upsert_merchant_segment
 from app.reference_data.segments import SegmentCatalogEntry
-
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
-
-    yield session
-    await session.close()
+from tests.database import safe_truncate_test_tables
 
 
 @pytest.mark.asyncio
@@ -46,15 +32,20 @@ async def test_generate_daily_metrics_idempotent(db_session: AsyncSession):
     shopper_id = uuid.uuid4()
     campaign_id = uuid.uuid4()
     order_id = uuid.uuid4()
-    await db_session.execute(text("TRUNCATE TABLE merchants CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE platform_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE merchant_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE shopper_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE campaign_events CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE feature_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE merchant_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE platform_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE campaign_analytics_daily CASCADE"))
+    await safe_truncate_test_tables(
+        db_session,
+        [
+            "merchants",
+            "platform_events",
+            "merchant_events",
+            "shopper_events",
+            "campaign_events",
+            "feature_metrics_daily",
+            "merchant_metrics_daily",
+            "platform_metrics_daily",
+            "campaign_analytics_daily",
+        ],
+    )
     await db_session.commit()
     
     # 1. Setup Merchant

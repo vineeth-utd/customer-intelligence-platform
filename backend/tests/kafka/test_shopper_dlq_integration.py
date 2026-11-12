@@ -8,7 +8,6 @@ from aiokafka import TopicPartition, AIOKafkaConsumer
 from sqlalchemy import select, delete, text
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.kafka.consumer import ShopperEventConsumer
 from app.kafka.producer import EventProducer
 from app.models.merchant import Merchant
@@ -54,18 +53,6 @@ async def consumer():
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
     yield instance
     await instance.stop()
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-    yield session
-    await session.close()
 
 @pytest.fixture
 async def merchant(db_session):

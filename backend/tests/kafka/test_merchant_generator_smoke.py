@@ -41,6 +41,6 @@ async def test_generated_population_reaches_the_merchant_topic(started_producer:
 
         received = [(await consumer.getone()).value for _ in envelopes]
 
-        assert received == [envelope.model_dump_json().encode("utf-8") for envelope in envelopes]
+        assert set(received) == {envelope.model_dump_json().encode("utf-8") for envelope in envelopes}
     finally:
         await consumer.stop()

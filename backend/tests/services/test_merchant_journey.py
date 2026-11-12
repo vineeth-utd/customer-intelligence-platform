@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.campaign import Campaign
 from app.models.event import CampaignEvent, MerchantEvent
 from app.models.journey import MerchantJourney, MerchantJourneyEvent
@@ -18,18 +17,8 @@ from app.services.merchant_journey import generate_merchant_journeys_for_merchan
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-
-    yield session
-    await session.close()
-    await engine.dispose()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.fixture

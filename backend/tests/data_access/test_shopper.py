@@ -6,23 +6,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.models.event import ShopperEvent
 from app.models.merchant import Merchant
 from app.models.shopper import Shopper
-
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-    yield session
-    await session.close()
 
 
 @pytest.fixture

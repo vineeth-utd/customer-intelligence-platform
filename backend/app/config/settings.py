@@ -1,4 +1,7 @@
-from pydantic import computed_field
+from typing import Self
+from urllib.parse import urlparse
+
+from pydantic import AliasChoices, Field, computed_field, model_validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -14,6 +17,11 @@ class Settings(BaseSettings):
     postgres_user: str = "cip_user"
     postgres_password: str = "cip_password"
     postgres_db: str = "cip_db"
+    postgres_test_db: str = "cip_test_db"
+    test_database_url_override: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("test_database_url", "test_database_url_override"),
+    )
 
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_merchant_events_topic: str = "cip.merchant.events"
@@ -68,6 +76,35 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @computed_field
+    @property
+    def test_database_url(self) -> str:
+        if self.test_database_url_override:
+            return self.test_database_url_override
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_test_db}"
+        )
+
+    @model_validator(mode="after")
+    def validate_test_database_configuration(self) -> Self:
+        if not self.postgres_test_db or not self.postgres_test_db.strip():
+            raise ValueError("postgres_test_db must not be empty.")
+        if self.postgres_test_db == self.postgres_db:
+            raise ValueError(
+                f"postgres_test_db ('{self.postgres_test_db}') cannot be identical to postgres_db ('{self.postgres_db}')."
+            )
+        parsed = urlparse(self.test_database_url)
+        target_db = parsed.path.lstrip("/")
+        if not target_db:
+            raise ValueError("test_database_url must specify a target database.")
+        if target_db == self.postgres_db:
+            raise ValueError(
+                f"test_database_url points to the application database '{self.postgres_db}'. "
+                f"Automated tests must run against a dedicated test database (e.g. '{self.postgres_test_db}')."
+            )
+        return self
 
 settings = Settings()
 

@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.campaign import Campaign
 from app.models.event import CampaignEvent, MerchantEvent, ShopperEvent
 from app.models.journey import ShopperJourney, ShopperJourneyEvent
@@ -47,18 +46,8 @@ from app.services.segment import (
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    s = AsyncSessionLocal()
-    try:
-        await s.execute(text("SELECT 1"))
-    except Exception as exc:
-        await s.close()
-        pytest.skip(f"Database unavailable: {exc}")
-
-    yield s
-    await s.close()
-    await engine.dispose()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.fixture

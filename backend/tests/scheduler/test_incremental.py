@@ -8,8 +8,7 @@ from app.models.merchant import Merchant
 from app.models.processing_state import EntityProcessingState
 from app.scheduler.incremental import process_incremental_target
 from app.data_access.processing_state import record_domain_activity
-
-from app.db.session import AsyncSessionLocal, engine
+from tests.database import TestAsyncSessionLocal
 from sqlalchemy import text
 
 class DummyGeneratorError(Exception):
@@ -18,17 +17,8 @@ class DummyGeneratorError(Exception):
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        raise exc
-    yield session
-    await session.rollback()
-    await session.close()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.mark.asyncio
@@ -191,8 +181,7 @@ async def test_process_incremental_concurrent_activity(session):
         newer_time = datetime.now(timezone.utc) + timedelta(minutes=5)
         
         # We need a new session since we are simulating an independent Kafka worker
-        from app.db.session import AsyncSessionLocal
-        async with AsyncSessionLocal() as concurrent_session:
+        async with TestAsyncSessionLocal() as concurrent_session:
             await record_domain_activity(
                 concurrent_session, "merchant", eid, "merchant", newer_time
             )

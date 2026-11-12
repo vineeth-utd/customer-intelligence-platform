@@ -15,20 +15,7 @@ from app.services.analytics import (
     generate_daily_metrics
 )
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-
-    yield session
-    await session.close()
+from tests.database import safe_truncate_test_tables
 
 @pytest.mark.asyncio
 async def test_analytics_read_capabilities(db_session: AsyncSession):
@@ -38,13 +25,18 @@ async def test_analytics_read_capabilities(db_session: AsyncSession):
 
     # Note: We rely on the db state from test_analytics.py or we can mock it here
     # For a robust test, we insert dummy daily metrics directly
-    await db_session.execute(text("TRUNCATE TABLE merchant_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE platform_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE feature_metrics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE campaign_analytics_daily CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE platform_features CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE campaigns CASCADE"))
-    await db_session.execute(text("TRUNCATE TABLE merchants CASCADE"))
+    await safe_truncate_test_tables(
+        db_session,
+        [
+            "merchant_metrics_daily",
+            "platform_metrics_daily",
+            "feature_metrics_daily",
+            "campaign_analytics_daily",
+            "campaigns",
+            "merchants",
+        ],
+    )
+    await db_session.execute(text("DELETE FROM platform_features WHERE feature_key = 'read_feature'"))
     await db_session.commit()
 
     # Create dummy merchant

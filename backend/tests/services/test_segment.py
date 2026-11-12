@@ -3,28 +3,11 @@ import uuid
 import pytest
 from sqlalchemy import select, text
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import Merchant
 from app.models.shopper import ShopperSegment
 from app.reference_data.segments import SEGMENT_CATALOG
 from app.services.segment import initialize_merchant_segments
 from app.data_access.segment import get_merchant_segments
-
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        pytest.skip(f"Database unavailable: {exc}")
-
-    yield session
-
-    # Transaction is typically rolled back in tests, but let's just make sure
-    await session.rollback()
-    await session.close()
 
 
 @pytest.mark.asyncio

@@ -14,12 +14,12 @@ from aiokafka.structs import TopicPartition
 from sqlalchemy import delete, select, text
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.kafka.consumer import CampaignEventConsumer
 from app.kafka.producer import EventProducer
 from app.models.event import CampaignEvent
 from app.schemas.events.envelope import CampaignEventEnvelope
 from app.schemas.events.event_types import CampaignEventType
+from tests.database import TestAsyncSessionLocal
 
 
 @pytest.fixture
@@ -47,15 +47,8 @@ async def consumer():
 
 
 @pytest.fixture(autouse=True)
-async def check_db():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-    await session.close()
+def check_db(isolate_test_db):
+    yield
 
 
 async def _drain_until_event(consumer: CampaignEventConsumer, event_id: uuid.UUID, max_messages: int = 5000):
@@ -96,7 +89,7 @@ def _created_envelope(
 
 
 async def _cleanup_campaign(campaign_id: uuid.UUID) -> None:
-    async with AsyncSessionLocal() as session:
+    async with TestAsyncSessionLocal() as session:
         await session.execute(delete(CampaignEvent).where(CampaignEvent.campaign_id == campaign_id))
         await session.commit()
 
@@ -131,7 +124,7 @@ async def test_valid_event_persists_with_offset_advancement_and_remains_unproces
         await consumer._handle_message(message)
 
         # 2. Event is persisted
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             row = await session.get(CampaignEvent, envelope.event_id)
         assert row is not None
         assert row.event_type == CampaignEventType.CAMPAIGN_CREATED.value
@@ -169,10 +162,10 @@ async def test_duplicate_event_is_persisted_idempotently_with_offset_advancement
 
         await consumer._handle_message(first_message)
 
-        second_message = await consumer._consumer.getone()
+        second_message = await _drain_until_event(consumer, envelope.event_id)
         await consumer._handle_message(second_message)
 
-        async with AsyncSessionLocal() as session:
+        async with TestAsyncSessionLocal() as session:
             rows = (
                 (await session.execute(select(CampaignEvent).where(CampaignEvent.event_id == envelope.event_id)))
                 .scalars()

@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import Merchant
 from app.models.profile import MerchantProfile, ShopperProfile
 from app.models.order import Order, OrderItem
@@ -17,18 +16,8 @@ from app.services.profile import generate_merchant_profile_callback, generate_sh
 
 
 @pytest.fixture
-async def session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-
-    yield session
-
-    await session.close()
+async def session(db_session):
+    yield db_session
 
 
 @pytest.fixture

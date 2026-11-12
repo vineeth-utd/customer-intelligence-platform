@@ -9,27 +9,10 @@ from sqlalchemy import delete, text
 
 from app.config.settings import settings
 from app.data_access.merchant import get_feature_by_key, get_plan_by_key, upsert_feature, upsert_plan
-from app.db.session import AsyncSessionLocal, engine
 from app.models.merchant import PlatformFeature, SubscriptionPlan
 from app.reference_data.features import FeatureCatalogEntry, FeatureKey
 from app.reference_data.plans import PlanCatalogEntry, PlanKey
-
-
-@pytest.fixture
-async def db_session():
-    # Each async test runs on its own event loop, but the engine's connection
-    # pool is a module-level singleton - dispose it first so a stale
-    # connection bound to a previous test's loop is never reused here.
-    await engine.dispose()
-
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable at {settings.postgres_host}:{settings.postgres_port}: {exc}")
-    yield session
-    await session.close()
+from tests.database import TestAsyncSessionLocal
 
 
 async def _delete_plan(session, plan_key: PlanKey) -> None:
@@ -122,7 +105,7 @@ async def test_upsert_plan_does_not_commit(db_session):
         await upsert_plan(db_session, entry)
         await db_session.rollback()
 
-        async with AsyncSessionLocal() as other_session:
+        async with TestAsyncSessionLocal() as other_session:
             assert await get_plan_by_key(other_session, PlanKey.GROWTH) is None
     finally:
         await _delete_plan(db_session, PlanKey.GROWTH)

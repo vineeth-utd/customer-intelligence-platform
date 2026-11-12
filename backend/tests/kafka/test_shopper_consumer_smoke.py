@@ -13,7 +13,6 @@ from aiokafka.structs import TopicPartition
 from sqlalchemy import delete, select, text
 
 from app.config.settings import settings
-from app.db.session import AsyncSessionLocal, engine
 from app.kafka.consumer import ShopperEventConsumer
 from app.kafka.producer import EventProducer
 from app.models.event import ShopperEvent
@@ -43,23 +42,14 @@ async def consumer():
     instance = ShopperEventConsumer(group_id=f"consumer-smoke-test-{uuid.uuid4()}")
     try:
         await instance.start()
+        partitions = instance._consumer.assignment()
+        if partitions:
+            await instance._consumer.seek_to_end(*partitions)
     except KafkaConnectionError:
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
     yield instance
     await instance.stop()
 
-
-@pytest.fixture
-async def db_session():
-    await engine.dispose()
-    session = AsyncSessionLocal()
-    try:
-        await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        await session.close()
-        pytest.skip(f"Local Postgres is not reachable: {exc}")
-    yield session
-    await session.close()
 
 @pytest.fixture
 async def merchant(db_session):
@@ -84,7 +74,7 @@ async def merchant(db_session):
     await db_session.commit()
 
 
-async def _drain_until_event(consumer: ShopperEventConsumer, event_id: uuid.UUID, max_messages: int = 5000):
+async def _drain_until_event(consumer: ShopperEventConsumer, event_id: uuid.UUID, max_messages: int = 30000):
     for _ in range(max_messages):
         message = await consumer._consumer.getone()
         envelope = consumer._validate(message)
@@ -166,7 +156,7 @@ async def test_duplicate_delivery_is_skipped_and_offset_still_committed(
         first_message = await _drain_until_event(consumer, envelope.event_id)
         await consumer._handle_message(first_message)
         
-        second_message = await consumer._consumer.getone()
+        second_message = await _drain_until_event(consumer, envelope.event_id)
         topic_partition = TopicPartition(second_message.topic, second_message.partition)
         committed_before = await consumer._consumer.committed(topic_partition)
 
