@@ -737,6 +737,27 @@ The MVP frontend remains primarily an internal-team experience. A complete merch
 * The deterministic Customer Intelligence Platform is useful through dashboards and APIs without requiring AI capabilities.
 * The resulting Business Services can later be reused directly by AI tools.
 
+### Status
+
+**COMPLETED**: Phase 2 Milestone 4 is complete.
+
+* **Architecture Outcome**: The complete deterministic MVP business-intelligence layer is exposed through reusable backend REST APIs and a rich internal intelligence dashboard.
+  * **Authentication & Authorization Foundation (Unit 4.1)**: Lightweight token issuance and validation (`app.auth.token.decode_access_token`, `create_access_token`), `INTERNAL` (platform-wide) and `MERCHANT` (tenant-scoped) principal models (`app.schemas.auth.Principal`), FastAPI dependency enforcers (`app.dependencies.auth.require_internal_principal`, `app.dependencies.auth.require_merchant_access`), and strict cross-merchant tenant isolation returning HTTP 403 Forbidden on unauthorized access. Development token endpoints (`POST /api/v1/auth/dev-token`, `GET /api/v1/auth/dev-principals`) support persona testing.
+  * **Merchant & Shopper Intelligence APIs (Unit 4.2)**: Merchant endpoints in `app.api.merchants` (`/api/v1/merchants`, `/{id}`, `/profile`, `/health`, `/journeys`, `/journeys/{journey_id}`, `/features`, `/subscription`, `/shoppers`, `/orders`, `/analytics/summary`, `/analytics/trend`, `/analytics/funnel`, `/analytics/journeys`, `/analytics/behavior`, `/analytics/revenue`, `/campaigns/analytics`) delegating to underlying Business Services (`app.services.merchant`, `profile`, `merchant_health`, `merchant_journey`, `analytics`, `order`, `shopper`). Shopper endpoints in `app.api.shoppers` (`/api/v1/merchants/{merchant_id}/shoppers/{shopper_id}`, `/profile`, `/journeys`, `/journeys/{journey_id}`, `/orders`, `/segments`, `/activity`) delegating to `app.services.shopper`, `profile`, `journey`, `order`, and `segment`.
+  * **Campaign APIs (Unit 4.3)**: Campaign endpoints in `app.api.campaigns` (`/api/v1/merchants/{merchant_id}/campaigns`, `/{id}`, `/{id}/performance`, `/{id}/attribution`, `/{id}/journey-correlation`, `/{id}/audience`) exposing performance, multi-perspective attribution, journey correlation, and audience segment response by delegating to `app.services.campaign` and `app.services.analytics`.
+  * **Analytics & Consolidated Dashboard APIs (Unit 4.4)**: Platform summary, trend, and feature metrics in `app.api.analytics`; consolidated dashboard endpoints in `app.api.dashboard` (`GET /api/v1/dashboard/platform`, `GET /api/v1/dashboard/merchants/{merchant_id}`) thin-composing underlying services (`app.services.dashboard.get_platform_dashboard`, `get_merchant_dashboard`) without raw DAL or SQL leakage.
+  * **Authenticated Internal Intelligence UX (Units 4.5–4.8)**: Complete internal dashboard experience:
+    * Header MVP Identity Switcher (`components/layout/Header.tsx`) for switching between `INTERNAL` principal and `MERCHANT` personas.
+    * Platform Overview (`features/platform/PlatformOverview.tsx`) rendering platform KPIs (MRR, ARR, active merchants, GMV, total orders, conversion rate), revenue trends, and feature adoption.
+    * Merchant Intelligence Drill-Down (`features/merchants/MerchantOverview.tsx`) across 7 dedicated views: Overview & Intelligence, Shoppers & Customers, Campaigns & Marketing, Health & Risk, Merchant Lifecycle Journey, Profile & Features, and Recent Activity.
+    * Shopper Intelligence Drill-Down (`features/shoppers/ShopperDetail.tsx`) featuring a 7-day timeline visualizer for `CONVERTED`, `NON_CONVERTING`, and `OPEN` journeys.
+    * Campaign Intelligence Drill-Down (`features/campaigns/CampaignDetail.tsx`) rendering multi-perspective attribution breakdown (direct, first-touch, last-touch, assisted).
+  * **Operational Hardening & Stability**:
+    * **Deterministic Historical Simulation**: `SimulationContext` and `HistoricalOrchestrator` generate causal, chronological business event histories across merchants, shoppers, orders, and campaigns without out-of-order anomalies.
+    * **Stateful Test Isolation**: Dedicated test targets (PostgreSQL `cip_test_db` with `assert_test_database` guard, dynamic Kafka test topic prefixing `cip.test.*`) protect long-lived development simulation data from automated test pollution or deletion.
+    * **UI Data Normalization & Scope Clarity**: Defensive number parsing (`parseNumericValue`) protects presentation components against serialized string Decimals; subtle, non-interactive Scope Badges distinguish period-scoped overview metrics from lifetime campaign performance and snapshot profile state.
+  * **Milestone Integration & Verification**: Full regression suite confirms 481 passing backend tests across API, auth, Kafka, scheduler, services, and DAL layers, and 18 passing frontend tests with a clean production build (`tsc -b && vite build`).
+
 ---
 
 ## Milestone 5 - AI Knowledge Pipeline

@@ -128,6 +128,18 @@ The frontend does not introduce a separate global state management library. Serv
 
 ---
 
+## 2.4 Authentication & Identity Switching
+
+The frontend includes lightweight development authentication and persona switching:
+
+- **Token Storage**: Managed via `tokenStorage` in `frontend/src/features/auth/tokenStorage.ts`, storing signed JWT access tokens in browser local storage.
+- **Header Identity Switcher**: Implemented in `frontend/src/components/layout/Header.tsx`, providing an interactive persona selector allowing users to switch between:
+  - `INTERNAL` (Platform Operator): Unrestricted platform-wide access across all merchants and platform analytics.
+  - `MERCHANT` (Store Owner): Restricted to a selected merchant ID, exercising tenant-isolation boundaries.
+- **API Request Interception**: Outgoing HTTP requests through `frontend/src/api/client.ts` automatically attach the active bearer token in the `Authorization` header.
+
+---
+
 # 3. Dashboard & Visualization Design
 
 The frontend provides dashboard experiences that allow users to monitor business performance, explore analytical data, and drill down into specific merchants, shoppers, campaigns, and shopper journeys.
@@ -138,47 +150,34 @@ Dashboards consume business data and metrics provided by backend APIs. Business 
 
 ## 3.1 Dashboard Experiences
 
-The platform provides different dashboard scopes for internal users and merchants.
+The platform provides distinct dashboard scopes for internal platform operators and merchant-specific drill-downs.
 
-### Internal Experience
+### Platform Overview Experience
 
-Internal teams require visibility across the entire SaaS platform while also being able to investigate individual merchants and their underlying business activity.
+The platform overview (`frontend/src/features/platform/PlatformOverview.tsx`) provides high-level visibility across all merchants:
 
-The internal experience supports:
+* Executive KPI cards: MRR, ARR, active merchants, platform GMV, total completed orders, storefront conversion rate, and feature adoption.
+* Time-series revenue, GMV, and order volume growth charts.
+* Platform conversion funnel (sessions → product views → cart additions → checkouts → orders).
+* Platform feature adoption summary table showing entitled vs enabled vs active usage.
 
-* Platform-wide business performance.
-* Merchant growth, retention, and subscription trends.
-* Cross-merchant analytics.
-* Platform feature adoption.
-* Campaign performance.
-* Merchant health monitoring.
-* Merchant-level drill-down.
-* Shopper, campaign, and shopper journey drill-down.
+### Merchant Intelligence Experience
 
-This enables users to move naturally from platform-level trends into the specific merchants or business activity contributing to those trends.
+The merchant intelligence drill-down (`frontend/src/features/merchants/MerchantOverview.tsx`) provides a comprehensive 7-tab view for any merchant:
 
-### Merchant Experience
-
-Merchant-facing dashboards are scoped to the authenticated merchant's own business.
-
-The merchant experience supports:
-
-* Store performance.
-* Revenue and conversion trends.
-* Shopper behaviour.
-* Customer journeys.
-* Campaign performance.
-* Feature adoption and usage.
-
-Merchants cannot access platform-wide information or information belonging to other merchants.
+1. **Overview & Intelligence**: Period-scoped financial metrics (GMV, order count, AOV, conversion rate), period-over-period growth comparisons, health summary, and 30-day activity trend charts.
+2. **Shoppers & Customers**: Merchant customer directory, shopper lifetime spend, order count, active segment tags, and drill-down into individual shopper profiles.
+3. **Campaigns & Marketing**: Lifetime campaign performance table with explicit run-window context (`formatCampaignRunWindow`), status filters (Draft, Scheduled, Active, Completed, Paused), and drill-down into campaign attribution.
+4. **Health & Risk**: Multi-factor normalized health score (0–100), inverse churn risk score, dimensional scores (feature adoption, platform engagement, business performance), and explainable contributing factors.
+5. **Merchant Lifecycle Journey**: Interactive visual timeline tracking significant lifecycle milestones (app install, plan upgrades/downgrades, feature enablement, campaign creation).
+6. **Profile & Features**: Operational snapshot details (merchant name, store currency, domain, platform, catalog size, subscription plan) and feature entitlement vs enablement matrix.
+7. **Recent Activity**: Audit stream of recent raw operational domain activities.
 
 ---
 
-## 3.2 Visualization Components
+## 3.2 Visualization Components & Scope Semantics
 
-The frontend uses a small set of reusable visualization components across dashboard experiences.
-
-Common components include:
+The frontend uses reusable visualization components across dashboard experiences:
 
 * KPI cards for important business metrics.
 * Line charts for time-series trends.
@@ -188,6 +187,18 @@ Common components include:
 * Timelines for customer and merchant journeys.
 * Status indicators for merchant health and other business states.
 * Context-specific filters and date-range selectors.
+
+### Scope Badges & Temporal Clarity
+
+Because the Merchant Intelligence screen combines period-scoped metrics with snapshot and lifetime views, non-interactive **Scope Badges** are displayed when navigating away from period-scoped tabs:
+- Overview & Intelligence: Period-scoped to the selected date range.
+- Campaigns & Marketing: `Scope: Lifetime Campaign Performance` (with campaign run-windows displayed in-row).
+- Profile & Features: `Scope: Current Profile & Features`.
+- Shoppers & Customers: `Scope: Customer Directory`.
+- Lifecycle Journey: `Scope: Lifecycle Milestones`.
+- Recent Activity: `Scope: Activity Audit Stream`.
+
+This prevents user confusion when date-range filters do not affect tabs that represent lifetime or snapshot business state.
 
 Apache ECharts provides the underlying charting capabilities while React components provide consistent presentation and interaction patterns.
 
@@ -308,6 +319,16 @@ The frontend distinguishes between:
 * **Empty states** when a valid request returns no business data.
 
 This ensures that temporary failures and genuinely empty datasets are communicated clearly without being treated as the same condition.
+
+---
+
+## 4.5 Defensive Boundary Normalization & Multi-Currency Formatting
+
+Because the API backend serializes high-precision `Decimal` values into JSON as strings, the frontend presentation boundary enforces defensive normalization:
+
+- **Numeric Parsing (`parseNumericValue`)**: Reusable utility in `frontend/src/utils/formatters.ts` safely parses `number | string | null | undefined` into a valid JavaScript `number` or `null`. Formatting functions (`formatCurrency`, `formatGrowthRate`, `formatScore`, `formatPercent`) route all inputs through `parseNumericValue` prior to arithmetic operations or `.toFixed()` calls, preventing runtime `TypeError` exceptions.
+- **Multi-Currency Support (`formatCurrency`)**: Monetary figures are formatted using the merchant's authoritative store currency (e.g. `USD`, `EUR`, `AUD`, `CAD`, `GBP`), avoiding hardcoded currency assumptions and ensuring visual fidelity across multi-currency merchant cohorts.
+- **Null Safety**: Genuinely absent or non-computable metrics render clear visual em-dash (`—`) fallbacks rather than coercing nulls into deceptive zeros.
 
 ---
 

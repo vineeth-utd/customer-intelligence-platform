@@ -99,85 +99,96 @@ Each API group represents a logical business domain and provides the operations 
 
 ## 3.1 Merchant APIs
 
-Merchant APIs provide access to merchant-related information and business operations.
+Merchant APIs provide access to merchant-related information, configuration, and business operations.
 
-These APIs support internal teams such as Customer Success, Sales, and Product, as well as merchant-facing experiences.
+Mounted at `/api/v1/merchants`, these endpoints support internal platform users and merchant-specific experiences:
 
-Key capabilities include:
-
-* Retrieve merchant profile
-* Retrieve merchant health
-* Retrieve subscription information
-* Retrieve feature adoption
-* Retrieve merchant campaigns
+* `GET /api/v1/merchants`: Paginated merchant listing (`PaginatedResponse[MerchantSummaryResponse]`).
+* `GET /api/v1/merchants/{merchant_id}`: Detailed merchant profile and configuration (`MerchantDetailResponse`).
+* `GET /api/v1/merchants/{merchant_id}/profile`: Snapshot operational profile and catalog metrics (`MerchantProfileResponse`).
+* `GET /api/v1/merchants/{merchant_id}/health`: Normalized health score (0–100), churn risk, and factor breakdown (`MerchantHealthResponse`).
+* `GET /api/v1/merchants/{merchant_id}/journeys`: Merchant lifecycle journeys (`List[MerchantJourneyResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/journeys/{merchant_journey_id}`: Detailed merchant journey timeline (`MerchantJourneyDetailResponse`).
+* `GET /api/v1/merchants/{merchant_id}/features`: Feature entitlement and enablement statuses (`List[MerchantFeatureResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/subscription`: Active subscription plan and status (`SubscriptionResponse`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers`: Merchant customer directory (`PaginatedResponse[ShopperResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/orders`: Merchant orders with pagination (`PaginatedResponse[OrderResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/summary`: Aggregate revenue, conversion, and shopper metrics (`MerchantMetricsSummaryResult`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/trend`: Time-series merchant performance metrics (`List[MerchantMetricsTrendResult]`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/analytics`: Campaign performance summary for the merchant (`List[CampaignAnalyticsResult]`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/funnel`: Conversion funnel analysis (`ConversionFunnelResult`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/journeys`: Aggregated shopper journey conversion statistics (`ShopperJourneyAnalyticsResult`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/behavior`: Shopper behavioral analytics (`ShopperBehaviorAnalyticsResult`).
+* `GET /api/v1/merchants/{merchant_id}/analytics/revenue`: Granular revenue breakdown (`RevenueAnalyticsResult`).
 
 ---
 
 ## 3.2 Shopper APIs
 
-Shopper APIs provide access to shopper-related information and behavioural insights.
+Shopper APIs provide access to shopper profiles, journeys, purchasing history, and behavioral activity.
 
-These APIs support shopper journey analysis, shopper investigations, segmentation, and merchant dashboards.
+Mounted at `/api/v1/merchants/{merchant_id}/shoppers`:
 
-Key capabilities include:
-
-* Retrieve shopper profile
-* Retrieve shopper journey
-* Retrieve purchase history
-* Retrieve shopper segments
-* Retrieve shopper activity
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}`: Shopper identity and summary (`ShopperResponse`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/profile`: Operational shopper profile (`ShopperProfileResponse`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/journeys`: Shopper journey list (`List[ShopperJourneyResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/journeys/{journey_id}`: Detailed 7-day journey timeline events (`ShopperJourneyDetailResponse`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/orders`: Purchase history (`PaginatedResponse[OrderResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/segments`: Active segment memberships (`List[ShopperSegmentMembershipResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/shoppers/{shopper_id}/activity`: Chronological shopper event stream (`PaginatedResponse[ShopperActivityEventResponse]`).
 
 ---
 
 ## 3.3 Campaign APIs
 
-Campaign APIs expose campaign information and performance analytics.
+Campaign APIs expose marketing campaign configurations, delivery performance, multi-perspective attribution, and audience response.
 
-These APIs enable users to evaluate campaign effectiveness and understand shopper engagement.
+Mounted at `/api/v1/merchants/{merchant_id}/campaigns`:
 
-Key capabilities include:
-
-* Retrieve campaign details
-* Retrieve campaign performance
-* Retrieve campaign engagement metrics
-* Retrieve campaign audience information
+* `GET /api/v1/merchants/{merchant_id}/campaigns`: Paginated campaign listing (`PaginatedResponse[CampaignSummaryResponse]`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/{campaign_id}`: Campaign configuration details (`CampaignDetailResponse`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/{campaign_id}/performance`: Aggregated send, open, click, and conversion metrics (`CampaignPerformanceDetailResult`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/{campaign_id}/attribution`: Multi-perspective attribution breakdown (direct session match, first-touch, last-touch, and assisted touches) (`CampaignAttributionResult`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/{campaign_id}/journey-correlation`: Correlation with converting and non-converting shopper journeys (`CampaignJourneyCorrelationResult`).
+* `GET /api/v1/merchants/{merchant_id}/campaigns/{campaign_id}/audience`: Segment-level audience response and engagement (`CampaignAudienceAnalysisResult`).
 
 ---
 
 ## 3.4 Analytics APIs
 
-Analytics APIs provide access to business metrics and analytical data products generated by the platform.
+Analytics APIs provide platform-level aggregations and feature adoption metrics.
 
-These APIs primarily power dashboards and business reporting.
+Mounted at `/api/v1/analytics`:
 
-Key capabilities include:
-
-* Retrieve business metrics
-* Retrieve revenue metrics
-* Retrieve conversion metrics
-* Retrieve merchant analytics
-* Retrieve shopper analytics
-* Retrieve campaign analytics
-* Retrieve feature adoption metrics
+* `GET /api/v1/analytics/platform/summary`: Platform-wide KPI totals and period-over-period growth (`PlatformSummaryResult`).
+* `GET /api/v1/analytics/platform/trend`: Time-series daily platform growth trends (`List[PlatformTrendResult]`).
+* `GET /api/v1/analytics/features`: Feature adoption, active merchants, and usage rates (`List[FeatureMetricsResult]`).
 
 ---
 
 ## 3.5 Dashboard APIs
 
-Dashboard APIs provide consolidated data required to render role-based dashboards.
+Dashboard APIs provide consolidated payloads designed specifically for internal and merchant-level dashboard screens, composing multiple underlying business services into a single round trip without raw DAL or database access.
 
-Rather than requiring clients to make multiple API calls, these APIs aggregate the information needed for a specific dashboard experience.
+Mounted at `/api/v1/dashboard`:
 
-Key capabilities include:
-
-* Retrieve internal dashboard data
-* Retrieve merchant dashboard data
-* Retrieve dashboard summaries
-* Retrieve dashboard KPIs
+* `GET /api/v1/dashboard/platform`: Platform overview KPIs, revenue trends, conversion funnel, and feature adoption (`PlatformDashboardResponse`).
+* `GET /api/v1/dashboard/merchants/{merchant_id}`: Consolidated merchant intelligence dashboard composing summary metrics, trends, health score, profile, and recent activity (`MerchantDashboardResponse`).
 
 ---
 
-## 3.6 Investigation APIs
+## 3.6 Authentication & Development Identity APIs
+
+Development identity endpoints support local development and manual/automated testing of role-based access.
+
+Mounted at `/api/v1/auth`:
+
+* `POST /api/v1/auth/dev-token`: Issue a signed development JWT for an `INTERNAL` or `MERCHANT` principal (`DevTokenResponse`).
+* `GET /api/v1/auth/dev-principals`: List preconfigured development principals (`DevPrincipalsResponse`).
+
+---
+
+## 3.7 Investigation APIs
 
 Investigation APIs enable users to investigate business questions through a structured investigation workflow.
 
@@ -349,33 +360,54 @@ Certain responsibilities apply consistently across all API groups regardless of 
 
 ---
 
-## Authentication
+## 6.1 Authentication
 
-All API requests require authenticated users before accessing platform resources.
+All API endpoints (except development auth endpoints and `/health`) require an authenticated caller:
 
----
-
-## Authorization
-
-Every request is evaluated against the user's role and permissions to ensure access is limited to authorized business data and operations.
-
----
-
-## Request Validation
-
-Incoming requests are validated before reaching the business service layer.
-
-Validation includes request structure, required fields, parameter formats, and supported values.
+- **Bearer Token Scheme**: Transmitted via HTTP `Authorization: Bearer <token>` header.
+- **Token Decoding & Verification**: Managed by `app.auth.token.decode_access_token` and injected via the FastAPI dependency `app.dependencies.auth.get_current_principal`.
+- **Principal Model**: Decoded into `app.schemas.auth.Principal`, carrying `user_id`, `role`, `scope` (`INTERNAL` | `MERCHANT`), and `permitted_merchant_id` (when `scope == MERCHANT`).
+- **Failure Behavior**: Missing, invalid, or expired tokens return HTTP 401 Unauthorized with a standard `WWW-Authenticate: Bearer` header.
 
 ---
 
-## Error Handling
+## 6.2 Authorization & Tenant Isolation
 
-The platform returns clear and consistent error responses that help clients understand why a request failed without exposing internal implementation details.
+Every request is evaluated against the authenticated `Principal` before reaching the Business Service Layer:
+
+- **Platform-Wide Access (`require_internal_principal`)**: Restricts platform-level routes (such as `/api/v1/dashboard/platform` and `/api/v1/analytics/*`) to users with `scope == INTERNAL`.
+- **Tenant-Scoped Access (`require_merchant_access`)**: Restricts merchant-specific routes (`/api/v1/merchants/{merchant_id}/*`, `/shoppers/*`, `/campaigns/*`) to:
+  - Any caller with `scope == INTERNAL`.
+  - Callers with `scope == MERCHANT` where `principal.permitted_merchant_id == merchant_id`.
+- **Tenant Isolation Enforcement**: If a merchant principal attempts to access a different merchant's resources, `app.auth.enforcer.enforce_merchant_access` immediately raises HTTP 403 Forbidden before any resource retrieval occurs.
 
 ---
 
-## Audit Logging
+## 6.3 Request Validation
+
+Incoming requests are validated at the FastAPI router boundary using Pydantic request models and path/query parameter constraints:
+
+- Request schemas enforce field types, required fields, and value constraints.
+- Date ranges are validated to ensure `start_date <= end_date`.
+- Pagination parameters (`page >= 1`, `page_size >= 1`) are validated and capped.
+- Schema violations return standard HTTP 422 Unprocessable Entity responses.
+
+---
+
+## 6.4 Error Handling
+
+The platform returns structured error responses using consistent HTTP status codes:
+
+- `400 Bad Request`: Invalid parameter logic (such as inverted date ranges).
+- `401 Unauthorized`: Missing or invalid Bearer authentication token.
+- `403 Forbidden`: Authenticated caller lacks permission for the requested resource or merchant tenant.
+- `404 Not Found`: Requested business entity does not exist. Empty valid result sets return HTTP 200 with empty collections rather than 404 errors.
+- `422 Unprocessable Entity`: Request body or query parameter failed Pydantic schema validation.
+- `500 Internal Server Error`: Unexpected runtime exceptions (internal details masked from clients).
+
+---
+
+## 6.5 Audit Logging
 
 Important business operations and investigation activities are recorded to support auditing, troubleshooting, and compliance requirements.
 
@@ -388,7 +420,7 @@ Examples include:
 
 ---
 
-## Observability
+## 6.6 Observability
 
 The platform records operational metrics, logs, and traces that help monitor API health, diagnose failures, and understand system behaviour.
 

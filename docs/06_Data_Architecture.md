@@ -855,7 +855,33 @@ This traceability ensures that every business insight can always be validated ag
 
 ---
 
-## 5.3 Why Data Lineage Matters
+## 5.3 Historical Bootstrap, Range Backfill, and Incremental Processing Transition
+
+Although derived products are maintained continuously during live streaming operations, initializing a new deployment or recovering from extensive historical event ingestion requires a deterministic bootstrap process that respects the derived dependency matrix.
+
+The authoritative bootstrap workflow (`app.services.bootstrap.run_historical_bootstrap`) executes in strict dependency order:
+
+1. **Ingestion Verification**: Confirms that operational event queues and consumer offsets have been fully drained (`app.kafka.drain.verify_no_unprocessed_events`), ensuring no pending raw events exist before derived processing begins.
+2. **Segment Definition Baseline**: Initializes canonical segment definitions (`app.services.segment.initialize_merchant_segments`) for all installed merchants.
+3. **Analytics Range Backfill**: Recomputes daily metrics across the entire historical date range `[start_date, end_date]` in ascending chronological order (`app.scheduler.analytics_job.run_analytics_job`), followed by aggregate materialized-view refreshes (`refresh_aggregate_views`).
+4. **Historical Derived Product Evaluation (`as_of`)**: Evaluates derived entities against historical operational state evaluated as of a reference timestamp `as_of`:
+   - Shopper Journeys (`generate_shopper_journeys_for_shopper`) and Merchant Journeys (`generate_merchant_journeys_for_merchant`).
+   - Shopper Profiles (`generate_shopper_profile_callback`) and Merchant Profiles (`generate_merchant_profile_callback`).
+   - Shopper Segment Memberships (`refresh_shopper_segment_membership_callback`) evaluated against newly derived profiles and journeys.
+   - Merchant Health Scores (`generate_merchant_health_callback`) evaluated against daily analytics, subscription states, and merchant profiles.
+5. **Processing State Watermarks & Incremental Transition**: Records successful processing watermarks in `entity_processing_states` (`last_generated_at = as_of`) for canonical target names:
+   - `shopper_journey`
+   - `merchant_journey`
+   - `shopper_profile`
+   - `merchant_profile`
+   - `segment_membership`
+   - `merchant_health`
+
+Setting these watermarks to `as_of` ensures that subsequent incremental scheduled jobs (`app.scheduler.incremental.process_incremental_target`) evaluate only entities with newer live source activity (`last_event_at > last_generated_at`), preventing redundant historical recalculation and seamlessly transitioning the platform into incremental operational mode.
+
+---
+
+## 5.4 Why Data Lineage Matters
 
 Maintaining end-to-end data lineage provides several important benefits throughout the platform.
 

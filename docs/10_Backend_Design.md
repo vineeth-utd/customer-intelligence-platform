@@ -53,36 +53,45 @@ The high-level backend architecture is illustrated below.
 
 ## 2.1 API Layer
 
-The API Layer provides the entry point for client applications to interact with the platform.
+The API Layer provides the entry point for client applications and internal users to interact with the platform.
 
-Its responsibilities include:
+Implemented via FastAPI routers in `app.api` (`analytics`, `auth`, `campaigns`, `dashboard`, `merchants`, `shoppers`), its responsibilities include:
 
-* Receiving HTTP requests.
-* Validating request payloads.
-* Authenticating and authorizing users.
-* Delegating requests to the appropriate business services.
-* Returning consistent API responses.
+* Receiving and routing HTTP requests across defined `/api/v1` prefixes.
+* Validating request payloads using typed Pydantic request models.
+* Authenticating callers and enforcing role/tenant authorization boundaries via dependency injection (`app.dependencies.auth`):
+  - `get_current_principal`: Extracts and validates the Bearer token into an `app.schemas.auth.Principal`.
+  - `require_internal_principal`: Restricts platform-level operations to callers with `INTERNAL` scope.
+  - `require_merchant_access`: Enforces tenant-level isolation for merchant resources, raising HTTP 403 Forbidden on tenant mismatch.
+* Delegating business operations directly to the Business Service Layer.
+* Serializing results through typed Pydantic response models.
 
-The API Layer remains intentionally thin and does not contain business logic.
+The API Layer remains intentionally thin and contains no direct database access, SQL queries, or business calculation logic.
 
 ---
 
 ## 2.2 Business Service Layer
 
-The Business Service Layer implements the platform's business capabilities.
+The Business Service Layer implements the platform's core business capabilities.
 
-It coordinates workflows across multiple business domains while enforcing business rules and ensuring consistent behaviour regardless of how a request enters the system.
+It coordinates workflows across multiple business domains while enforcing business rules and ensuring consistent behaviour regardless of whether a request originates from an HTTP API, an AI investigation tool, a Kafka consumer, or a background scheduler.
 
-Its responsibilities include:
+Key service modules in `app.services` include:
 
-* Implementing business logic.
-* Coordinating workflows across multiple services.
-* Validating business rules.
-* Managing transactions where required.
-* Invoking the Data Access Layer and Infrastructure Layer.
-* Providing reusable business capabilities for APIs, AI investigations, and background processing.
+* `dashboard.py`: Thin composition services (`get_platform_dashboard`, `get_merchant_dashboard`) that assemble cross-domain metrics and summary views by invoking underlying domain services, avoiding raw SQL in routers.
+* `analytics.py`: Periodic metric generation (`generate_daily_metrics`), materialized view refreshes (`refresh_aggregate_views`), and query services for platform trends, feature adoption, conversion funnels, and shopper journey analytics.
+* `merchant.py`: Merchant operational state, app install/uninstall lifecycle, and subscription plan management.
+* `profile.py`: Operational snapshot profiles (`get_merchant_profile`, `get_shopper_profile`).
+* `merchant_health.py`: Multi-factor health scoring (`get_merchant_health`, `get_merchant_health_with_factors`) combining feature adoption, platform engagement, and business performance into a normalized 0–100 score and inverse churn risk score.
+* `merchant_journey.py`: Merchant lifecycle journey generation and stage progression tracking.
+* `shopper.py` & `journey.py`: Shopper identity enrichment, customer activity logs, and 7-day shopper journey reconstruction (`CONVERTED`, `NON_CONVERTING`, `OPEN`).
+* `segment.py`: Merchant segment definition management and deterministic shopper segment membership evaluation.
+* `campaign.py`: Marketing campaign lifecycle, event processing, and multi-perspective attribution (direct session match, first-touch, last-touch, and assisted touches).
+* `order.py`: Order retrieval and purchase history management.
+* `bootstrap.py`: Authoritative historical bootstrap orchestration (`run_historical_bootstrap`).
+* `processing_state.py`: Incremental processing watermark management (`record_processing_success`, `get_eligible_entities_for_target`).
 
-This layer forms the core of the backend application.
+This layer forms the single source of truth for platform business logic.
 
 ---
 
@@ -691,7 +700,29 @@ This ensures that business rules are implemented once and reused consistently ac
 
 ---
 
-## 7.4 Design Principles
+## 7.4 Incremental Processing & Historical Bootstrap
+
+Background derived-product maintenance supports two operational modes:
+
+### Incremental Target Maintenance
+
+Periodic background jobs run via APScheduler using the generic incremental processing runner `app.scheduler.incremental.process_incremental_target`:
+- For each target product (`shopper_journey`, `merchant_journey`, `shopper_profile`, `merchant_profile`, `segment_membership`, `merchant_health`), the scheduler queries `app.services.processing_state.get_eligible_entities_for_target`.
+- Entities are eligible only when their latest source event timestamp exceeds their last processed watermark (`last_event_at > last_generated_at`).
+- An idempotent generator callback processes each entity, updating its state via `record_processing_success` or logging failures via `record_processing_failure`.
+
+### Authoritative Historical Bootstrap
+
+When standing up a deployment or reconstructing derived state after bulk historical ingestion, `app.services.bootstrap.run_historical_bootstrap` executes a complete dependency-ordered backfill:
+1. Drains and verifies operational event queues (`verify_no_unprocessed_events`).
+2. Initializes merchant segment baselines (`initialize_merchant_segments`).
+3. Recomputes chronological daily metrics and refreshes materialized views across `[start_date, end_date]`.
+4. Derives journeys, profiles, segment memberships, and health scores evaluated `as_of`.
+5. Sets processing state watermarks (`last_generated_at = as_of`) for all canonical targets, cleanly handing off to ongoing incremental jobs.
+
+---
+
+## 7.5 Design Principles
 
 Background processing follows a small set of implementation principles:
 
