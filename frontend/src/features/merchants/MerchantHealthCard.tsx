@@ -4,6 +4,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import type { MerchantHealthResponse } from '../../types';
+import { formatScore, parseNumericValue } from '../../utils';
 
 interface MerchantHealthCardProps {
   merchantId: string;
@@ -59,55 +60,61 @@ export function MerchantHealthCard({ merchantId, initialData }: MerchantHealthCa
 
       <div className="p-6">
         {/* Top KPI row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Health Score</div>
-            <div className="mt-1 flex items-baseline">
-              <span className="text-3xl font-extrabold text-gray-900">{data.health_score.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 ml-1">/ 100</span>
-            </div>
-            <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
-              <div
-                className={`h-1.5 rounded-full ${data.health_status === 'HEALTHY'
-                  ? 'bg-emerald-500'
-                  : data.health_status === 'NEEDS_ATTENTION'
-                    ? 'bg-amber-500'
-                    : 'bg-rose-500'
-                  }`}
-                style={{ width: `${Math.min(100, Math.max(0, data.health_score))}%` }}
-              />
-            </div>
-          </div>
+        {(() => {
+          const healthNum = parseNumericValue(data.health_score) ?? 0;
+          const churnNum = parseNumericValue(data.churn_risk_score) ?? 0;
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Health Score</div>
+                <div className="mt-1 flex items-baseline">
+                  <span className="text-3xl font-extrabold text-gray-900">{formatScore(data.health_score)}</span>
+                  <span className="text-xs text-gray-500 ml-1">/ 100</span>
+                </div>
+                <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full ${data.health_status === 'HEALTHY'
+                      ? 'bg-emerald-500'
+                      : data.health_status === 'NEEDS_ATTENTION'
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                      }`}
+                    style={{ width: `${Math.min(100, Math.max(0, healthNum))}%` }}
+                  />
+                </div>
+              </div>
 
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Churn Risk</div>
-            <div className="mt-1 flex items-baseline">
-              <span className="text-3xl font-bold text-gray-900">{data.churn_risk_score.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 ml-1">/ 100</span>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Churn Risk</div>
+                <div className="mt-1 flex items-baseline">
+                  <span className="text-3xl font-bold text-gray-900">{formatScore(data.churn_risk_score)}</span>
+                  <span className="text-xs text-gray-500 ml-1">/ 100</span>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  {churnNum > 60 ? 'Elevated churn risk' : churnNum > 30 ? 'Moderate risk' : 'Low risk'}
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Feature Adoption</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">{formatScore(data.feature_adoption_score)}</div>
+                <div className="mt-2 text-xs text-gray-500">Entitled feature usage</div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Platform Engagement</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">{formatScore(data.engagement_score)}</div>
+                <div className="mt-2 text-xs text-gray-500">Activity and session logins</div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Business Performance</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">{formatScore(data.business_performance_score)}</div>
+                <div className="mt-2 text-xs text-gray-500">Order & revenue trajectory</div>
+              </div>
             </div>
-            <div className="mt-2 text-xs text-gray-500">
-              {data.churn_risk_score > 60 ? 'Elevated churn risk' : data.churn_risk_score > 30 ? 'Moderate risk' : 'Low risk'}
-            </div>
-          </div>
-
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Feature Adoption</div>
-            <div className="mt-1 text-2xl font-bold text-gray-900">{data.feature_adoption_score.toFixed(1)}</div>
-            <div className="mt-2 text-xs text-gray-500">Entitled feature usage</div>
-          </div>
-
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Platform Engagement</div>
-            <div className="mt-1 text-2xl font-bold text-gray-900">{data.engagement_score.toFixed(1)}</div>
-            <div className="mt-2 text-xs text-gray-500">Activity and session logins</div>
-          </div>
-
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Business Performance</div>
-            <div className="mt-1 text-2xl font-bold text-gray-900">{data.business_performance_score.toFixed(1)}</div>
-            <div className="mt-2 text-xs text-gray-500">Order & revenue trajectory</div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Risk Alerts */}
         {riskAlerts.length > 0 && (

@@ -2,7 +2,7 @@ import { useMerchantMetricsSummary, useMerchant } from '../../hooks/queries';
 import { KpiCard } from '../../components/common/KpiCard';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatPercent } from '../../utils';
 
 interface MerchantMetricsSummaryProps {
   merchantId: string;
@@ -46,7 +46,7 @@ export function MerchantMetricsSummary({
       />
       <KpiCard
         title="Conversion Rate"
-        value={`${(data.conversion_rate * 100).toFixed(2)}%`}
+        value={formatPercent(data.conversion_rate, 2)}
       />
     </div>
   );

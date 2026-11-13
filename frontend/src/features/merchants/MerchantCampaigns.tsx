@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { Pagination } from '../../components/common/Pagination';
 import type { CampaignStatus } from '../../types';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatPercent } from '../../utils';
 
 export function MerchantCampaigns({ merchantId, currency }: { merchantId: string; currency?: string }) {
   const navigate = useNavigate();
@@ -191,7 +191,7 @@ export function MerchantCampaigns({ merchantId, currency }: { merchantId: string
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">
                       {analytics
-                        ? `${(analytics.click_through_rate * 100).toFixed(1)}%`
+                        ? formatPercent(analytics.click_through_rate, 1)
                         : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">

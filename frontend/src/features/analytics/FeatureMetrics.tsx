@@ -2,6 +2,7 @@ import { useFeatureMetrics } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import type { FeatureMetricsResult } from '../../types';
+import { formatPercent } from '../../utils';
 
 interface FeatureMetricsProps {
   features?: FeatureMetricsResult[];
@@ -58,11 +59,11 @@ export function FeatureMetrics({ features }: FeatureMetricsProps) {
                   {feature.enabled_merchant_count} / {feature.eligible_merchant_count}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
-                  {(feature.adoption_rate * 100).toFixed(1)}%
+                  {formatPercent(feature.adoption_rate, 1)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{feature.active_merchant_count.toLocaleString()}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
-                  {(feature.usage_rate * 100).toFixed(1)}%
+                  {formatPercent(feature.usage_rate, 1)}
                 </td>
               </tr>
             ))}

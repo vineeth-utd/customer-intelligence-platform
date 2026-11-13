@@ -1,12 +1,11 @@
 import type { ShopperBehaviorAnalyticsResult } from '../../types';
+import { formatPercent } from '../../utils';
 
 interface MerchantShopperBehaviorCardProps {
   behavior: ShopperBehaviorAnalyticsResult;
 }
 
 export function MerchantShopperBehaviorCard({ behavior }: MerchantShopperBehaviorCardProps) {
-  const repeatRatePct = (behavior.repeat_purchase_rate * 100).toFixed(1);
-
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -37,7 +36,9 @@ export function MerchantShopperBehaviorCard({ behavior }: MerchantShopperBehavio
 
         <div className="p-3 bg-gray-50 rounded-lg col-span-2 sm:col-span-1">
           <div className="text-xs font-medium text-gray-500">Repeat Purchase Rate</div>
-          <div className="text-xl font-bold text-indigo-600 mt-1">{repeatRatePct}%</div>
+          <div className="text-xl font-bold text-indigo-600 mt-1">
+            {formatPercent(behavior.repeat_purchase_rate, 1)}
+          </div>
           <div className="text-[11px] text-gray-500 mt-1">
             Cohort retention metric
           </div>

@@ -1,7 +1,7 @@
 import { useMerchantProfile, useMerchant } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatPercent } from '../../utils';
 
 interface MerchantProfileCardProps {
   merchantId: string;
@@ -62,7 +62,7 @@ export function MerchantProfileCard({ merchantId, currency }: MerchantProfileCar
         <div>
           <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Store Conversion Rate</dt>
           <dd className="mt-1 text-2xl font-bold text-gray-900">
-            {(data.conversion_rate * 100).toFixed(2)}%
+            {formatPercent(data.conversion_rate, 2)}
           </dd>
         </div>
 

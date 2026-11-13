@@ -1,6 +1,7 @@
 import { useMerchant } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { formatCurrency } from '../../utils';
 
 export function MerchantDetails({ merchantId }: { merchantId: string }) {
   const { data, isLoading, isError, refetch } = useMerchant(merchantId);
@@ -65,7 +66,7 @@ export function MerchantDetails({ merchantId }: { merchantId: string }) {
               <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500">Amount Paid</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  ${data.active_subscription.amount_paid.toFixed(2)}
+                  {formatCurrency(data.active_subscription.amount_paid, data.store_currency)}
                 </dd>
               </div>
             </dl>

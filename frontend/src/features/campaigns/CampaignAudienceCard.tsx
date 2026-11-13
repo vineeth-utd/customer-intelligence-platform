@@ -1,4 +1,5 @@
 import type { CampaignAudienceAnalysisResult } from '../../types';
+import { formatPercent } from '../../utils';
 
 interface CampaignAudienceCardProps {
   audience: CampaignAudienceAnalysisResult;
@@ -240,7 +241,7 @@ export function CampaignAudienceCard({ audience }: CampaignAudienceCardProps) {
                         {seg.converted_shoppers_count.toLocaleString()}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-right font-bold text-gray-900">
-                        {(seg.conversion_rate * 100).toFixed(1)}%
+                        {formatPercent(seg.conversion_rate, 1)}
                       </td>
                     </tr>
                   );

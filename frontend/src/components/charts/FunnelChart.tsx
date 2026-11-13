@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { EChartsOption } from 'echarts';
 import { BaseChart } from './BaseChart';
 import type { ConversionFunnelStage } from '../../types';
+import { formatPercent } from '../../utils';
 
 interface FunnelChartProps {
   stages: ConversionFunnelStage[];
@@ -24,13 +25,13 @@ export function FunnelChart({ stages }: FunnelChartProps) {
           const stage = stages[p.dataIndex];
           if (!stage) return '';
           const dropOff = stage.drop_off_count
-            ? `<br/><span style="color:#ef4444">Drop-off: ${stage.drop_off_count.toLocaleString()} (${(stage.drop_off_rate * 100).toFixed(1)}%)</span>`
+            ? `<br/><span style="color:#ef4444">Drop-off: ${stage.drop_off_count.toLocaleString()} (${formatPercent(stage.drop_off_rate, 1)})</span>`
             : '';
-          const stepRate = stage.step_conversion_rate !== null
-            ? `<br/>Step Conversion: ${(stage.step_conversion_rate * 100).toFixed(1)}%`
+          const stepRate = stage.step_conversion_rate !== null && stage.step_conversion_rate !== undefined
+            ? `<br/>Step Conversion: ${formatPercent(stage.step_conversion_rate, 1)}`
             : '';
           const overallRate = stage.overall_conversion_rate !== null && stage.overall_conversion_rate !== undefined
-            ? `<br/>Overall Rate: ${(stage.overall_conversion_rate * 100).toFixed(1)}%`
+            ? `<br/>Overall Rate: ${formatPercent(stage.overall_conversion_rate, 1)}`
             : '';
           return `<b>${stage.stage_name.replace(/_/g, ' ')}</b><br/>Volume: ${stage.count.toLocaleString()}${stepRate}${overallRate}${dropOff}`;
         },

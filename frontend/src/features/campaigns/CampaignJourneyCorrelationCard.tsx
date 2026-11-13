@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { EChartsOption } from 'echarts';
 import { BaseChart } from '../../components/charts/BaseChart';
 import type { CampaignJourneyCorrelationResult } from '../../types';
+import { formatPercent, parseNumericValue } from '../../utils';
 
 interface CampaignJourneyCorrelationCardProps {
   correlation: CampaignJourneyCorrelationResult;
@@ -20,12 +21,13 @@ export function CampaignJourneyCorrelationCard({
     drop_off_stages,
   } = correlation;
 
-  const formatDuration = (seconds: number | null) => {
-    if (seconds === null || seconds === undefined) return 'N/A';
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-    if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
-    return `${(seconds / 86400).toFixed(1)}d`;
+  const formatDuration = (seconds: number | string | null | undefined) => {
+    const s = parseNumericValue(seconds);
+    if (s === null) return 'N/A';
+    if (s < 60) return `${Math.round(s)}s`;
+    if (s < 3600) return `${Math.round(s / 60)}m`;
+    if (s < 86400) return `${(s / 3600).toFixed(1)}h`;
+    return `${(s / 86400).toFixed(1)}d`;
   };
 
   // Drop-off stages chart
@@ -136,7 +138,7 @@ export function CampaignJourneyCorrelationCard({
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
           <div className="text-xs font-medium text-gray-500">Resolved Conversion Rate</div>
           <div className="text-2xl font-bold text-indigo-600 mt-1">
-            {(journey_conversion_rate * 100).toFixed(1)}%
+            {formatPercent(journey_conversion_rate, 1)}
           </div>
           <div className="text-[11px] text-gray-400 mt-1">Of resolved journeys (excl. open)</div>
         </div>

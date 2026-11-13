@@ -1,15 +1,17 @@
 import type { ShopperJourneyAnalyticsResult } from '../../types';
+import { formatPercent, parseNumericValue } from '../../utils';
 
 interface MerchantAggregateJourneysCardProps {
   journeys: ShopperJourneyAnalyticsResult;
 }
 
 export function MerchantAggregateJourneysCard({ journeys }: MerchantAggregateJourneysCardProps) {
-  const formatDuration = (seconds: number | null) => {
-    if (seconds === null || seconds === undefined) return 'N/A';
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-    return `${(seconds / 3600).toFixed(1)}h`;
+  const formatDuration = (seconds: number | string | null | undefined) => {
+    const s = parseNumericValue(seconds);
+    if (s === null) return 'N/A';
+    if (s < 60) return `${Math.round(s)}s`;
+    if (s < 3600) return `${Math.round(s / 60)}m`;
+    return `${(s / 3600).toFixed(1)}h`;
   };
 
   return (
@@ -20,7 +22,7 @@ export function MerchantAggregateJourneysCard({ journeys }: MerchantAggregateJou
           <p className="text-xs text-gray-500 mt-0.5">Multi-touch customer journeys & entry source attribution (excludes open journeys from conversion denominator)</p>
         </div>
         <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded" title="Converted / (Converted + Non-Converting)">
-          Resolved Conv: {(journeys.journey_conversion_rate * 100).toFixed(1)}%
+          Resolved Conv: {formatPercent(journeys.journey_conversion_rate, 1)}
         </span>
       </div>
 
@@ -81,7 +83,7 @@ export function MerchantAggregateJourneysCard({ journeys }: MerchantAggregateJou
                         {source.converted_journeys.toLocaleString()}
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                        {(source.conversion_rate * 100).toFixed(1)}%
+                        {formatPercent(source.conversion_rate, 1)}
                       </td>
                     </tr>
                   ))}

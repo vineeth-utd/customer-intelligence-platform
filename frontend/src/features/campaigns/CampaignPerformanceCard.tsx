@@ -3,7 +3,7 @@ import type { EChartsOption } from 'echarts';
 import { BaseChart } from '../../components/charts/BaseChart';
 import { KpiCard } from '../../components/common/KpiCard';
 import type { CampaignPerformanceDetailResult } from '../../types';
-import { formatGrowthRate } from '../../utils';
+import { formatGrowthRate, formatPercent, parseNumericValue } from '../../utils';
 
 interface CampaignPerformanceCardProps {
   performance: CampaignPerformanceDetailResult;
@@ -101,6 +101,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
   const openPct = delivered_count > 0 ? (opened_count / delivered_count) * 100 : 0;
   const clickPct = delivered_count > 0 ? (clicked_count / delivered_count) * 100 : 0;
 
+  const delivGrowth = parseNumericValue(delivered_growth_pct);
+  const openGrowth = parseNumericValue(opened_growth_pct);
+  const clickGrowth = parseNumericValue(clicked_growth_pct);
+
   return (
     <div className="space-y-6">
       {/* Top Engagement KPI Cards */}
@@ -109,10 +113,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           title="Delivered"
           value={delivered_count.toLocaleString()}
           trend={
-            delivered_growth_pct !== null && delivered_growth_pct !== undefined
+            delivGrowth !== null
               ? {
-                value: formatGrowthRate(delivered_growth_pct),
-                isPositive: delivered_growth_pct >= 0,
+                value: formatGrowthRate(delivGrowth),
+                isPositive: delivGrowth >= 0,
               }
               : undefined
           }
@@ -121,10 +125,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           title="Opened"
           value={opened_count.toLocaleString()}
           trend={
-            opened_growth_pct !== null && opened_growth_pct !== undefined
+            openGrowth !== null
               ? {
-                value: formatGrowthRate(opened_growth_pct),
-                isPositive: opened_growth_pct >= 0,
+                value: formatGrowthRate(openGrowth),
+                isPositive: openGrowth >= 0,
               }
               : undefined
           }
@@ -133,21 +137,21 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           title="Clicked"
           value={clicked_count.toLocaleString()}
           trend={
-            clicked_growth_pct !== null && clicked_growth_pct !== undefined
+            clickGrowth !== null
               ? {
-                value: formatGrowthRate(clicked_growth_pct),
-                isPositive: clicked_growth_pct >= 0,
+                value: formatGrowthRate(clickGrowth),
+                isPositive: clickGrowth >= 0,
               }
               : undefined
           }
         />
         <KpiCard
           title="Open Rate"
-          value={`${(open_rate * 100).toFixed(1)}%`}
+          value={formatPercent(open_rate, 1)}
         />
         <KpiCard
           title="Click-Through Rate"
-          value={`${(click_through_rate * 100).toFixed(1)}%`}
+          value={formatPercent(click_through_rate, 1)}
         />
       </div>
 
@@ -178,7 +182,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                 <span>2. Opened</span>
                 <span>
                   {opened_count.toLocaleString()} recipients (
-                  {(open_rate * 100).toFixed(1)}% open rate)
+                  {formatPercent(open_rate, 1)} open rate)
                 </span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
@@ -194,7 +198,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                 <span>3. Clicked</span>
                 <span>
                   {clicked_count.toLocaleString()} recipients (
-                  {(click_through_rate * 100).toFixed(1)}% CTR)
+                  {formatPercent(click_through_rate, 1)} CTR)
                 </span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
@@ -226,10 +230,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${(delivered_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  className={`text-xs font-bold ${(delivGrowth ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}
                 >
-                  {formatGrowthRate(delivered_growth_pct)}
+                  {formatGrowthRate(delivGrowth)}
                 </span>
               </div>
 
@@ -241,10 +245,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${(opened_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  className={`text-xs font-bold ${(openGrowth ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}
                 >
-                  {formatGrowthRate(opened_growth_pct)}
+                  {formatGrowthRate(openGrowth)}
                 </span>
               </div>
 
@@ -256,10 +260,10 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${(clicked_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  className={`text-xs font-bold ${(clickGrowth ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}
                 >
-                  {formatGrowthRate(clicked_growth_pct)}
+                  {formatGrowthRate(clickGrowth)}
                 </span>
               </div>
             </div>

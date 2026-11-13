@@ -6,7 +6,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { KpiCard } from '../../components/common/KpiCard';
-import { formatCurrency, formatGrowthRate } from '../../utils';
+import { formatCurrency, formatGrowthRate, formatPercent, parseNumericValue } from '../../utils';
 
 import { MerchantRevenueCard } from './MerchantRevenueCard';
 import { MerchantFunnelCard } from './MerchantFunnelCard';
@@ -256,11 +256,10 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
               title="Revenue"
               value={formatCurrency(revenue.total_revenue, merchant.store_currency)}
               trend={
-                revenue.prior_period_comparison?.revenue_growth_pct !== null &&
-                  revenue.prior_period_comparison?.revenue_growth_pct !== undefined
+                parseNumericValue(revenue.prior_period_comparison?.revenue_growth_pct) !== null
                   ? {
-                    value: formatGrowthRate(revenue.prior_period_comparison.revenue_growth_pct),
-                    isPositive: revenue.prior_period_comparison.revenue_growth_pct >= 0,
+                    value: formatGrowthRate(revenue.prior_period_comparison?.revenue_growth_pct),
+                    isPositive: (parseNumericValue(revenue.prior_period_comparison?.revenue_growth_pct) ?? 0) >= 0,
                   }
                   : undefined
               }
@@ -269,11 +268,10 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
               title="Total Orders"
               value={revenue.total_orders.toLocaleString()}
               trend={
-                revenue.prior_period_comparison?.order_growth_pct !== null &&
-                  revenue.prior_period_comparison?.order_growth_pct !== undefined
+                parseNumericValue(revenue.prior_period_comparison?.order_growth_pct) !== null
                   ? {
-                    value: formatGrowthRate(revenue.prior_period_comparison.order_growth_pct),
-                    isPositive: revenue.prior_period_comparison.order_growth_pct >= 0,
+                    value: formatGrowthRate(revenue.prior_period_comparison?.order_growth_pct),
+                    isPositive: (parseNumericValue(revenue.prior_period_comparison?.order_growth_pct) ?? 0) >= 0,
                   }
                   : undefined
               }
@@ -282,18 +280,17 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
               title="Average Order Value"
               value={formatCurrency(revenue.average_order_value, merchant.store_currency)}
               trend={
-                revenue.prior_period_comparison?.aov_growth_pct !== null &&
-                  revenue.prior_period_comparison?.aov_growth_pct !== undefined
+                parseNumericValue(revenue.prior_period_comparison?.aov_growth_pct) !== null
                   ? {
-                    value: formatGrowthRate(revenue.prior_period_comparison.aov_growth_pct),
-                    isPositive: revenue.prior_period_comparison.aov_growth_pct >= 0,
+                    value: formatGrowthRate(revenue.prior_period_comparison?.aov_growth_pct),
+                    isPositive: (parseNumericValue(revenue.prior_period_comparison?.aov_growth_pct) ?? 0) >= 0,
                   }
                   : undefined
               }
             />
             <KpiCard
               title="Conversion Rate"
-              value={`${(summary.conversion_rate * 100).toFixed(2)}%`}
+              value={formatPercent(summary.conversion_rate, 2)}
             />
           </div>
 

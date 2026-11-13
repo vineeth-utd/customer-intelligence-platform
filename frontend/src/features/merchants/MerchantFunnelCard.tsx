@@ -1,5 +1,6 @@
 import { FunnelChart } from '../../components/charts/FunnelChart';
 import type { ConversionFunnelResult } from '../../types';
+import { formatPercent } from '../../utils';
 
 interface MerchantFunnelCardProps {
   funnel: ConversionFunnelResult;
@@ -17,7 +18,7 @@ export function MerchantFunnelCard({ funnel }: MerchantFunnelCardProps) {
           <p className="text-xs text-gray-500 mt-0.5">Session-to-purchase funnel stages</p>
         </div>
         <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded">
-          Overall: {(funnel.overall_conversion_rate * 100).toFixed(2)}%
+          Overall: {formatPercent(funnel.overall_conversion_rate, 2)}
         </span>
       </div>
 
@@ -41,13 +42,13 @@ export function MerchantFunnelCard({ funnel }: MerchantFunnelCardProps) {
           <div className="p-3 bg-gray-50 rounded-lg">
             <span className="text-gray-500">Cart Abandonment Rate</span>
             <div className="text-lg font-bold text-gray-900 mt-0.5">
-              {(funnel.cart_abandonment_rate * 100).toFixed(1)}%
+              {formatPercent(funnel.cart_abandonment_rate, 1)}
             </div>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
             <span className="text-gray-500">Checkout Abandonment Rate</span>
             <div className="text-lg font-bold text-gray-900 mt-0.5">
-              {(funnel.checkout_abandonment_rate * 100).toFixed(1)}%
+              {formatPercent(funnel.checkout_abandonment_rate, 1)}
             </div>
           </div>
         </div>

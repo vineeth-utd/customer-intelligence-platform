@@ -1,5 +1,5 @@
 import type { RevenueAnalyticsResult } from '../../types';
-import { formatCurrency, formatGrowthRate } from '../../utils';
+import { formatCurrency, formatGrowthRate, parseNumericValue } from '../../utils';
 
 interface MerchantRevenueCardProps {
   revenue: RevenueAnalyticsResult;
@@ -9,12 +9,16 @@ interface MerchantRevenueCardProps {
 export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantRevenueCardProps) {
   const { prior_period_comparison, customer_revenue_breakdown } = revenue;
 
-  const totalRev = revenue.total_revenue || 0;
-  const newRev = customer_revenue_breakdown?.new_customer_revenue || 0;
-  const repeatRev = customer_revenue_breakdown?.repeat_customer_revenue || 0;
+  const totalRev = parseNumericValue(revenue.total_revenue) ?? 0;
+  const newRev = parseNumericValue(customer_revenue_breakdown?.new_customer_revenue) ?? 0;
+  const repeatRev = parseNumericValue(customer_revenue_breakdown?.repeat_customer_revenue) ?? 0;
 
   const newPct = totalRev > 0 ? ((newRev / totalRev) * 100).toFixed(1) : '0';
   const repeatPct = totalRev > 0 ? ((repeatRev / totalRev) * 100).toFixed(1) : '0';
+
+  const revGrowthNum = parseNumericValue(prior_period_comparison?.revenue_growth_pct);
+  const orderGrowthNum = parseNumericValue(prior_period_comparison?.order_growth_pct);
+  const aovGrowthNum = parseNumericValue(prior_period_comparison?.aov_growth_pct);
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -30,7 +34,7 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">Revenue Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${(prior_period_comparison?.revenue_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(revGrowthNum ?? 0) >= 0
                   ? 'text-emerald-600'
                   : 'text-rose-600'
                   }`}
@@ -48,7 +52,7 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">Order Volume Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${(prior_period_comparison?.order_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(orderGrowthNum ?? 0) >= 0
                   ? 'text-emerald-600'
                   : 'text-rose-600'
                   }`}
@@ -66,7 +70,7 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">AOV Shift</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${(prior_period_comparison?.aov_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(aovGrowthNum ?? 0) >= 0
                   ? 'text-emerald-600'
                   : 'text-rose-600'
                   }`}
