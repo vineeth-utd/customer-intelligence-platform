@@ -9,6 +9,32 @@ import { Pagination } from '../../components/common/Pagination';
 import type { CampaignStatus } from '../../types';
 import { formatCurrency, formatPercent } from '../../utils';
 
+function formatCampaignRunWindow(startAt?: string | null, endAt?: string | null): string | null {
+  if (!startAt && !endAt) return null;
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  if (startAt && endAt) {
+    return `${formatDate(startAt)} – ${formatDate(endAt)}`;
+  }
+  if (startAt) {
+    return `Started ${formatDate(startAt)}`;
+  }
+  if (endAt) {
+    return `Ended ${formatDate(endAt)}`;
+  }
+  return null;
+}
+
 export function MerchantCampaigns({ merchantId, currency }: { merchantId: string; currency?: string }) {
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
@@ -66,7 +92,7 @@ export function MerchantCampaigns({ merchantId, currency }: { merchantId: string
         <div>
           <h3 className="text-lg font-medium text-gray-900">Campaigns & Marketing Intelligence</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Select a campaign to drill down into performance, attribution models, journey impact, and segment response
+            Directory of marketing campaigns with lifetime performance totals. Click any campaign to drill down into period-scoped trends, attribution models, and journey correlation.
           </p>
         </div>
 
@@ -132,16 +158,16 @@ export function MerchantCampaigns({ merchantId, currency }: { merchantId: string
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Delivered
+                  Delivered (Lifetime)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  CTR
+                  CTR (Lifetime)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Orders
+                  Orders (Lifetime)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Attributed Rev
+                  Attributed Rev (Lifetime)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
@@ -178,6 +204,14 @@ export function MerchantCampaigns({ merchantId, currency }: { merchantId: string
                           <div className="text-xs text-gray-500 mt-0.5 capitalize">
                             {campaign.campaign_type} • {campaign.campaign_medium}
                           </div>
+                          {(() => {
+                            const runWindow = formatCampaignRunWindow(campaign.start_at, campaign.end_at);
+                            return runWindow ? (
+                              <div className="text-[11px] text-gray-400 mt-0.5">
+                                {runWindow}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </td>

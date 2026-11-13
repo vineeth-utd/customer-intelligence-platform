@@ -33,6 +33,16 @@ type TabKey =
   | 'profile'
   | 'activity';
 
+const TAB_SCOPE_LABELS: Record<TabKey, string> = {
+  overview: '',
+  shoppers: 'Customer Directory',
+  campaigns: 'Lifetime Campaign Performance',
+  health: 'Current Health Evaluation',
+  journey: 'Full Lifecycle History',
+  profile: 'Current Profile & Features',
+  activity: 'Recent Orders Stream',
+};
+
 interface MerchantOverviewProps {
   merchantId: string;
 }
@@ -175,11 +185,20 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
           </p>
         </div>
 
-        <DateRangePicker
-          startDate={dateRange.startDate}
-          endDate={dateRange.endDate}
-          onChange={setDateRange}
-        />
+        {activeTab === 'overview' ? (
+          <DateRangePicker
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={setDateRange}
+          />
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200/80 rounded-md text-xs text-gray-500 font-normal select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            <span>
+              Scope: <span className="font-medium text-gray-700">{TAB_SCOPE_LABELS[activeTab]}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Tab Navigation */}
