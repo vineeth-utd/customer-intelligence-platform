@@ -30,11 +30,10 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">Revenue Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.revenue_growth_pct ?? 0) >= 0
-                    ? 'text-emerald-600'
-                    : 'text-rose-600'
-                }`}
+                className={`text-xl font-bold ${(prior_period_comparison?.revenue_growth_pct ?? 0) >= 0
+                  ? 'text-emerald-600'
+                  : 'text-rose-600'
+                  }`}
               >
                 {formatGrowthRate(prior_period_comparison?.revenue_growth_pct)}
               </span>
@@ -49,11 +48,10 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">Order Volume Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.order_growth_pct ?? 0) >= 0
-                    ? 'text-emerald-600'
-                    : 'text-rose-600'
-                }`}
+                className={`text-xl font-bold ${(prior_period_comparison?.order_growth_pct ?? 0) >= 0
+                  ? 'text-emerald-600'
+                  : 'text-rose-600'
+                  }`}
               >
                 {formatGrowthRate(prior_period_comparison?.order_growth_pct)}
               </span>
@@ -68,11 +66,10 @@ export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantReven
             <div className="text-xs font-medium text-gray-500">AOV Shift</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.aov_growth_pct ?? 0) >= 0
-                    ? 'text-emerald-600'
-                    : 'text-rose-600'
-                }`}
+                className={`text-xl font-bold ${(prior_period_comparison?.aov_growth_pct ?? 0) >= 0
+                  ? 'text-emerald-600'
+                  : 'text-rose-600'
+                  }`}
               >
                 {formatGrowthRate(prior_period_comparison?.aov_growth_pct)}
               </span>

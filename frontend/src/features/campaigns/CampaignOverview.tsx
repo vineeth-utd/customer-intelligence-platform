@@ -238,11 +238,10 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
                 key={tab.key}
                 type="button"
                 onClick={() => handleTabChange(tab.key)}
-                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                  isActive
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${isActive
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <span>{tab.label}</span>
                 {tab.badge && (

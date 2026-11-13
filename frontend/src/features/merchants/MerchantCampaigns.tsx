@@ -86,11 +86,10 @@ export function MerchantCampaigns({ merchantId, currency }: { merchantId: string
                 key={filter.label}
                 type="button"
                 onClick={() => handleStatusChange(filter.value)}
-                className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${isSelected
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
                 {filter.label}
               </button>

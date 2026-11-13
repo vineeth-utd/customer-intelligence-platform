@@ -111,9 +111,9 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             delivered_growth_pct !== null && delivered_growth_pct !== undefined
               ? {
-                  value: formatGrowthRate(delivered_growth_pct),
-                  isPositive: delivered_growth_pct >= 0,
-                }
+                value: formatGrowthRate(delivered_growth_pct),
+                isPositive: delivered_growth_pct >= 0,
+              }
               : undefined
           }
         />
@@ -123,9 +123,9 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             opened_growth_pct !== null && opened_growth_pct !== undefined
               ? {
-                  value: formatGrowthRate(opened_growth_pct),
-                  isPositive: opened_growth_pct >= 0,
-                }
+                value: formatGrowthRate(opened_growth_pct),
+                isPositive: opened_growth_pct >= 0,
+              }
               : undefined
           }
         />
@@ -135,9 +135,9 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             clicked_growth_pct !== null && clicked_growth_pct !== undefined
               ? {
-                  value: formatGrowthRate(clicked_growth_pct),
-                  isPositive: clicked_growth_pct >= 0,
-                }
+                value: formatGrowthRate(clicked_growth_pct),
+                isPositive: clicked_growth_pct >= 0,
+              }
               : undefined
           }
         />
@@ -226,9 +226,8 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${
-                    (delivered_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                  }`}
+                  className={`text-xs font-bold ${(delivered_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}
                 >
                   {formatGrowthRate(delivered_growth_pct)}
                 </span>
@@ -242,9 +241,8 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${
-                    (opened_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                  }`}
+                  className={`text-xs font-bold ${(opened_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}
                 >
                   {formatGrowthRate(opened_growth_pct)}
                 </span>
@@ -258,9 +256,8 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-bold ${
-                    (clicked_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                  }`}
+                  className={`text-xs font-bold ${(clicked_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                    }`}
                 >
                   {formatGrowthRate(clicked_growth_pct)}
                 </span>

@@ -68,13 +68,12 @@ export function MerchantHealthCard({ merchantId, initialData }: MerchantHealthCa
             </div>
             <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
               <div
-                className={`h-1.5 rounded-full ${
-                  data.health_status === 'HEALTHY'
-                    ? 'bg-emerald-500'
-                    : data.health_status === 'NEEDS_ATTENTION'
+                className={`h-1.5 rounded-full ${data.health_status === 'HEALTHY'
+                  ? 'bg-emerald-500'
+                  : data.health_status === 'NEEDS_ATTENTION'
                     ? 'bg-amber-500'
                     : 'bg-rose-500'
-                }`}
+                  }`}
                 style={{ width: `${Math.min(100, Math.max(0, data.health_score))}%` }}
               />
             </div>
