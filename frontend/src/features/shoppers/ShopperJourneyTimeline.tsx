@@ -246,6 +246,16 @@ export function ShopperJourneyTimeline({ merchantId, shopperId }: ShopperJourney
             </span>
           </div>
         )}
+
+        {/* Open Journey Active Window Banner */}
+        {currentJourney.journey_status === 'OPEN' && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 flex items-center gap-2">
+            <span className="text-base">⏳</span>
+            <span>
+              <strong>Active 7-Day Window:</strong> This journey is currently active. Additional storefront and campaign touchpoints will append until conversion or the 7-day expiration boundary.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Chronological Timeline Body */}

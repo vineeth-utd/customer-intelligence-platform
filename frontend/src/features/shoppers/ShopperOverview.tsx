@@ -179,11 +179,10 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
               key={tab.key}
               type="button"
               onClick={() => handleTabChange(tab.key)}
-              className={`whitespace-nowrap shrink-0 py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                activeTab === tab.key
+              className={`whitespace-nowrap shrink-0 py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 ${activeTab === tab.key
                   ? 'border-indigo-500 text-indigo-600 font-semibold'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -194,7 +193,7 @@ export function ShopperOverview({ merchantId, shopperId }: ShopperOverviewProps)
       {/* Tab Panels */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <ShopperProfileCard merchantId={merchantId} shopperId={shopperId} />
+          <ShopperProfileCard merchantId={merchantId} shopperId={shopperId} currency={merchant?.store_currency} />
           <ShopperSegmentsCard merchantId={merchantId} shopperId={shopperId} />
         </div>
       )}

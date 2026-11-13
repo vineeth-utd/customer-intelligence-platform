@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.processing_state import record_domain_activity
 from app.models.metrics import MerchantMetricsDaily, PlatformMetricsDaily
+from app.services.analytics_rules import calculate_period_growth
 from app.schemas.analytics import (
     AttributionModelMetric,
     CampaignAnalyticsResult,
@@ -1002,9 +1003,9 @@ async def get_revenue_analytics(
     prior_aov = round(prior_rev / Decimal(prior_orders), 2) if prior_orders > 0 else Decimal("0.0")
 
     # Calculate growth percentage: None if prior denominator is 0
-    rev_growth = round(((total_rev - prior_rev) / prior_rev) * 100, 2) if prior_rev > 0 else None
-    order_growth = round(((Decimal(total_orders) - Decimal(prior_orders)) / Decimal(prior_orders)) * 100, 2) if prior_orders > 0 else None
-    aov_growth = round(((aov - prior_aov) / prior_aov) * 100, 2) if prior_aov > 0 else None
+    rev_growth = calculate_period_growth(total_rev, prior_rev)
+    order_growth = calculate_period_growth(total_orders, prior_orders)
+    aov_growth = calculate_period_growth(aov, prior_aov)
 
     # 3. New vs Repeat customer revenue in current window
     stmt_breakdown = text("""
@@ -1144,11 +1145,6 @@ async def get_campaign_performance(
     prior_op = int(row_prior[1]) if row_prior else 0
     prior_cl = int(row_prior[2]) if row_prior else 0
 
-    def calc_growth(curr: int, prior: int) -> Optional[Decimal]:
-        if prior > 0:
-            return (Decimal(str(curr - prior)) / Decimal(str(prior))) * Decimal("100.0")
-        return None
-
     return CampaignPerformanceDetailResult(
         campaign_id=camp.campaign_id,
         merchant_id=camp.merchant_id,
@@ -1167,9 +1163,9 @@ async def get_campaign_performance(
         prior_period_delivered=prior_del,
         prior_period_opened=prior_op,
         prior_period_clicked=prior_cl,
-        delivered_growth_pct=calc_growth(tot_delivered, prior_del),
-        opened_growth_pct=calc_growth(tot_opened, prior_op),
-        clicked_growth_pct=calc_growth(tot_clicked, prior_cl),
+        delivered_growth_pct=calculate_period_growth(tot_delivered, prior_del),
+        opened_growth_pct=calculate_period_growth(tot_opened, prior_op),
+        clicked_growth_pct=calculate_period_growth(tot_clicked, prior_cl),
     )
 
 

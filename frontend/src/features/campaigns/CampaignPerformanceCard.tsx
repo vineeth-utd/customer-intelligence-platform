@@ -3,6 +3,7 @@ import type { EChartsOption } from 'echarts';
 import { BaseChart } from '../../components/charts/BaseChart';
 import { KpiCard } from '../../components/common/KpiCard';
 import type { CampaignPerformanceDetailResult } from '../../types';
+import { formatGrowthRate } from '../../utils';
 
 interface CampaignPerformanceCardProps {
   performance: CampaignPerformanceDetailResult;
@@ -110,7 +111,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             delivered_growth_pct !== null && delivered_growth_pct !== undefined
               ? {
-                  value: `${delivered_growth_pct >= 0 ? '+' : ''}${(delivered_growth_pct * 100).toFixed(1)}%`,
+                  value: formatGrowthRate(delivered_growth_pct),
                   isPositive: delivered_growth_pct >= 0,
                 }
               : undefined
@@ -122,7 +123,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             opened_growth_pct !== null && opened_growth_pct !== undefined
               ? {
-                  value: `${opened_growth_pct >= 0 ? '+' : ''}${(opened_growth_pct * 100).toFixed(1)}%`,
+                  value: formatGrowthRate(opened_growth_pct),
                   isPositive: opened_growth_pct >= 0,
                 }
               : undefined
@@ -134,7 +135,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
           trend={
             clicked_growth_pct !== null && clicked_growth_pct !== undefined
               ? {
-                  value: `${clicked_growth_pct >= 0 ? '+' : ''}${(clicked_growth_pct * 100).toFixed(1)}%`,
+                  value: formatGrowthRate(clicked_growth_pct),
                   isPositive: clicked_growth_pct >= 0,
                 }
               : undefined
@@ -229,9 +230,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                     (delivered_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                   }`}
                 >
-                  {delivered_growth_pct !== null && delivered_growth_pct !== undefined
-                    ? `${delivered_growth_pct >= 0 ? '+' : ''}${(delivered_growth_pct * 100).toFixed(1)}%`
-                    : 'N/A'}
+                  {formatGrowthRate(delivered_growth_pct)}
                 </span>
               </div>
 
@@ -247,9 +246,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                     (opened_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                   }`}
                 >
-                  {opened_growth_pct !== null && opened_growth_pct !== undefined
-                    ? `${opened_growth_pct >= 0 ? '+' : ''}${(opened_growth_pct * 100).toFixed(1)}%`
-                    : 'N/A'}
+                  {formatGrowthRate(opened_growth_pct)}
                 </span>
               </div>
 
@@ -265,9 +262,7 @@ export function CampaignPerformanceCard({ performance }: CampaignPerformanceCard
                     (clicked_growth_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
                   }`}
                 >
-                  {clicked_growth_pct !== null && clicked_growth_pct !== undefined
-                    ? `${clicked_growth_pct >= 0 ? '+' : ''}${(clicked_growth_pct * 100).toFixed(1)}%`
-                    : 'N/A'}
+                  {formatGrowthRate(clicked_growth_pct)}
                 </span>
               </div>
             </div>

@@ -218,7 +218,7 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
             &larr; Back to Store Overview
           </Link>
           <div>
-            <div className="text-right text-[11px] text-gray-400 mb-1">Analytical Horizon:</div>
+            <div className="text-right text-[11px] text-gray-400 mb-1">Analysis Date Range:</div>
             <DateRangePicker
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
@@ -291,7 +291,7 @@ export function CampaignOverview({ merchantId, campaignId }: CampaignOverviewPro
               />
             </div>
           ) : (
-            <CampaignAttributionCard attribution={attributionData} />
+            <CampaignAttributionCard attribution={attributionData} currency={merchant?.store_currency} />
           )}
         </div>
       )}

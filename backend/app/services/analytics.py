@@ -27,6 +27,7 @@ from app.data_access.analytics import (
 )
 from app.data_access.campaign import get_campaign
 from app.data_access.merchant import get_merchant_by_id
+from app.services.analytics_rules import calculate_period_growth
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
     CampaignAttributionResult,

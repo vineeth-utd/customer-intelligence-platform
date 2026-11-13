@@ -1,9 +1,18 @@
-import { useMerchantProfile } from '../../hooks/queries';
+import { useMerchantProfile, useMerchant } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { formatCurrency } from '../../utils';
 
-export function MerchantProfileCard({ merchantId }: { merchantId: string }) {
+interface MerchantProfileCardProps {
+  merchantId: string;
+  currency?: string;
+}
+
+export function MerchantProfileCard({ merchantId, currency }: MerchantProfileCardProps) {
   const { data, isLoading, isError, refetch } = useMerchantProfile(merchantId);
+  const { data: merchant } = useMerchant(merchantId);
+
+  const effectiveCurrency = currency || merchant?.store_currency || 'USD';
 
   if (isLoading) {
     return (
@@ -37,7 +46,7 @@ export function MerchantProfileCard({ merchantId }: { merchantId: string }) {
         <div>
           <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</dt>
           <dd className="mt-1 text-2xl font-bold text-gray-900">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.total_revenue)}
+            {formatCurrency(data.total_revenue, effectiveCurrency)}
           </dd>
         </div>
         <div>
@@ -47,7 +56,7 @@ export function MerchantProfileCard({ merchantId }: { merchantId: string }) {
         <div>
           <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Average Order Value</dt>
           <dd className="mt-1 text-2xl font-bold text-gray-900">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.average_order_value)}
+            {formatCurrency(data.average_order_value, effectiveCurrency)}
           </dd>
         </div>
         <div>
@@ -67,27 +76,13 @@ export function MerchantProfileCard({ merchantId }: { merchantId: string }) {
         </div>
         <div>
           <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Campaigns</dt>
-          <dd className="mt-1 text-lg font-semibold text-gray-900">
-            {data.active_campaign_count} <span className="text-xs font-normal text-gray-500">/ {data.total_campaigns} total</span>
-          </dd>
+          <dd className="mt-1 text-lg font-semibold text-gray-900">{data.active_campaign_count} / {data.total_campaigns}</dd>
         </div>
         <div>
           <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">Enabled Features</dt>
           <dd className="mt-1 text-lg font-semibold text-gray-900">{data.enabled_feature_count}</dd>
         </div>
-
-        <div className="col-span-2 sm:col-span-3 lg:col-span-4 pt-4 border-t border-gray-100 flex flex-wrap gap-6 text-xs text-gray-600">
-          <div>
-            <span className="font-medium text-gray-700">Last Order: </span>
-            {data.last_order_at ? new Date(data.last_order_at).toLocaleString() : 'No orders recorded yet'}
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Last Campaign: </span>
-            {data.last_campaign_at ? new Date(data.last_campaign_at).toLocaleString() : 'No campaigns launched'}
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-

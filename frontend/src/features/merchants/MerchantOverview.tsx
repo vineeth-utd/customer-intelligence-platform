@@ -6,6 +6,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { KpiCard } from '../../components/common/KpiCard';
+import { formatCurrency, formatGrowthRate } from '../../utils';
 
 import { MerchantRevenueCard } from './MerchantRevenueCard';
 import { MerchantFunnelCard } from './MerchantFunnelCard';
@@ -209,22 +210,20 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
                 type="button"
                 data-active={isActive ? 'true' : 'false'}
                 onClick={() => handleTabChange(tab.key)}
-                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-t ${
-                  isActive
+                className={`whitespace-nowrap shrink-0 py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded-t ${isActive
                     ? 'border-indigo-600 text-indigo-600 font-semibold'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <span>{tab.label}</span>
                 {tab.badge && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                      tab.badge === 'HEALTHY'
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${tab.badge === 'HEALTHY'
                         ? 'bg-emerald-100 text-emerald-800'
                         : tab.badge === 'NEEDS ATTENTION'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-rose-100 text-rose-800'
-                    }`}
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}
                   >
                     {tab.badge}
                   </span>
@@ -255,17 +254,14 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KpiCard
               title="Revenue"
-              value={new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: merchant.store_currency || 'USD',
-              }).format(revenue.total_revenue)}
+              value={formatCurrency(revenue.total_revenue, merchant.store_currency)}
               trend={
                 revenue.prior_period_comparison?.revenue_growth_pct !== null &&
-                revenue.prior_period_comparison?.revenue_growth_pct !== undefined
+                  revenue.prior_period_comparison?.revenue_growth_pct !== undefined
                   ? {
-                      value: `${revenue.prior_period_comparison.revenue_growth_pct >= 0 ? '+' : ''}${(revenue.prior_period_comparison.revenue_growth_pct * 100).toFixed(1)}%`,
-                      isPositive: revenue.prior_period_comparison.revenue_growth_pct >= 0,
-                    }
+                    value: formatGrowthRate(revenue.prior_period_comparison.revenue_growth_pct),
+                    isPositive: revenue.prior_period_comparison.revenue_growth_pct >= 0,
+                  }
                   : undefined
               }
             />
@@ -274,27 +270,24 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
               value={revenue.total_orders.toLocaleString()}
               trend={
                 revenue.prior_period_comparison?.order_growth_pct !== null &&
-                revenue.prior_period_comparison?.order_growth_pct !== undefined
+                  revenue.prior_period_comparison?.order_growth_pct !== undefined
                   ? {
-                      value: `${revenue.prior_period_comparison.order_growth_pct >= 0 ? '+' : ''}${(revenue.prior_period_comparison.order_growth_pct * 100).toFixed(1)}%`,
-                      isPositive: revenue.prior_period_comparison.order_growth_pct >= 0,
-                    }
+                    value: formatGrowthRate(revenue.prior_period_comparison.order_growth_pct),
+                    isPositive: revenue.prior_period_comparison.order_growth_pct >= 0,
+                  }
                   : undefined
               }
             />
             <KpiCard
               title="Average Order Value"
-              value={new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: merchant.store_currency || 'USD',
-              }).format(revenue.average_order_value)}
+              value={formatCurrency(revenue.average_order_value, merchant.store_currency)}
               trend={
                 revenue.prior_period_comparison?.aov_growth_pct !== null &&
-                revenue.prior_period_comparison?.aov_growth_pct !== undefined
+                  revenue.prior_period_comparison?.aov_growth_pct !== undefined
                   ? {
-                      value: `${revenue.prior_period_comparison.aov_growth_pct >= 0 ? '+' : ''}${(revenue.prior_period_comparison.aov_growth_pct * 100).toFixed(1)}%`,
-                      isPositive: revenue.prior_period_comparison.aov_growth_pct >= 0,
-                    }
+                    value: formatGrowthRate(revenue.prior_period_comparison.aov_growth_pct),
+                    isPositive: revenue.prior_period_comparison.aov_growth_pct >= 0,
+                  }
                   : undefined
               }
             />
@@ -306,7 +299,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
           {/* Revenue & Funnel Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MerchantRevenueCard revenue={revenue} />
+            <MerchantRevenueCard revenue={revenue} currency={merchant.store_currency} />
             <MerchantFunnelCard funnel={funnel} />
           </div>
 
@@ -321,6 +314,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
             merchantId={merchantId}
             startDate={dateRange.startDate}
             endDate={dateRange.endDate}
+            currency={merchant.store_currency}
           />
         </div>
       )}
@@ -339,7 +333,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
       {activeTab === 'profile' && (
         <div className="space-y-6">
-          <MerchantProfileCard merchantId={merchantId} />
+          <MerchantProfileCard merchantId={merchantId} currency={merchant.store_currency} />
           <MerchantDetails merchantId={merchantId} />
           <MerchantFeatures merchantId={merchantId} />
         </div>
@@ -353,7 +347,7 @@ export function MerchantOverview({ merchantId }: MerchantOverviewProps) {
 
       {activeTab === 'campaigns' && (
         <div className="space-y-6">
-          <MerchantCampaigns merchantId={merchantId} />
+          <MerchantCampaigns merchantId={merchantId} currency={merchant.store_currency} />
         </div>
       )}
 

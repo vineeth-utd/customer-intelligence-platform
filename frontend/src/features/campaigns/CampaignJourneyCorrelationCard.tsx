@@ -134,11 +134,11 @@ export function CampaignJourneyCorrelationCard({
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-          <div className="text-xs font-medium text-gray-500">Conversion Rate</div>
+          <div className="text-xs font-medium text-gray-500">Resolved Conversion Rate</div>
           <div className="text-2xl font-bold text-indigo-600 mt-1">
             {(journey_conversion_rate * 100).toFixed(1)}%
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">Touch-to-order rate</div>
+          <div className="text-[11px] text-gray-400 mt-1">Of resolved journeys (excl. open)</div>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow border border-gray-100">

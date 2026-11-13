@@ -29,7 +29,10 @@ export function FunnelChart({ stages }: FunnelChartProps) {
           const stepRate = stage.step_conversion_rate !== null
             ? `<br/>Step Conversion: ${(stage.step_conversion_rate * 100).toFixed(1)}%`
             : '';
-          return `<b>${stage.stage_name.replace(/_/g, ' ')}</b><br/>Sessions: ${stage.count.toLocaleString()}${stepRate}${dropOff}`;
+          const overallRate = stage.overall_conversion_rate !== null && stage.overall_conversion_rate !== undefined
+            ? `<br/>Overall Rate: ${(stage.overall_conversion_rate * 100).toFixed(1)}%`
+            : '';
+          return `<b>${stage.stage_name.replace(/_/g, ' ')}</b><br/>Volume: ${stage.count.toLocaleString()}${stepRate}${overallRate}${dropOff}`;
         },
       },
       grid: {

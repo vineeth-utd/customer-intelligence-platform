@@ -1,15 +1,20 @@
-import { useShopperProfile } from '../../hooks/queries';
+import { useShopperProfile, useMerchant } from '../../hooks/queries';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { KpiCard } from '../../components/common/KpiCard';
+import { formatCurrency } from '../../utils';
 
 interface ShopperProfileCardProps {
   merchantId: string;
   shopperId: string;
+  currency?: string;
 }
 
-export function ShopperProfileCard({ merchantId, shopperId }: ShopperProfileCardProps) {
+export function ShopperProfileCard({ merchantId, shopperId, currency }: ShopperProfileCardProps) {
   const { data: profile, isLoading, isError, refetch } = useShopperProfile(merchantId, shopperId);
+  const { data: merchant } = useMerchant(merchantId);
+
+  const effectiveCurrency = currency || merchant?.store_currency || 'USD';
 
   if (isLoading) {
     return (
@@ -50,10 +55,7 @@ export function ShopperProfileCard({ merchantId, shopperId }: ShopperProfileCard
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <KpiCard
               title="Total Spend"
-              value={`$${profile.total_spend.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`}
+              value={formatCurrency(profile.total_spend, effectiveCurrency)}
             />
             <KpiCard
               title="Total Orders"
@@ -61,10 +63,7 @@ export function ShopperProfileCard({ merchantId, shopperId }: ShopperProfileCard
             />
             <KpiCard
               title="Average Order Value"
-              value={`$${profile.average_order_value.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`}
+              value={formatCurrency(profile.average_order_value, effectiveCurrency)}
             />
           </div>
         </div>

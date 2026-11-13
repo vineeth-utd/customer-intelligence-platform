@@ -33,6 +33,9 @@ export function FeatureMetrics({ features }: FeatureMetricsProps) {
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-medium text-gray-900">Feature Adoption & Usage</h3>
+        <p className="text-xs text-gray-500 mt-1">
+          Adoption measures enabled features relative to plan entitlements; usage measures active shopper feature interactions.
+        </p>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -40,8 +43,9 @@ export function FeatureMetrics({ features }: FeatureMetricsProps) {
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feature</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Active Merchants</th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Adopted / Eligible</th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Adoption Rate</th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Active Merchants (Usage)</th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Usage Rate</th>
             </tr>
           </thead>
@@ -50,11 +54,14 @@ export function FeatureMetrics({ features }: FeatureMetricsProps) {
               <tr key={feature.feature_id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{feature.feature_name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{feature.feature_category}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{feature.active_merchant_count.toLocaleString()}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">
+                  {feature.enabled_merchant_count} / {feature.eligible_merchant_count}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
                   {(feature.adoption_rate * 100).toFixed(1)}%
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{feature.active_merchant_count.toLocaleString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
                   {(feature.usage_rate * 100).toFixed(1)}%
                 </td>
               </tr>

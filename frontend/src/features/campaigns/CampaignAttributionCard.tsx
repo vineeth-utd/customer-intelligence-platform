@@ -2,12 +2,17 @@ import { useMemo } from 'react';
 import type { EChartsOption } from 'echarts';
 import { BaseChart } from '../../components/charts/BaseChart';
 import type { CampaignAttributionResult } from '../../types';
+import { formatCurrency, getCurrencySymbol } from '../../utils';
 
 interface CampaignAttributionCardProps {
   attribution: CampaignAttributionResult;
+  currency?: string;
 }
 
-export function CampaignAttributionCard({ attribution }: CampaignAttributionCardProps) {
+export function CampaignAttributionCard({
+  attribution,
+  currency = 'USD',
+}: CampaignAttributionCardProps) {
   const {
     direct_session,
     first_touch_journey,
@@ -65,6 +70,7 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
     const categories = perspectives.map((p) => p.name);
     const conversions = perspectives.map((p) => p.metric.conversions_count);
     const revenues = perspectives.map((p) => p.metric.attributed_revenue);
+    const currencySymbol = getCurrencySymbol(currency);
 
     return {
       tooltip: {
@@ -77,12 +83,12 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
           if (!item) return '';
           return `<b>${item.name}</b><br/>` +
             `Conversions: <b>${item.metric.conversions_count.toLocaleString()}</b><br/>` +
-            `Attributed Revenue: <b>$${item.metric.attributed_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><br/>` +
-            `Average Order Value: <b>$${item.metric.average_order_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>`;
+            `Attributed Revenue: <b>${formatCurrency(item.metric.attributed_revenue, currency)}</b><br/>` +
+            `Average Order Value: <b>${formatCurrency(item.metric.average_order_value, currency)}</b>`;
         },
       },
       legend: {
-        data: ['Conversions', 'Attributed Revenue ($)'],
+        data: ['Conversions', `Attributed Revenue (${currencySymbol})`],
         top: 0,
       },
       grid: {
@@ -110,9 +116,9 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
         },
         {
           type: 'value',
-          name: 'Revenue ($)',
+          name: `Revenue (${currencySymbol})`,
           axisLabel: {
-            formatter: (val: number) => `$${val.toLocaleString()}`,
+            formatter: (val: number) => `${currencySymbol}${val.toLocaleString()}`,
           },
         },
       ],
@@ -125,7 +131,7 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
           barMaxWidth: 36,
         },
         {
-          name: 'Attributed Revenue ($)',
+          name: `Attributed Revenue (${currencySymbol})`,
           type: 'bar',
           yAxisIndex: 1,
           data: revenues,
@@ -134,7 +140,7 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
         },
       ],
     };
-  }, [perspectives]);
+  }, [perspectives, currency]);
 
   // Donut chart for direct vs cross-session
   const directCount = direct_vs_cross_session_journeys?.direct_session || 0;
@@ -245,20 +251,14 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
               <div className="flex justify-between items-baseline">
                 <span className="text-xs text-gray-500">Attributed Rev</span>
                 <span className="text-base font-bold text-emerald-600">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(p.metric.attributed_revenue)}
+                  {formatCurrency(p.metric.attributed_revenue, currency)}
                 </span>
               </div>
 
               <div className="flex justify-between items-baseline">
                 <span className="text-xs text-gray-500">Average Order Value</span>
                 <span className="text-xs font-semibold text-gray-700">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(p.metric.average_order_value)}
+                  {formatCurrency(p.metric.average_order_value, currency)}
                 </span>
               </div>
             </div>
@@ -317,20 +317,14 @@ export function CampaignAttributionCard({ attribution }: CampaignAttributionCard
               <div className="flex justify-between items-baseline">
                 <span className="text-xs text-gray-600">Assisted Revenue</span>
                 <span className="text-lg font-bold text-amber-700">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(assisted_journey.attributed_revenue)}
+                  {formatCurrency(assisted_journey.attributed_revenue, currency)}
                 </span>
               </div>
 
               <div className="flex justify-between items-baseline">
                 <span className="text-xs text-gray-600">Assisted AOV</span>
                 <span className="text-xs font-semibold text-gray-800">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(assisted_journey.average_order_value)}
+                  {formatCurrency(assisted_journey.average_order_value, currency)}
                 </span>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { KpiCard } from '../../components/common/KpiCard';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import type { PlatformSummaryResult } from '../../types';
+import { formatCurrency } from '../../utils';
 
 interface PlatformSummaryProps {
   summary?: PlatformSummaryResult;
@@ -30,7 +31,7 @@ export function PlatformSummary({ summary }: PlatformSummaryProps) {
       />
       <KpiCard
         title="Total Revenue"
-        value={new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.total_revenue)}
+        value={formatCurrency(data.total_revenue, 'USD')}
       />
       <KpiCard
         title="Total Orders"

@@ -1,10 +1,12 @@
 import type { RevenueAnalyticsResult } from '../../types';
+import { formatCurrency, formatGrowthRate } from '../../utils';
 
 interface MerchantRevenueCardProps {
   revenue: RevenueAnalyticsResult;
+  currency?: string;
 }
 
-export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
+export function MerchantRevenueCard({ revenue, currency = 'USD' }: MerchantRevenueCardProps) {
   const { prior_period_comparison, customer_revenue_breakdown } = revenue;
 
   const totalRev = revenue.total_revenue || 0;
@@ -28,20 +30,17 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
             <div className="text-xs font-medium text-gray-500">Revenue Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.revenue_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(prior_period_comparison?.revenue_growth_pct ?? 0) >= 0
                     ? 'text-emerald-600'
                     : 'text-rose-600'
-                }`}
+                  }`}
               >
-                {prior_period_comparison?.revenue_growth_pct !== null && prior_period_comparison?.revenue_growth_pct !== undefined
-                  ? `${prior_period_comparison.revenue_growth_pct >= 0 ? '+' : ''}${(prior_period_comparison.revenue_growth_pct * 100).toFixed(1)}%`
-                  : 'N/A'}
+                {formatGrowthRate(prior_period_comparison?.revenue_growth_pct)}
               </span>
               <span className="text-xs text-gray-400">vs prior period</span>
             </div>
             <div className="text-[11px] text-gray-500 mt-1">
-              Prior: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(prior_period_comparison?.prior_revenue || 0)}
+              Prior: {formatCurrency(prior_period_comparison?.prior_revenue || 0, currency)}
             </div>
           </div>
 
@@ -49,15 +48,12 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
             <div className="text-xs font-medium text-gray-500">Order Volume Growth</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.order_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(prior_period_comparison?.order_growth_pct ?? 0) >= 0
                     ? 'text-emerald-600'
                     : 'text-rose-600'
-                }`}
+                  }`}
               >
-                {prior_period_comparison?.order_growth_pct !== null && prior_period_comparison?.order_growth_pct !== undefined
-                  ? `${prior_period_comparison.order_growth_pct >= 0 ? '+' : ''}${(prior_period_comparison.order_growth_pct * 100).toFixed(1)}%`
-                  : 'N/A'}
+                {formatGrowthRate(prior_period_comparison?.order_growth_pct)}
               </span>
               <span className="text-xs text-gray-400">vs prior period</span>
             </div>
@@ -70,20 +66,17 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
             <div className="text-xs font-medium text-gray-500">AOV Shift</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span
-                className={`text-xl font-bold ${
-                  (prior_period_comparison?.aov_growth_pct ?? 0) >= 0
+                className={`text-xl font-bold ${(prior_period_comparison?.aov_growth_pct ?? 0) >= 0
                     ? 'text-emerald-600'
                     : 'text-rose-600'
-                }`}
+                  }`}
               >
-                {prior_period_comparison?.aov_growth_pct !== null && prior_period_comparison?.aov_growth_pct !== undefined
-                  ? `${prior_period_comparison.aov_growth_pct >= 0 ? '+' : ''}${(prior_period_comparison.aov_growth_pct * 100).toFixed(1)}%`
-                  : 'N/A'}
+                {formatGrowthRate(prior_period_comparison?.aov_growth_pct)}
               </span>
               <span className="text-xs text-gray-400">vs prior period</span>
             </div>
             <div className="text-[11px] text-gray-500 mt-1">
-              Prior: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(prior_period_comparison?.prior_average_order_value || 0)}
+              Prior: {formatCurrency(prior_period_comparison?.prior_average_order_value || 0, currency)}
             </div>
           </div>
         </div>
@@ -107,7 +100,7 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
               <div>
                 <div className="font-semibold text-gray-800">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(newRev)}
+                  {formatCurrency(newRev, currency)}
                 </div>
                 <div className="text-[11px] text-gray-500">
                   New Customer ({customer_revenue_breakdown?.new_customer_order_count || 0} orders)
@@ -119,7 +112,7 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <div>
                 <div className="font-semibold text-gray-800">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(repeatRev)}
+                  {formatCurrency(repeatRev, currency)}
                 </div>
                 <div className="text-[11px] text-gray-500">
                   Repeat Customer ({customer_revenue_breakdown?.repeat_customer_order_count || 0} orders)
@@ -132,4 +125,3 @@ export function MerchantRevenueCard({ revenue }: MerchantRevenueCardProps) {
     </div>
   );
 }
-

@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCampaigns } from '../../hooks/queries/useCampaignQueries';
-import { useMerchantCampaignAnalytics } from '../../hooks/queries/useMerchantQueries';
+import { useMerchantCampaignAnalytics, useMerchant } from '../../hooks/queries/useMerchantQueries';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { Pagination } from '../../components/common/Pagination';
 import type { CampaignStatus } from '../../types';
+import { formatCurrency } from '../../utils';
 
-export function MerchantCampaigns({ merchantId }: { merchantId: string }) {
+export function MerchantCampaigns({ merchantId, currency }: { merchantId: string; currency?: string }) {
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | undefined>(undefined);
   const limit = 10;
+
+  const { data: merchant } = useMerchant(merchantId);
+  const effectiveCurrency = currency || merchant?.store_currency || 'USD';
 
   useEffect(() => {
     setOffset(0);
@@ -198,10 +202,7 @@ export function MerchantCampaigns({ merchantId }: { merchantId: string }) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
                       {analytics
-                        ? new Intl.NumberFormat('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                          }).format(analytics.attributed_revenue)
+                        ? formatCurrency(analytics.attributed_revenue, effectiveCurrency)
                         : '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-xs">

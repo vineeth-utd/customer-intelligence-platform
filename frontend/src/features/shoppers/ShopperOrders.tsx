@@ -4,6 +4,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { Pagination } from '../../components/common/Pagination';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { formatCurrency } from '../../utils';
 
 interface ShopperOrdersProps {
   merchantId: string;
@@ -112,15 +113,11 @@ export function ShopperOrders({ merchantId, shopperId }: ShopperOrdersProps) {
                   {order.completed_at
                     ? `Completed: ${new Date(order.completed_at).toLocaleDateString()}`
                     : order.cancelled_at
-                    ? `Cancelled: ${new Date(order.cancelled_at).toLocaleDateString()}`
-                    : 'Pending'}
+                      ? `Cancelled: ${new Date(order.cancelled_at).toLocaleDateString()}`
+                      : 'Pending'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-gray-900">
-                  {order.currency}{' '}
-                  {order.total_amount.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(order.total_amount, order.currency)}
                 </td>
               </tr>
             ))}
