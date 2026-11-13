@@ -40,6 +40,9 @@ async def consumer():
     instance = CampaignEventConsumer(group_id=f"consumer-smoke-test-{uuid.uuid4()}")
     try:
         await instance.start()
+        partitions = instance._consumer.assignment()
+        if partitions:
+            await instance._consumer.seek_to_end(*partitions)
     except KafkaConnectionError:
         pytest.skip("Local Kafka broker is not reachable at localhost:9092")
     yield instance

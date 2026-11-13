@@ -15,28 +15,59 @@ from app.models.event import CampaignEvent, MerchantEvent, ProductEvent, Shopper
 
 logger = logging.getLogger(__name__)
 
-DOMAIN_KAFKA_MAPPING: dict[str, dict[str, str]] = {
-    "merchant": {
-        "topic": settings.kafka_merchant_events_topic,
-        "group_id": settings.kafka_merchant_consumer_group_id,
-        "table": "merchant_events",
-    },
-    "product": {
-        "topic": settings.kafka_product_events_topic,
-        "group_id": settings.kafka_product_consumer_group_id,
-        "table": "product_events",
-    },
-    "shopper": {
-        "topic": settings.kafka_shopper_events_topic,
-        "group_id": settings.kafka_shopper_consumer_group_id,
-        "table": "shopper_events",
-    },
-    "campaign": {
-        "topic": settings.kafka_campaign_events_topic,
-        "group_id": settings.kafka_campaign_consumer_group_id,
-        "table": "campaign_events",
-    },
-}
+
+def get_domain_kafka_mapping() -> dict[str, dict[str, str]]:
+    """Return active mapping of domain -> topic, group_id, table based on live settings."""
+    return {
+        "merchant": {
+            "topic": settings.kafka_merchant_events_topic,
+            "group_id": settings.kafka_merchant_consumer_group_id,
+            "table": "merchant_events",
+        },
+        "product": {
+            "topic": settings.kafka_product_events_topic,
+            "group_id": settings.kafka_product_consumer_group_id,
+            "table": "product_events",
+        },
+        "shopper": {
+            "topic": settings.kafka_shopper_events_topic,
+            "group_id": settings.kafka_shopper_consumer_group_id,
+            "table": "shopper_events",
+        },
+        "campaign": {
+            "topic": settings.kafka_campaign_events_topic,
+            "group_id": settings.kafka_campaign_consumer_group_id,
+            "table": "campaign_events",
+        },
+    }
+
+
+class _DynamicDomainKafkaMapping(dict):
+    """Dynamic proxy for DOMAIN_KAFKA_MAPPING reflecting live settings (e.g. test isolation)."""
+
+    def __getitem__(self, key: str) -> dict[str, str]:
+        return get_domain_kafka_mapping()[key]
+
+    def items(self):
+        return get_domain_kafka_mapping().items()
+
+    def values(self):
+        return get_domain_kafka_mapping().values()
+
+    def keys(self):
+        return get_domain_kafka_mapping().keys()
+
+    def __iter__(self):
+        return iter(get_domain_kafka_mapping())
+
+    def __len__(self):
+        return len(get_domain_kafka_mapping())
+
+    def __contains__(self, key: object) -> bool:
+        return key in get_domain_kafka_mapping()
+
+
+DOMAIN_KAFKA_MAPPING = _DynamicDomainKafkaMapping()
 
 
 async def capture_topic_end_offsets(

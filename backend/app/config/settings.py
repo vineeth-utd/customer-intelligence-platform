@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     kafka_product_consumer_group_id: str = "cip-product-event-consumer"
     kafka_shopper_consumer_group_id: str = "cip-shopper-event-consumer"
     kafka_campaign_consumer_group_id: str = "cip-campaign-event-consumer"
+    kafka_test_topic_prefix: str = "cip.test."
+    kafka_test_group_prefix: str = "cip-test-"
 
     reference_resolution_timeout_seconds: float = 30.0
     reference_resolution_interval_seconds: float = 0.5
@@ -104,7 +106,25 @@ class Settings(BaseSettings):
                 f"test_database_url points to the application database '{self.postgres_db}'. "
                 f"Automated tests must run against a dedicated test database (e.g. '{self.postgres_test_db}')."
             )
+        if not self.kafka_test_topic_prefix or not self.kafka_test_topic_prefix.strip():
+            raise ValueError("kafka_test_topic_prefix must not be empty.")
         return self
+
+    def configure_test_kafka(self) -> None:
+        """Switch topic and consumer group configurations to isolated test targets."""
+        self.kafka_merchant_events_topic = f"{self.kafka_test_topic_prefix}merchant.events"
+        self.kafka_merchant_dlq_topic = f"{self.kafka_test_topic_prefix}merchant.events.dlq"
+        self.kafka_shopper_events_topic = f"{self.kafka_test_topic_prefix}shopper.events"
+        self.kafka_shopper_dlq_topic = f"{self.kafka_test_topic_prefix}shopper.events.dlq"
+        self.kafka_campaign_events_topic = f"{self.kafka_test_topic_prefix}campaign.events"
+        self.kafka_campaign_dlq_topic = f"{self.kafka_test_topic_prefix}campaign.events.dlq"
+        self.kafka_product_events_topic = f"{self.kafka_test_topic_prefix}product.events"
+        self.kafka_product_dlq_topic = f"{self.kafka_test_topic_prefix}product.events.dlq"
+
+        self.kafka_merchant_consumer_group_id = f"{self.kafka_test_group_prefix}merchant-event-consumer"
+        self.kafka_product_consumer_group_id = f"{self.kafka_test_group_prefix}product-event-consumer"
+        self.kafka_shopper_consumer_group_id = f"{self.kafka_test_group_prefix}shopper-event-consumer"
+        self.kafka_campaign_consumer_group_id = f"{self.kafka_test_group_prefix}campaign-event-consumer"
 
 settings = Settings()
 
