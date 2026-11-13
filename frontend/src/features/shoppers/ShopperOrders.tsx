@@ -113,8 +113,8 @@ export function ShopperOrders({ merchantId, shopperId }: ShopperOrdersProps) {
                   {order.completed_at
                     ? `Completed: ${new Date(order.completed_at).toLocaleDateString()}`
                     : order.cancelled_at
-                      ? `Cancelled: ${new Date(order.cancelled_at).toLocaleDateString()}`
-                      : 'Pending'}
+                    ? `Cancelled: ${new Date(order.cancelled_at).toLocaleDateString()}`
+                    : 'Pending'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right font-bold text-gray-900">
                   {formatCurrency(order.total_amount, order.currency)}

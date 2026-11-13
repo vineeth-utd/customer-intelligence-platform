@@ -9,11 +9,11 @@ import { formatCurrency } from '../../utils';
 export function MerchantOrders({ merchantId }: { merchantId: string }) {
   const [offset, setOffset] = useState(0);
   const limit = 10;
-
+  
   useEffect(() => {
     setOffset(0);
   }, [merchantId]);
-
+  
   const { data, isLoading, isError, refetch } = useMerchantOrders(merchantId, limit, offset);
 
   if (isLoading) {
@@ -69,10 +69,11 @@ export function MerchantOrders({ merchantId }: { merchantId: string }) {
                   {new Date(order.placed_at).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.order_status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                      order.order_status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                    }`}>
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    order.order_status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                    order.order_status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
                     {order.order_status}
                   </span>
                 </td>
@@ -84,7 +85,7 @@ export function MerchantOrders({ merchantId }: { merchantId: string }) {
           </tbody>
         </table>
       </div>
-      <Pagination
+      <Pagination 
         total={data.total}
         limit={limit}
         offset={offset}
