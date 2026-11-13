@@ -442,8 +442,11 @@ Business services should focus on business behaviour rather than technical imple
 
 Business logic is organized around the platform's core business domains and derived products:
 
-* **Merchant Service** (`app/services/merchant.py`): Manages merchant operational lifecycle, merchant profiles, and merchant journey reconstruction.
-* **Shopper Service** (`app/services/shopper.py`): Coordinates shopper identity, profiles, and 7-day shopper journey reconstruction across storefront touchpoints.
+* **Merchant Service** (`app/services/merchant.py`): Manages merchant operational lifecycle, app installation/uninstallation, and subscription plan changes.
+* **Profile Service** (`app/services/profile.py`): Generates and retrieves operational snapshot profiles for merchants and shoppers (`get_merchant_profile`, `get_shopper_profile`).
+* **Merchant Journey Service** (`app/services/merchant_journey.py`): Reconstructs merchant lifecycle journeys and tracks stage progression across platform milestones.
+* **Shopper Service** (`app/services/shopper.py`): Coordinates shopper identity enrichment, customer directories, and activity event streams.
+* **Journey Service** (`app/services/journey.py`): Reconstructs 7-day shopper journeys across storefront touchpoints (`CONVERTED`, `NON_CONVERTING`, `OPEN`).
 * **Segment Service** (`app/services/segment.py`): Evaluates deterministic segment criteria (`has_recent_session` with explicit window parameters, `total_spend` lifetime thresholds, and `abandoned_cart_24h` within non-converting journeys). Coordinates membership generation and invalidation cascades.
 * **Merchant Health Service** (`app/services/merchant_health.py`): Computes 0–100 merchant health and churn risk scores based on equal weighting across Feature Adoption (resolving plan-specific entitlements with explicit Free tier fallback and deterministic empty fallback), Engagement, and Business Performance (`(feature_adoption + engagement + business_performance) / 3.0`), with deterministic lifecycle modifiers (uninstalled, subscription status). Produces structured, explainable contributing factors.
 * **Analytics Service** (`app/services/analytics.py` & `app/data_access/analytics.py`): Answers primary business intelligence questions including store funnels, shopper journey funnels, shopper behavior, repeat purchase analytics, period-over-period revenue comparisons, campaign audience segment analysis, and multi-perspective attribution (direct session, first-touch journey, last-touch journey, assisted).

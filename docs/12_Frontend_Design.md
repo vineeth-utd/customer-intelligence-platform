@@ -193,10 +193,11 @@ The frontend uses reusable visualization components across dashboard experiences
 Because the Merchant Intelligence screen combines period-scoped metrics with snapshot and lifetime views, non-interactive **Scope Badges** are displayed when navigating away from period-scoped tabs:
 - Overview & Intelligence: Period-scoped to the selected date range.
 - Campaigns & Marketing: `Scope: Lifetime Campaign Performance` (with campaign run-windows displayed in-row).
+- Health & Risk: `Scope: Current Health Evaluation`.
 - Profile & Features: `Scope: Current Profile & Features`.
 - Shoppers & Customers: `Scope: Customer Directory`.
-- Lifecycle Journey: `Scope: Lifecycle Milestones`.
-- Recent Activity: `Scope: Activity Audit Stream`.
+- Lifecycle Journey: `Scope: Full Lifecycle History`.
+- Recent Activity: `Scope: Recent Orders Stream`.
 
 This prevents user confusion when date-range filters do not affect tabs that represent lifetime or snapshot business state.
 
@@ -326,7 +327,7 @@ This ensures that temporary failures and genuinely empty datasets are communicat
 
 Because the API backend serializes high-precision `Decimal` values into JSON as strings, the frontend presentation boundary enforces defensive normalization:
 
-- **Numeric Parsing (`parseNumericValue`)**: Reusable utility in `frontend/src/utils/formatters.ts` safely parses `number | string | null | undefined` into a valid JavaScript `number` or `null`. Formatting functions (`formatCurrency`, `formatGrowthRate`, `formatScore`, `formatPercent`) route all inputs through `parseNumericValue` prior to arithmetic operations or `.toFixed()` calls, preventing runtime `TypeError` exceptions.
+- **Numeric Parsing (`parseNumericValue`)**: Reusable utility in `frontend/src/utils/currency.ts` (re-exported via `frontend/src/utils/index.ts`) safely parses `number | string | null | undefined` into a valid JavaScript `number` or `null`. Formatting functions (`formatCurrency`, `formatGrowthRate`, `formatScore`, `formatPercent`) route all inputs through `parseNumericValue` prior to arithmetic operations or `.toFixed()` calls, preventing runtime `TypeError` exceptions.
 - **Multi-Currency Support (`formatCurrency`)**: Monetary figures are formatted using the merchant's authoritative store currency (e.g. `USD`, `EUR`, `AUD`, `CAD`, `GBP`), avoiding hardcoded currency assumptions and ensuring visual fidelity across multi-currency merchant cohorts.
 - **Null Safety**: Genuinely absent or non-computable metrics render clear visual em-dash (`—`) fallbacks rather than coercing nulls into deceptive zeros.
 
