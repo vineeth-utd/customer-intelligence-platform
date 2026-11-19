@@ -7,6 +7,7 @@ from app.models.investigation import (
     InvestigationToolExecution,
 )
 from app.models.journey import ShopperJourney, ShopperJourneyEvent, MerchantJourney, MerchantJourneyEvent
+from app.models.knowledge import KnowledgeProcessingState
 from app.models.merchant import (
     FeatureEventMapping,
     MerchantFeature,
@@ -43,6 +44,7 @@ __all__ = [
     "InvestigationEvidence",
     "InvestigationMessage",
     "InvestigationToolExecution",
+    "KnowledgeProcessingState",
     "Merchant",
     "MerchantEvent",
     "MerchantFeature",

@@ -545,6 +545,10 @@ Establish the common contracts, identity model, and PostgreSQL state foundation 
 
 Every planned knowledge type has a typed identity/fact contract and can be represented by a deterministic knowledge point with persistent processing state.
 
+### Status
+
+**COMPLETED**: Unit 5.2 is complete. Knowledge type enums, flexible source lineage contracts (`source_type` + structured `source_reference`), deterministic RFC 4122 UUIDv5 point ID generator (`generate_knowledge_point_id`), typed facts schemas with strict PII exclusion, Qdrant payload contracts, `KnowledgeProcessingState` SQLAlchemy model, Alembic migration `a7e4b91d2f08`, DAL query primitives, and service lifecycle transitions (attempt, success, failure, watermark preservation/advancement) are fully implemented and verified.
+
 ---
 
 ## Unit 5.3 — Deterministic Fact Builders & Dependency Signals
