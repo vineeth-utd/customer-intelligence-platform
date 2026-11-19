@@ -7,7 +7,11 @@ import uuid
 import pytest
 
 from app.schemas.events.event_types import ShopperEventType
-from app.services.journey import generate_shopper_journeys_for_shopper
+from app.services.journey import (
+    generate_shopper_journey_event_id,
+    generate_shopper_journey_id,
+    generate_shopper_journeys_for_shopper,
+)
 from app.services.merchant_journey import generate_merchant_journeys_for_merchant
 from app.services.segment import refresh_shopper_segment_membership_callback
 
@@ -116,6 +120,12 @@ async def test_shopper_journey_converts_immediately_on_purchase():
         assert journey.converted is True
         assert journey.order_id == order_id
         assert journey.ended_at == t_purchase
+        assert journey.journey_id == generate_shopper_journey_id(shopper_id, "shopper", raw_events[0][1])
+
+        events = session.add_all.call_args_list[1][0][0]
+        assert len(events) == 2
+        assert events[0].journey_event_id == generate_shopper_journey_event_id(journey.journey_id, "shopper", raw_events[0][1])
+        assert events[1].journey_event_id == generate_shopper_journey_event_id(journey.journey_id, "shopper", raw_events[1][1])
 
 
 @pytest.mark.asyncio

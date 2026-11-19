@@ -519,6 +519,10 @@ Fix the deterministic-platform identity gap before persistent AI knowledge refer
 
 Repeated Journey regeneration from identical authoritative events produces identical Journey and JourneyEvent IDs without changing Journey semantics.
 
+### Status
+
+**COMPLETED**: Unit 5.1 is complete. Deterministic RFC 4122 UUIDv5 identities implemented for `ShopperJourney` and `ShopperJourneyEvent`, total event stream tie-breaking (`event_timestamp`, `source_event_category`, `source_event_id`) established, and regression verified.
+
 ---
 
 ## Unit 5.2 — Knowledge Contracts & Processing Foundation

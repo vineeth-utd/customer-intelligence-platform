@@ -74,7 +74,9 @@ async def get_qualifying_events_for_shopper(
         ),
     )
 
-    union_stmt = shopper_stmt.union_all(campaign_stmt).order_by("event_timestamp")
+    union_stmt = shopper_stmt.union_all(campaign_stmt).order_by(
+        "event_timestamp", "source_event_category", "source_event_id"
+    )
     result = await session.execute(union_stmt)
     return list(result.all())
 
@@ -94,6 +96,7 @@ async def delete_shopper_journeys(session: AsyncSession, shopper_id: uuid.UUID) 
         await session.execute(
             delete(ShopperJourney).where(ShopperJourney.shopper_id == shopper_id)
         )
+        await session.flush()
 
 
 async def get_shopper_journeys_by_shopper(

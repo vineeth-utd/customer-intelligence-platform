@@ -21,6 +21,26 @@ from app.services.merchant_journey import (
 )
 
 
+def generate_shopper_journey_id(
+    shopper_id: uuid.UUID, source_event_category: str, source_event_id: uuid.UUID
+) -> uuid.UUID:
+    """
+    Generate a stable, deterministic UUIDv5 for a ShopperJourney based on the
+    shopper's identity and the canonical source identity of the opening event.
+    """
+    return uuid.uuid5(shopper_id, f"shopper_journey:{source_event_category}:{source_event_id}")
+
+
+def generate_shopper_journey_event_id(
+    journey_id: uuid.UUID, source_event_category: str, source_event_id: uuid.UUID
+) -> uuid.UUID:
+    """
+    Generate a stable, deterministic UUIDv5 for a ShopperJourneyEvent based on the
+    parent journey ID and the canonical source event identity.
+    """
+    return uuid.uuid5(journey_id, f"event:{source_event_category}:{source_event_id}")
+
+
 def _extract_domain(url: str) -> str | None:
     try:
         parsed = urlparse(url)
@@ -124,9 +144,10 @@ async def generate_shopper_journeys_for_shopper(
                 current_payload_map = {}
 
         if not current_journey:
-            # Start a new journey
+            # Start a new journey with a stable deterministic ID
+            journey_id = generate_shopper_journey_id(shopper_id, source_category, source_id)
             current_journey = ShopperJourney(
-                journey_id=uuid.uuid4(),
+                journey_id=journey_id,
                 merchant_id=merchant_id,
                 shopper_id=shopper_id,
                 started_at=event_timestamp,
@@ -137,9 +158,12 @@ async def generate_shopper_journeys_for_shopper(
                 generated_at=generated_at,
             )
 
-        # Append event
+        # Append event with a stable deterministic ID
+        journey_event_id = generate_shopper_journey_event_id(
+            current_journey.journey_id, source_category, source_id
+        )
         journey_event = ShopperJourneyEvent(
-            journey_event_id=uuid.uuid4(),
+            journey_event_id=journey_event_id,
             journey_id=current_journey.journey_id,
             source_event_category=source_category,
             source_event_id=source_id,
