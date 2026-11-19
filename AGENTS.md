@@ -4,9 +4,10 @@
 
 1. Read `specs.md` for specification routing.
 2. Read `Implementation_Plan.md` for the current phase, milestone, and progress.
-3. Read only the design documents relevant to the current task.
-4. Inspect existing code before proposing changes.
-5. Do not load the entire `docs/` directory unless genuinely required.
+3. If the current milestone has an approved milestone-specific implementation plan, read that plan before planning or implementing the task. Treat it as the approved implementation-level execution contract for that milestone. The numbered design documents remain the architectural source of truth.
+4. Read only the relevant design documents identified by `specs.md`.
+5. Inspect existing code before proposing changes.
+6. Do not load the entire `docs/` directory unless genuinely required.
 
 ## Implementation Workflow
 

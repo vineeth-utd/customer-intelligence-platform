@@ -39,6 +39,16 @@ Current implementation status and execution sequence:
 
 [`Implementation_Plan.md`](./Implementation_Plan.md)
 
+Milestone-specific implementation plans contain approved implementation-level decisions and unit boundaries for substantial milestones where additional execution detail is required.
+
+Current milestone-specific plan:
+
+- [`Phase2_Milestone5_Implementation_Plan.md`](./Phase2_Milestone5_Implementation_Plan.md) — Phase 2 Milestone 5 AI Knowledge Pipeline decisions, implementation units, dependencies, and execution boundaries.
+
+When implementing Milestone 5, read this plan after `Implementation_Plan.md` and before the relevant numbered design documents.
+
+Milestone-specific plans supplement but do not replace the numbered design documents, which remain the architectural source of truth.
+
 ---
 
 ## Task-Based Reading Guide
@@ -54,7 +64,7 @@ Current implementation status and execution sequence:
 | Analytics/metrics            | `06`, `11`                               |
 | REST APIs                    | `08`, `10`                               |
 | Frontend/dashboard           | `08`, `12`                               |
-| AI Knowledge Pipeline        | `06`, `07`, `09`                         |
+| AI Knowledge Pipeline        | Implementation_Plan`, `Phase2_Milestone5_Implementation_Plan`, `06`, `07`, `09`, relevant `10`/`11` sections                                         |
 | AI Gateway/tools             | `07`, `08`, `10`                         |
 | Investigation Agent          | `07`, `10`, relevant `11` sections       |
 | Investigation UI             | `07`, `08`, `12`                         |
