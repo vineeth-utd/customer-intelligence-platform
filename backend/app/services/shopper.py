@@ -14,6 +14,7 @@ from app.data_access.product import decrement_inventory, get_product_variant_wit
 from app.data_access.shopper import (
     enrich_shopper_email,
     get_shopper as dal_get_shopper,
+    get_shopper_by_id as dal_get_shopper_by_id,
     list_merchant_shoppers_paginated,
     upsert_shopper,
 )
@@ -159,6 +160,11 @@ async def list_shoppers(session: AsyncSession, merchant_id: uuid.UUID, limit: in
 async def get_shopper(session: AsyncSession, merchant_id: uuid.UUID, shopper_id: uuid.UUID) -> Shopper | None:
     """Retrieve a shopper by ID ensuring strict merchant ownership boundary."""
     return await dal_get_shopper(session, merchant_id, shopper_id)
+
+
+async def get_shopper_by_id(session: AsyncSession, shopper_id: uuid.UUID) -> Shopper | None:
+    """Retrieve a shopper by ID without merchant scoping."""
+    return await dal_get_shopper_by_id(session, shopper_id)
 
 
 def _extract_activity_details(payload: dict[str, Any]) -> dict[str, Any]:

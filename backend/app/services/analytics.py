@@ -1,5 +1,5 @@
-from datetime import date
-from typing import List, Optional
+from datetime import date, datetime, timezone
+from typing import Any, List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +11,12 @@ from app.data_access.analytics import (
     generate_campaign_analytics_daily,
     get_platform_summary as da_get_platform_summary,
     get_platform_metrics_trend as da_get_platform_metrics_trend,
+    get_platform_period_summary as da_get_platform_period_summary,
     get_feature_metrics_summary as da_get_feature_metrics_summary,
     get_merchant_metrics_summary as da_get_merchant_metrics_summary,
     get_merchant_metrics_trend as da_get_merchant_metrics_trend,
     get_campaign_analytics_summary as da_get_campaign_analytics_summary,
+    get_campaign_analytics_by_campaign_id as da_get_campaign_analytics_by_campaign_id,
     get_conversion_funnel as da_get_conversion_funnel,
     get_shopper_journey_analytics as da_get_shopper_journey_analytics,
     get_shopper_behavior_analytics as da_get_shopper_behavior_analytics,
@@ -27,6 +29,7 @@ from app.data_access.analytics import (
 )
 from app.data_access.campaign import get_campaign
 from app.data_access.merchant import get_merchant_by_id
+from app.data_access.processing_state import record_domain_activity
 from app.services.analytics_rules import calculate_period_growth
 from app.schemas.analytics import (
     CampaignAnalyticsResult,
@@ -54,7 +57,10 @@ async def generate_daily_metrics(session: AsyncSession, metric_date: date) -> No
     await generate_merchant_metrics_daily(session, metric_date)
     await generate_platform_metrics_daily(session, metric_date)
     await generate_feature_metrics_daily(session, metric_date)
-    await generate_campaign_analytics_daily(session, metric_date)
+    campaign_ids = await generate_campaign_analytics_daily(session, metric_date)
+    now = datetime.now(timezone.utc)
+    for c_id in campaign_ids:
+        await record_domain_activity(session, "campaign", c_id, "analytics", now)
 
 async def refresh_aggregate_views(session: AsyncSession) -> None:
     """
@@ -68,6 +74,14 @@ async def get_platform_summary(session: AsyncSession) -> Optional[PlatformSummar
 async def get_platform_metrics_trend(session: AsyncSession, start_date: date, end_date: date) -> List[PlatformTrendResult]:
     return await da_get_platform_metrics_trend(session, start_date, end_date)
 
+async def get_platform_period_summary(
+    session: AsyncSession, start_date: date, end_date: date
+) -> Optional[dict[str, Any]]:
+    """Retrieve platform-wide performance aggregates over a closed period."""
+    if start_date > end_date:
+        raise ValueError("start_date cannot be after end_date")
+    return await da_get_platform_period_summary(session, start_date, end_date)
+
 async def get_feature_metrics_summary(session: AsyncSession) -> List[FeatureMetricsResult]:
     return await da_get_feature_metrics_summary(session)
 
@@ -79,6 +93,12 @@ async def get_merchant_metrics_trend(session: AsyncSession, merchant_id: UUID, s
 
 async def get_campaign_analytics_for_merchant(session: AsyncSession, merchant_id: UUID) -> List[CampaignAnalyticsResult]:
     return await da_get_campaign_analytics_summary(session, merchant_id)
+
+async def get_campaign_analytics_for_campaign(
+    session: AsyncSession, campaign_id: UUID
+) -> Optional[CampaignAnalyticsResult]:
+    """Retrieve lifetime/current campaign analytics summary for a specific campaign."""
+    return await da_get_campaign_analytics_by_campaign_id(session, campaign_id)
 
 
 async def get_conversion_funnel(

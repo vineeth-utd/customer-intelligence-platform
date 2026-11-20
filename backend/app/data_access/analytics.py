@@ -1,9 +1,9 @@
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_access.processing_state import record_domain_activity
@@ -423,7 +423,7 @@ async def generate_feature_metrics_daily(session: AsyncSession, metric_date: dat
     await session.execute(stmt, {"metric_date": metric_date})
 
 
-async def generate_campaign_analytics_daily(session: AsyncSession, metric_date: date) -> None:
+async def generate_campaign_analytics_daily(session: AsyncSession, metric_date: date) -> list[UUID]:
     stmt = text("""
         WITH date_bounds AS (
             SELECT 
@@ -456,9 +456,13 @@ async def generate_campaign_analytics_daily(session: AsyncSession, metric_date: 
             GROUP BY ce.campaign_id
         ),
         active_campaigns AS (
-            SELECT campaign_id FROM campaign_event_stats
-            UNION
-            SELECT campaign_id FROM conversion_stats
+            SELECT c.campaign_id
+            FROM (
+                SELECT campaign_id FROM campaign_event_stats
+                UNION
+                SELECT campaign_id FROM conversion_stats
+            ) ac_raw
+            JOIN campaigns c ON c.campaign_id = ac_raw.campaign_id
         )
         INSERT INTO campaign_analytics_daily (
             campaign_id, metric_date, delivered_count, opened_count, clicked_count,
@@ -498,9 +502,11 @@ async def generate_campaign_analytics_daily(session: AsyncSession, metric_date: 
             open_rate = EXCLUDED.open_rate,
             click_through_rate = EXCLUDED.click_through_rate,
             conversion_rate = EXCLUDED.conversion_rate,
-            generated_at = EXCLUDED.generated_at;
+            generated_at = EXCLUDED.generated_at
+        RETURNING campaign_id;
     """)
-    await session.execute(stmt, {"metric_date": metric_date})
+    res = await session.execute(stmt, {"metric_date": metric_date})
+    return [row[0] for row in res.fetchall()]
 
 async def refresh_aggregate_views(session: AsyncSession) -> None:
     """
@@ -540,6 +546,44 @@ async def get_platform_metrics_trend(session: AsyncSession, start_date: date, en
     ).order_by(PlatformMetricsDaily.metric_date.asc())
     res = await session.execute(stmt)
     return [PlatformTrendResult.model_validate(row) for row in res.scalars().all()]
+
+
+async def get_platform_period_summary(
+    session: AsyncSession, start_date: date, end_date: date
+) -> Optional[dict[str, Any]]:
+    """
+    Computes platform-wide performance aggregates over an arbitrary date range
+    from platform_metrics_daily.
+    """
+    stmt = select(
+        func.coalesce(func.max(PlatformMetricsDaily.active_merchants), 0).label("active_merchants"),
+        func.coalesce(func.sum(PlatformMetricsDaily.new_merchants), 0).label("new_merchants"),
+        func.coalesce(func.sum(PlatformMetricsDaily.installed_merchants), 0).label("installed_merchants"),
+        func.coalesce(func.sum(PlatformMetricsDaily.uninstalled_merchants), 0).label("uninstalled_merchants"),
+        func.coalesce(func.sum(PlatformMetricsDaily.new_subscriptions), 0).label("new_subscriptions"),
+        func.coalesce(func.sum(PlatformMetricsDaily.total_revenue), 0).label("total_revenue"),
+        func.coalesce(func.sum(PlatformMetricsDaily.total_orders), 0).label("total_orders"),
+        func.coalesce(func.max(PlatformMetricsDaily.active_shoppers), 0).label("active_shoppers"),
+    ).where(
+        PlatformMetricsDaily.metric_date >= start_date,
+        PlatformMetricsDaily.metric_date <= end_date,
+    )
+    res = await session.execute(stmt)
+    row = res.one_or_none()
+    if not row:
+        return None
+    return {
+        "period_start": start_date,
+        "period_end": end_date,
+        "active_merchants": int(row.active_merchants),
+        "new_merchants": int(row.new_merchants),
+        "installed_merchants": int(row.installed_merchants),
+        "uninstalled_merchants": int(row.uninstalled_merchants),
+        "new_subscriptions": int(row.new_subscriptions),
+        "total_revenue": Decimal(str(row.total_revenue)),
+        "order_count": int(row.total_orders),
+        "active_shoppers": int(row.active_shoppers),
+    }
 
 async def get_feature_metrics_summary(session: AsyncSession) -> List[FeatureMetricsResult]:
     stmt = text("""
@@ -630,6 +674,39 @@ async def get_campaign_analytics_summary(session: AsyncSession, merchant_id: UUI
     """)
     res = await session.execute(stmt, {"merchant_id": merchant_id})
     return [CampaignAnalyticsResult.model_validate(row) for row in res.fetchall()]
+
+
+async def get_campaign_analytics_by_campaign_id(
+    session: AsyncSession, campaign_id: UUID
+) -> Optional[CampaignAnalyticsResult]:
+    """
+    Retrieves lifetime/current campaign analytics summary for a specific campaign.
+    """
+    stmt = text("""
+        SELECT 
+            ca.campaign_id,
+            c.campaign_name,
+            c.campaign_type,
+            c.campaign_medium,
+            c.status,
+            ca.delivered_count,
+            ca.opened_count,
+            ca.clicked_count,
+            ca.converted_count,
+            ca.attributed_order_count,
+            ca.attributed_revenue,
+            ca.open_rate,
+            ca.click_through_rate,
+            ca.conversion_rate
+        FROM campaign_analytics ca
+        JOIN campaigns c ON c.campaign_id = ca.campaign_id
+        WHERE c.campaign_id = :campaign_id
+    """)
+    res = await session.execute(stmt, {"campaign_id": campaign_id})
+    row = res.mappings().fetchone()
+    if not row:
+        return None
+    return CampaignAnalyticsResult.model_validate(dict(row))
 
 
 async def get_conversion_funnel(

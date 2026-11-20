@@ -579,6 +579,8 @@ Also:
 
 All initial knowledge types can be represented as validated, minimized, lineage-aware structured facts without calling an LLM.
 
+**COMPLETED**: Unit 5.3 is complete. The six deterministic Fact Builders (Merchant Summary, Shopper Behaviour, Shopper Journey, Campaign Summary, Merchant Performance, Platform Performance) are implemented in `app.services.fact_builders`, strictly composed through existing Business Services without direct SQL/DAL queries or computing new aggregations. Strict PII exclusion and data minimization are enforced. Downstream dependency signals (`merchant` health, `shopper` segment, `campaign` analytics) are recorded in their respective service callbacks. All unit and regression test suites pass cleanly.
+
 ---
 
 ## Unit 5.4 — LLM Summarization Infrastructure

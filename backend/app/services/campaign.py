@@ -253,3 +253,12 @@ async def list_campaigns(
     items = [CampaignSummaryResponse.model_validate(c) for c in campaigns]
     return items, total
 
+
+async def get_campaign_by_id(
+    session: AsyncSession, campaign_id: uuid.UUID
+) -> Optional[Campaign]:
+    """
+    Retrieves a campaign entity by ID without merchant scoping.
+    """
+    return await get_campaign(session, campaign_id)
+

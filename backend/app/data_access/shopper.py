@@ -79,3 +79,8 @@ async def get_shopper(
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_shopper_by_id(session: AsyncSession, shopper_id: uuid.UUID) -> Shopper | None:
+    """Retrieve a shopper by primary key ID without merchant scoping."""
+    return await session.get(Shopper, shopper_id)

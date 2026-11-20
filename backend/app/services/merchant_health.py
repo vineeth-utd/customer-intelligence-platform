@@ -18,6 +18,7 @@ from app.data_access.merchant_health import (
     upsert_merchant_health,
 )
 from app.data_access.merchant_journey import get_merchant_journeys_by_merchant
+from app.data_access.processing_state import record_domain_activity
 from app.data_access.profile import get_merchant_profile
 from app.models.merchant import MerchantFeature, PlanFeature, PlatformFeature
 from app.models.merchant_health import MerchantHealth
@@ -168,6 +169,7 @@ async def generate_merchant_health_callback(
         business_performance_score=biz_score,
         calculated_at=now,
     )
+    await record_domain_activity(session, "merchant", merchant_id, "health", now)
 
 
 async def get_merchant_health(

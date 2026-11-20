@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data_access.processing_state import record_domain_activity
 from app.data_access.segment import (
     count_segment_members as dal_count_segment_members,
     get_merchant_segments,
@@ -51,6 +52,7 @@ async def refresh_shopper_segment_membership_callback(
     segments = await get_merchant_segments(session, merchant_id)
     if not segments:
         await sync_shopper_segment_memberships(session, shopper_id, set(), eval_time)
+        await record_domain_activity(session, "shopper", shopper_id, "segment", eval_time)
         return
 
     matching_segment_ids: set[uuid.UUID] = set()
@@ -66,6 +68,7 @@ async def refresh_shopper_segment_membership_callback(
             matching_segment_ids.add(seg.segment_id)
 
     await sync_shopper_segment_memberships(session, shopper_id, matching_segment_ids, eval_time)
+    await record_domain_activity(session, "shopper", shopper_id, "segment", eval_time)
 
 
 async def refresh_segment_memberships_for_segment(

@@ -124,3 +124,34 @@ async def get_shopper_journey_by_id(
     res = await session.execute(stmt)
     return res.scalar_one_or_none()
 
+
+async def get_journey_source_events(
+    session: AsyncSession, journey_id: uuid.UUID
+) -> list[tuple[ShopperJourneyEvent, dict[str, Any] | None]]:
+    """
+    Retrieve all touchpoint events for a journey paired with their underlying source event payloads.
+    """
+    events_stmt = (
+        select(ShopperJourneyEvent)
+        .where(ShopperJourneyEvent.journey_id == journey_id)
+        .order_by(ShopperJourneyEvent.sequence_number.asc())
+    )
+    events_result = await session.execute(events_stmt)
+    journey_events = list(events_result.scalars().all())
+    if not journey_events:
+        return []
+
+    shopper_event_ids = [
+        e.source_event_id for e in journey_events if e.source_event_category == "shopper"
+    ]
+    payload_map: dict[uuid.UUID, dict[str, Any]] = {}
+    if shopper_event_ids:
+        shopper_stmt = select(ShopperEvent.event_id, ShopperEvent.payload).where(
+            ShopperEvent.event_id.in_(shopper_event_ids)
+        )
+        shopper_res = await session.execute(shopper_stmt)
+        for eid, payload in shopper_res.all():
+            payload_map[eid] = payload or {}
+
+    return [(e, payload_map.get(e.source_event_id)) for e in journey_events]
+

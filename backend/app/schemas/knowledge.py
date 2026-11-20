@@ -93,20 +93,18 @@ class ShopperBehaviourFacts(BaseModel):
     """
     Deterministic, AI-safe facts representing shopper behaviour.
     Strictly excludes PII (names, emails, billing info, exact address, session IDs).
+    Only contains currently authoritative, supported shopper facts (no deferred fields).
     """
     model_config = ConfigDict(extra="forbid")
 
     total_orders: int
     total_spend: Decimal
     average_order_value: Decimal
-    customer_lifetime_value: Optional[Decimal] = None
-    purchase_frequency: Optional[Decimal] = None
     wishlist_item_count: int
     save_for_later_item_count: int
     campaign_engagement_count: int
     preferred_category: Optional[str] = None
     preferred_size: Optional[str] = None
-    lifecycle_stage: Optional[str] = None
     last_purchase_at: Optional[datetime] = None
     segments: list[str] = Field(default_factory=list)
     total_journeys: int = 0
@@ -114,7 +112,11 @@ class ShopperBehaviourFacts(BaseModel):
 
 
 class ShopperJourneyFacts(BaseModel):
-    """Deterministic, AI-safe facts representing a completed shopper interaction episode."""
+    """
+    Deterministic, AI-safe facts representing a completed shopper interaction episode.
+    Preserves retrieval-oriented interaction context (products viewed, searches, cart actions)
+    without raw mechanical payload leakage.
+    """
     model_config = ConfigDict(extra="forbid")
 
     journey_status: str
@@ -125,12 +127,19 @@ class ShopperJourneyFacts(BaseModel):
     converted: bool
     touchpoint_count: int
     touchpoint_event_types: list[str] = Field(default_factory=list)
+    products_viewed: list[str] = Field(default_factory=list)
+    search_queries: list[str] = Field(default_factory=list)
+    cart_add_count: int = 0
+    checkout_started: bool = False
     order_id: Optional[uuid.UUID] = None
     order_total_amount: Optional[Decimal] = None
 
 
 class CampaignSummaryFacts(BaseModel):
-    """Deterministic, AI-safe facts representing campaign configuration and performance."""
+    """
+    Deterministic, AI-safe facts representing campaign configuration, performance,
+    attribution, audience response, and journey correlation.
+    """
     model_config = ConfigDict(extra="forbid")
 
     campaign_name: str
@@ -149,26 +158,46 @@ class CampaignSummaryFacts(BaseModel):
     open_rate: Decimal = Decimal("0.00")
     click_through_rate: Decimal = Decimal("0.00")
     conversion_rate: Decimal = Decimal("0.00")
+    first_touch_conversions: int = 0
+    last_touch_conversions: int = 0
+    assisted_conversions: int = 0
+    first_touch_revenue: Decimal = Decimal("0.00")
+    last_touch_revenue: Decimal = Decimal("0.00")
+    total_journeys_touched: int = 0
+    journey_conversion_rate: Decimal = Decimal("0.00")
+    top_drop_off_stages: dict[str, int] = Field(default_factory=dict)
+    audience_reached_count: int = 0
+    audience_engaged_count: int = 0
+    audience_converted_count: int = 0
 
 
 class MerchantPerformanceFacts(BaseModel):
-    """Deterministic facts representing merchant business performance over a closed month."""
+    """
+    Deterministic facts representing merchant business performance over a closed month,
+    composed from period-level Business Services.
+    """
     model_config = ConfigDict(extra="forbid")
 
     period_start: date
     period_end: date
     total_revenue: Decimal
     order_count: int
+    average_order_value: Decimal
     unique_shoppers: int
     new_shoppers: int
-    average_order_value: Decimal
+    returning_shoppers: int
     conversion_rate: Decimal
-    session_count: int
-    converted_session_count: int
+    cart_abandonment_rate: Decimal
+    total_journeys: int
+    converted_journeys: int
+    journey_conversion_rate: Decimal
 
 
 class PlatformPerformanceFacts(BaseModel):
-    """Deterministic facts representing platform-wide business metrics over a closed month."""
+    """
+    Deterministic facts representing platform-wide business metrics over a closed month,
+    composed from period-level platform Business Services.
+    """
     model_config = ConfigDict(extra="forbid")
 
     period_start: date

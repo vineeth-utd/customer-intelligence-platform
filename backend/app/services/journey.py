@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import settings
 from app.data_access.journey import (
     delete_shopper_journeys,
+    get_journey_source_events,
     get_qualifying_events_for_shopper,
     get_shopper_journey_by_id,
     get_shopper_journeys_by_shopper,
@@ -227,4 +229,50 @@ async def get_shopper_journey(
 ) -> ShopperJourney | None:
     """Retrieve a single shopper journey by ID, optionally including events."""
     return await get_shopper_journey_by_id(session, journey_id, include_events=include_events)
+
+
+async def get_shopper_journey_interaction_context(
+    session: AsyncSession, journey_id: uuid.UUID
+) -> dict[str, Any]:
+    """
+    Extracts deterministic, retrieval-oriented interaction context for a shopper journey
+    (products viewed, searches, cart actions, checkout started) from underlying events
+    while strictly minimizing data and excluding raw payloads / PII.
+    """
+    source_events = await get_journey_source_events(session, journey_id)
+    products_viewed: list[str] = []
+    seen_products: set[str] = set()
+    search_queries: list[str] = []
+    seen_searches: set[str] = set()
+    cart_add_count = 0
+    checkout_started = False
+
+    for jevent, payload in source_events:
+        payload = payload or {}
+        etype = jevent.event_type
+        if etype == ShopperEventType.PRODUCT_VIEWED.value:
+            pid = payload.get("product_id")
+            if pid:
+                pid_str = str(pid)
+                if pid_str not in seen_products:
+                    seen_products.add(pid_str)
+                    products_viewed.append(pid_str)
+        elif etype == ShopperEventType.PRODUCT_SEARCHED.value:
+            q = payload.get("search_query")
+            if q and isinstance(q, str):
+                q_clean = q.strip()
+                if q_clean and q_clean not in seen_searches:
+                    seen_searches.add(q_clean)
+                    search_queries.append(q_clean)
+        elif etype == ShopperEventType.ADD_TO_CART.value:
+            cart_add_count += 1
+        elif etype == ShopperEventType.CHECKOUT_STARTED.value:
+            checkout_started = True
+
+    return {
+        "products_viewed": products_viewed,
+        "search_queries": search_queries,
+        "cart_add_count": cart_add_count,
+        "checkout_started": checkout_started,
+    }
 
