@@ -631,6 +631,10 @@ Persist semantic knowledge in the AI Knowledge Layer.
 
 A generated summary can be embedded and persisted as a correctly identified, metadata-rich Qdrant knowledge point.
 
+### Status
+
+**COMPLETED**: Unit 5.5 is complete. Added `qdrant-client` and `fastembed` dependencies with zero PyTorch/CUDA bloat. Configured canonical MVP embedding model `BAAI/bge-small-en-v1.5` (384-dimensional cosine vectors) with FastEmbed ONNX Runtime wrapped in non-blocking threads. Implemented reusable `EmbeddingProvider` abstraction supporting `embed_documents` and `embed_query`. Implemented hermetic `FakeEmbeddingProvider` for offline unit testing. Implemented `KnowledgeRepository` in DAL managing `cip_knowledge` lifecycle with fail-fast dimension validation on incompatible existing collections, required payload indexes (`merchant_id`, `access_scope`, `knowledge_type`, `entity_id`, `is_current`), deterministic RFC 4122 UUIDv5 point upsert (`wait=True`), exact point retrieval, and deletion. Verified with hermetic in-memory tests and live Docker Qdrant container integration tests. All 44 Milestone 5 tests and 54 regression tests pass cleanly.
+
 ---
 
 ## Unit 5.6 — End-to-End Knowledge Generator

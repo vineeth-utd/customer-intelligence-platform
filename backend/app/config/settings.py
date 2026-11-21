@@ -77,6 +77,17 @@ class Settings(BaseSettings):
     llm_retry_initial_delay_seconds: float = 0.5
     llm_retry_backoff_factor: float = 2.0
 
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_grpc_port: int = 6334
+    qdrant_api_key: str | None = None
+    qdrant_timeout_seconds: float = 10.0
+    qdrant_collection_name: str = "cip_knowledge"
+
+    embedding_provider: str = "fastembed"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_dimension: int = 384
+
     class Config:
         env_file = ".env"
 
