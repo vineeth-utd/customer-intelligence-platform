@@ -152,6 +152,8 @@ class KnowledgeRepository:
         """
         pid_str = str(point_id)
         try:
+            if not await self.client.collection_exists(self.collection_name):
+                return None
             records = await self.client.retrieve(
                 collection_name=self.collection_name,
                 ids=[pid_str],
@@ -177,6 +179,8 @@ class KnowledgeRepository:
         """
         pid_str = str(point_id)
         try:
+            if not await self.client.collection_exists(self.collection_name):
+                return False
             await self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=models.PointIdsList(points=[pid_str]),

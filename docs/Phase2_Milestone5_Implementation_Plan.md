@@ -663,6 +663,10 @@ Facts → LLM → Validation → BGE → Qdrant → SUCCESS
 
 with safe failure and retry semantics.
 
+### Status
+
+**COMPLETED**: Unit 5.6 is complete. Implemented `KnowledgeWorkItem` and `KnowledgeGenerationResult` schemas in `app.schemas.knowledge` with deterministic point ID computation (`uuid5`) and per-type validation rules. Implemented `generate_knowledge_item` service in `app.services.knowledge_generator` focusing on single-item execution independent of scheduling technology. Enforced strict discrete database transaction boundaries (recording attempt, reading facts via registry dispatch, running external LLM/ONNX/Qdrant operations with zero open DB locks, and recording success/failure). Preserved explicit upstream `source_watermark` passed by discovery/orchestration layer. Verified idempotent retries, state transitions (`PROCESSING` -> `SUCCESS` / `FAILED`), transaction isolation, and end-to-end generation across knowledge types. All 50 Milestone 5 tests and 54 regression tests pass cleanly.
+
 ---
 
 ## Unit 5.7 — Incremental Discovery & Scheduled Processing

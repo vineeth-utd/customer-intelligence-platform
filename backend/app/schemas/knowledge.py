@@ -1,10 +1,60 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, Self, Union
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+# Canonical RFC 4122 namespace for all CIP AI Knowledge Point IDs
+CIP_KNOWLEDGE_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_DNS, "knowledge.cip")
+
+
+def generate_knowledge_point_id(
+    knowledge_type: str | "KnowledgeType",
+    entity_id: Optional[uuid.UUID] = None,
+    period_start: Optional[date | str] = None,
+    period_end: Optional[date | str] = None,
+) -> uuid.UUID:
+    """
+    Generate a deterministic RFC 4122 UUIDv5 point ID for a knowledge item
+    matching the canonical CIP AI Knowledge identity rules.
+    """
+    k_type = knowledge_type.value if isinstance(knowledge_type, KnowledgeType) else knowledge_type
+
+    if k_type == KnowledgeType.MERCHANT_SUMMARY.value:
+        if entity_id is None:
+            raise ValueError("merchant_summary requires merchant_id")
+        name = f"merchant_summary:{entity_id}"
+    elif k_type == KnowledgeType.SHOPPER_BEHAVIOUR.value:
+        if entity_id is None:
+            raise ValueError("shopper_behaviour requires shopper_id")
+        name = f"shopper_behaviour:{entity_id}"
+    elif k_type == KnowledgeType.SHOPPER_JOURNEY.value:
+        if entity_id is None:
+            raise ValueError("shopper_journey requires stable journey_id")
+        name = f"shopper_journey:{entity_id}"
+    elif k_type == KnowledgeType.CAMPAIGN_SUMMARY.value:
+        if entity_id is None:
+            raise ValueError("campaign_summary requires campaign_id")
+        name = f"campaign_summary:{entity_id}"
+    elif k_type == KnowledgeType.MERCHANT_PERFORMANCE.value:
+        if entity_id is None or period_start is None or period_end is None:
+            raise ValueError("merchant_performance requires merchant_id, period_start, and period_end")
+        start_str = period_start.isoformat() if isinstance(period_start, date) else str(period_start)
+        end_str = period_end.isoformat() if isinstance(period_end, date) else str(period_end)
+        name = f"merchant_performance:{entity_id}:{start_str}:{end_str}"
+    elif k_type == KnowledgeType.PLATFORM_PERFORMANCE.value:
+        if period_start is None or period_end is None:
+            raise ValueError("platform_performance requires period_start and period_end")
+        start_str = period_start.isoformat() if isinstance(period_start, date) else str(period_start)
+        end_str = period_end.isoformat() if isinstance(period_end, date) else str(period_end)
+        name = f"platform_performance:{start_str}:{end_str}"
+    else:
+        raise ValueError(f"Unknown knowledge_type: {knowledge_type}")
+
+    return uuid.uuid5(CIP_KNOWLEDGE_NAMESPACE, name)
 
 
 class KnowledgeType(str, Enum):
@@ -251,3 +301,69 @@ class KnowledgeQdrantPayload(BaseModel):
     schema_version: int = 1
     embedding_model: Optional[str] = None
     prompt_version: Optional[str] = None
+
+
+class KnowledgeWorkItem(BaseModel):
+    """
+    Self-contained unit of work representing a single knowledge item to be generated.
+    Can be dispatched independently by the knowledge generator or future orchestrators (e.g. Airflow).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    knowledge_type: KnowledgeType
+    entity_id: Optional[uuid.UUID] = None
+    merchant_id: Optional[uuid.UUID] = None
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    as_of: Optional[datetime] = None
+    is_current: Optional[bool] = None
+    source_watermark: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def validate_requirements(self) -> Self:
+        k_type = self.knowledge_type
+        if k_type in (
+            KnowledgeType.MERCHANT_SUMMARY,
+            KnowledgeType.SHOPPER_BEHAVIOUR,
+            KnowledgeType.SHOPPER_JOURNEY,
+            KnowledgeType.CAMPAIGN_SUMMARY,
+        ):
+            if self.entity_id is None:
+                raise ValueError(f"{k_type.value} requires entity_id")
+        elif k_type == KnowledgeType.MERCHANT_PERFORMANCE:
+            if self.entity_id is None:
+                raise ValueError("merchant_performance requires entity_id (merchant_id)")
+            if self.period_start is None or self.period_end is None:
+                raise ValueError("merchant_performance requires period_start and period_end")
+            if self.period_start > self.period_end:
+                raise ValueError("period_start cannot be after period_end")
+        elif k_type == KnowledgeType.PLATFORM_PERFORMANCE:
+            if self.period_start is None or self.period_end is None:
+                raise ValueError("platform_performance requires period_start and period_end")
+            if self.period_start > self.period_end:
+                raise ValueError("period_start cannot be after period_end")
+        return self
+
+    @property
+    def point_id(self) -> uuid.UUID:
+        return generate_knowledge_point_id(
+            knowledge_type=self.knowledge_type,
+            entity_id=self.entity_id,
+            period_start=self.period_start,
+            period_end=self.period_end,
+        )
+
+
+class KnowledgeGenerationResult(BaseModel):
+    """Execution result returned from generating a single knowledge work item."""
+    model_config = ConfigDict(extra="forbid")
+
+    point_id: uuid.UUID
+    knowledge_type: KnowledgeType
+    status: KnowledgeStatus
+    source_watermark: Optional[datetime] = None
+    summary: Optional[str] = None
+    error_message: Optional[str] = None
+    generated_at: Optional[datetime] = None
+    retry_count: int = 0
+
