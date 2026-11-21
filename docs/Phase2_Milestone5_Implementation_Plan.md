@@ -603,6 +603,10 @@ Convert structured deterministic facts into grounded retrieval-oriented summarie
 
 Every knowledge fact type can produce a validated retrieval-oriented summary through the provider abstraction without introducing AI Gateway/tool functionality.
 
+### Status
+
+**COMPLETED**: Unit 5.4 is complete. Implemented `LLMProvider` abstraction (`LLMMessage`, `LLMResponse`, `LLMProvider`) and `GroqLLMProvider` using native `httpx.AsyncClient` with bounded exponential backoff retries for transient HTTP errors (429, 5xx, timeouts) and fail-fast for invalid configs. Implemented deterministic `FakeLLMProvider` for offline testing. Created shared grounding policy enforcing strict fidelity, anti-speculation, anti-recommendation, and fact isolation (stripping metadata/lineage before LLM prompting). Implemented knowledge-type-specific prompt instructions for all six knowledge types. Implemented `generate_knowledge_summary` service with deterministic output validation (stripping markdown fences, conversational preambles, verifying length bounds and shopper PII boundaries). Added comprehensive unit tests and regression verified against the broader suite.
+
 ---
 
 ## Unit 5.5 — BGE Embedding & Qdrant Knowledge Repository

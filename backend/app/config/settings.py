@@ -68,6 +68,15 @@ class Settings(BaseSettings):
     merchant_health_job_interval_minutes: int = 15
     journey_max_window_days: int = 7
 
+    llm_provider: str = "groq"
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    llm_request_timeout_seconds: float = 30.0
+    llm_max_retries: int = 3
+    llm_retry_initial_delay_seconds: float = 0.5
+    llm_retry_backoff_factor: float = 2.0
+
     class Config:
         env_file = ".env"
 
